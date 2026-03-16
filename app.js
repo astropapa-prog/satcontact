@@ -13,6 +13,7 @@
   let chipAll, chipRowSatellites, chipRowBandwidth;
   let allEntries = [];
   let filteredEntries = [];
+  let lastRenderedGroup = null;
 
   /**
    * Извлечение NORAD ID из Name (значение в квадратных скобках)
@@ -103,7 +104,6 @@
       const frequency = el.querySelector('Frequency')?.textContent?.trim() || '0';
       const detectorType = el.querySelector('DetectorType')?.textContent?.trim() || '';
       const filterBandwidth = el.querySelector('FilterBandwidth')?.textContent?.trim() || '';
-      const isFavourite = (el.querySelector('IsFavourite')?.textContent?.toLowerCase() || '') === 'true';
 
       const noradId = extractNoradId(name);
       const txFreq = extractTxFreq(name);
@@ -119,7 +119,6 @@
         detectorType,
         filterBandwidth,
         bandwidthFormatted,
-        isFavourite,
         noradId,
         txFreq,
         status,
@@ -207,7 +206,6 @@
   function createCardHtml(entry) {
     const rxFreq = formatFreq(entry.frequency);
     const txLine = entry.txFreq ? `TX: ${entry.txFreq.toFixed(3)} MHz` : '';
-    const favIcon = entry.isFavourite ? '<span class="freq-card__favourite" aria-hidden="true">★</span>' : '';
     const noradHtml = entry.noradId
       ? `<span class="freq-card__norad">NORAD ${entry.noradId}</span>`
       : '';
@@ -224,7 +222,6 @@
       <article class="freq-card" data-norad="${entry.noradId || ''}" data-searchable="${escapeHtml(entry.cleanName + ' ' + rxFreq + ' ' + (entry.noradId || ''))}">
         <div class="freq-card__top">
           <span class="freq-card__name">${escapeHtml(entry.cleanName || '—')}</span>
-          ${favIcon}
         </div>
         <div class="freq-card__freq-block">
           <span class="freq-card__rx">${escapeHtml(rxFreq)}</span>
@@ -279,11 +276,12 @@
   }
 
   /**
-   * Генерация кнопок-чипсов для спутников и полос
+   * Генерация кнопок-чипсов на основе актуального списка (отфильтрованного по группе)
+   * @param {Array} entries - записи выбранной группы (или все при "Все группы")
    */
-  function renderFilterChips() {
-    const satellites = getUniqueSatellites(allEntries);
-    const bandwidths = getUniqueBandwidths(allEntries);
+  function renderFilterChips(entries) {
+    const satellites = getUniqueSatellites(entries);
+    const bandwidths = getUniqueBandwidths(entries);
 
     if (chipRowSatellites) {
       chipRowSatellites.innerHTML = satellites
@@ -331,6 +329,10 @@
     if (group) {
       base = base.filter((e) => (e.groupName || '(Без группы)') === group);
     }
+    if (lastRenderedGroup !== group) {
+      lastRenderedGroup = group;
+      renderFilterChips(base);
+    }
     filteredEntries = filterEntries(base, query);
     renderCards(filteredEntries, base.length);
   }
@@ -347,7 +349,6 @@
       filteredEntries = [...allEntries];
 
       renderGroupSelect();
-      renderFilterChips();
       applyFilter();
       bindSearchInput();
     } catch (err) {

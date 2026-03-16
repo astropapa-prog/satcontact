@@ -228,14 +228,6 @@ body {
   min-width: 0;
 }
 
-.freq-card__favourite {
-  flex-shrink: 0;
-  margin-left: 8px;
-  font-size: 1rem;
-  color: #e8b923;
-  line-height: 1;
-}
-
 .freq-card__freq-block {
   margin-bottom: 8px;
 }
