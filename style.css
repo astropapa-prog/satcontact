@@ -39,6 +39,8 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
+  /* Блокирует горизонтальный overscroll на уровне страницы — предотвращает закрытие браузера */
+  overscroll-behavior-x: none;
 }
 
 .app {
@@ -172,7 +174,7 @@ body {
   margin-bottom: 4px;
   -webkit-overflow-scrolling: touch;
   /* Предотвращает передачу жеста браузеру при достижении края (закрытие вкладки/назад) */
-  overscroll-behavior-x: contain;
+  overscroll-behavior-x: none;
 }
 
 .chip-scroll.chip-row--collapsed {
