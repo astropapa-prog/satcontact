@@ -159,6 +159,11 @@ body {
   outline: none;
 }
 
+.chip--active {
+  background: rgba(82, 136, 193, 0.35);
+  border-color: var(--accent);
+}
+
 .chip--all {
   font-weight: 600;
   padding: 8px 16px;

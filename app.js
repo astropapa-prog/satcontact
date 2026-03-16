@@ -15,6 +15,13 @@
   let filteredEntries = [];
   let lastRenderedGroup = null;
 
+  // Состояние фильтров по кнопкам (независимо от строки поиска)
+  const selectedFilters = {
+    satellites: new Set(),
+    bandwidths: new Set(),
+    sensitivities: new Set()
+  };
+
   /**
    * Извлечение NORAD ID из Name (значение в квадратных скобках)
    */
@@ -180,23 +187,39 @@
   }
 
   /**
-   * Фильтрация по поисковому запросу (поддержка нескольких слов)
+   * Фильтрация по выбранным кнопкам (множественный выбор)
+   * Внутри категории: OR. Между категориями: AND.
    */
-  function filterEntries(entries, query) {
-    if (!query || !query.trim()) return entries;
-    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  function filterByButtons(entries) {
+    const hasSat = selectedFilters.satellites.size > 0;
+    const hasBw = selectedFilters.bandwidths.size > 0;
+    const hasSens = selectedFilters.sensitivities.size > 0;
+    if (!hasSat && !hasBw && !hasSens) return entries;
+
     return entries.filter((e) => {
-      const searchable = [
-        e.cleanName,
-        e.name,
-        formatFreq(e.frequency),
-        e.txFreq ? `${e.txFreq}` : '',
-        e.noradId || '',
-        e.detectorType,
-        e.bandwidthFormatted,
-        e.status.label
-      ].join(' ').toLowerCase();
-      return terms.every((term) => searchable.includes(term));
+      const matchSat = !hasSat || selectedFilters.satellites.has(e.cleanName);
+      const matchBw = !hasBw || selectedFilters.bandwidths.has(e.bandwidthFormatted);
+      const matchSens = !hasSens || selectedFilters.sensitivities.has(e.status.label);
+      return matchSat && matchBw && matchSens;
+    });
+  }
+
+  /**
+   * Фильтрация по частоте (только цифры, без точек/запятых)
+   * Сопоставление RX и TX частот по подстроке цифр
+   */
+  function filterByFrequency(entries, freqInput) {
+    const digits = (freqInput || '').replace(/\D/g, '');
+    if (!digits) return entries;
+
+    return entries.filter((e) => {
+      const rxDigits = String(e.frequency);
+      if (rxDigits.includes(digits)) return true;
+      if (e.txFreq != null) {
+        const txDigits = String(Math.round(e.txFreq * 1000));
+        if (txDigits.includes(digits)) return true;
+      }
+      return false;
     });
   }
 
@@ -285,13 +308,19 @@
 
     if (chipRowSatellites) {
       chipRowSatellites.innerHTML = satellites
-        .map((s) => `<button type="button" class="chip" data-filter="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
+        .map((s) => {
+          const active = selectedFilters.satellites.has(s) ? ' chip--active' : '';
+          return `<button type="button" class="chip${active}" data-category="satellite" data-filter="${escapeHtml(s)}">${escapeHtml(s)}</button>`;
+        })
         .join('');
     }
 
     if (chipRowBandwidth) {
       chipRowBandwidth.innerHTML = bandwidths
-        .map((b) => `<button type="button" class="chip" data-filter="${escapeHtml(b)}">${escapeHtml(b)}</button>`)
+        .map((b) => {
+          const active = selectedFilters.bandwidths.has(b) ? ' chip--active' : '';
+          return `<button type="button" class="chip${active}" data-category="bandwidth" data-filter="${escapeHtml(b)}">${escapeHtml(b)}</button>`;
+        })
         .join('');
     }
 
@@ -299,22 +328,49 @@
   }
 
   /**
-   * Обработка кликов по чипсам
-   * При нажатии — очистить строку поиска и подставить только значение кнопки
+   * Обновление визуального состояния всех кнопок-фильтров
+   */
+  function updateChipActiveStates() {
+    document.querySelectorAll('.chip[data-category]').forEach((btn) => {
+      const cat = btn.dataset.category;
+      const val = btn.dataset.filter;
+      const set = cat === 'satellite' ? selectedFilters.satellites
+        : cat === 'bandwidth' ? selectedFilters.bandwidths
+        : selectedFilters.sensitivities;
+      btn.classList.toggle('chip--active', set.has(val));
+    });
+  }
+
+  /**
+   * Обработка кликов по чипсам — переключение выбора (toggle)
    */
   function bindChipClicks() {
     document.querySelectorAll('.chip').forEach((btn) => {
+      btn.replaceWith(btn.cloneNode(true));
+    });
+    document.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const filter = btn.dataset.filter;
         if (btn.id === 'chipAll') {
-          searchInput.value = '';
+          selectedFilters.satellites.clear();
+          selectedFilters.bandwidths.clear();
+          selectedFilters.sensitivities.clear();
+          if (searchInput) searchInput.value = '';
           applyFilter();
           return;
         }
-        if (filter) {
-          searchInput.value = filter;
-          applyFilter();
+        const cat = btn.dataset.category;
+        const filter = btn.dataset.filter;
+        if (!cat || !filter) return;
+        const set = cat === 'satellite' ? selectedFilters.satellites
+          : cat === 'bandwidth' ? selectedFilters.bandwidths
+          : selectedFilters.sensitivities;
+        if (set.has(filter)) {
+          set.delete(filter);
+        } else {
+          set.add(filter);
         }
+        btn.classList.toggle('chip--active', set.has(filter));
+        applyFilter();
       });
     });
   }
@@ -323,7 +379,7 @@
    * Применение фильтра и перерисовка
    */
   function applyFilter() {
-    const query = searchInput ? searchInput.value.trim() : '';
+    const freqInput = searchInput ? searchInput.value.trim() : '';
     const group = groupSelect ? groupSelect.value : '';
     let base = allEntries;
     if (group) {
@@ -331,10 +387,16 @@
     }
     if (lastRenderedGroup !== group) {
       lastRenderedGroup = group;
+      selectedFilters.satellites.clear();
+      selectedFilters.bandwidths.clear();
+      selectedFilters.sensitivities.clear();
       renderFilterChips(base);
     }
-    filteredEntries = filterEntries(base, query);
+    let result = filterByButtons(base);
+    result = filterByFrequency(result, freqInput);
+    filteredEntries = result;
     renderCards(filteredEntries, base.length);
+    updateChipActiveStates();
   }
 
   /**
@@ -363,11 +425,14 @@
   }
 
   /**
-   * Живой поиск при вводе
+   * Обработка ввода частоты (только цифры, без точек/запятых)
    */
   function bindSearchInput() {
     if (!searchInput) return;
-    searchInput.addEventListener('input', () => applyFilter());
+    searchInput.addEventListener('input', () => {
+      searchInput.value = searchInput.value.replace(/\D/g, '');
+      applyFilter();
+    });
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         searchInput.value = '';

@@ -18,7 +18,7 @@
         </select>
       </div>
       <div class="search-wrap">
-        <input type="search" class="search-input" id="searchInput" placeholder="Поиск по названию, частоте..." autocomplete="off">
+        <input type="search" class="search-input" id="searchInput" placeholder="Поиск по частоте" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div class="filter-chips">
         <div class="chip-row chip-row--all">
@@ -31,9 +31,9 @@
           <!-- Сгенерируются в app.js -->
         </div>
         <div class="chip-row chip-row--sensitivity" id="chipRowSensitivity">
-          <button type="button" class="chip" data-filter="Чувствительный">Чувствительный</button>
-          <button type="button" class="chip" data-filter="Средняя">Средняя</button>
-          <button type="button" class="chip" data-filter="Тупой">Тупой</button>
+          <button type="button" class="chip" data-category="sensitivity" data-filter="Чувствительный">Чувствительный</button>
+          <button type="button" class="chip" data-category="sensitivity" data-filter="Средняя">Средняя</button>
+          <button type="button" class="chip" data-category="sensitivity" data-filter="Тупой">Тупой</button>
         </div>
       </div>
     </header>
