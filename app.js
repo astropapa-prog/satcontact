@@ -389,6 +389,7 @@
       chipAll.addEventListener('click', () => {
         resetAllAndCollapse();
         applyFilter();
+        chipAll.blur();
       });
     }
     if (toggleBandwidth && chipRowBandwidth) {
@@ -397,6 +398,11 @@
         chipRowBandwidth.classList.toggle('chip-row--collapsed', !isCollapsed);
         toggleBandwidth.classList.toggle('active', isCollapsed);
         toggleBandwidth.setAttribute('aria-pressed', String(isCollapsed));
+        if (!isCollapsed) {
+          selectedFilters.bandwidths.clear();
+          applyFilter();
+        }
+        toggleBandwidth.blur();
       });
     }
     if (toggleSensitivity && chipRowSensitivity) {
@@ -405,6 +411,11 @@
         chipRowSensitivity.classList.toggle('chip-row--collapsed', !isCollapsed);
         toggleSensitivity.classList.toggle('active', isCollapsed);
         toggleSensitivity.setAttribute('aria-pressed', String(isCollapsed));
+        if (!isCollapsed) {
+          selectedFilters.sensitivities.clear();
+          applyFilter();
+        }
+        toggleSensitivity.blur();
       });
     }
   }
