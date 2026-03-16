@@ -472,6 +472,19 @@
   }
 
   /**
+   * При касании вне чипсов — снимаем chip--blurred (сброс «залипшего» hover на мобильных)
+   */
+  function bindChipBlurReset() {
+    const handler = (e) => {
+      if (!e.target.closest('.chip')) {
+        document.querySelectorAll('.chip.chip--blurred').forEach((c) => c.classList.remove('chip--blurred'));
+      }
+    };
+    document.addEventListener('touchstart', handler, { passive: true });
+    document.addEventListener('click', handler);
+  }
+
+  /**
    * Обработка кликов по чипсам — переключение выбора (toggle)
    * Категория определяется по родительскому ряду
    */
@@ -491,8 +504,10 @@
         }
         if (set.has(filter)) {
           btn.classList.add('chip--active');
+          btn.classList.remove('chip--blurred');
         } else {
           btn.classList.remove('chip--active');
+          btn.classList.add('chip--blurred');
         }
         forceBlur(btn);
         applyFilter();
@@ -538,6 +553,7 @@
       renderGroupSelect();
       bindControlPanel();
       bindHorizontalScroll();
+      bindChipBlurReset();
       applyFilter();
       bindSearchInput();
     } catch (err) {
