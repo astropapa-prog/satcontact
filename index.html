@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1c242d">
+  <meta name="description" content="SDR Frequency Manager & AR Satellite Tracker — менеджер частот для радиолюбителей">
+  <title>SDR Frequency Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header" id="header">
+      <h1 class="header__title">Частоты</h1>
+      <div class="search-wrap">
+        <input type="search" class="search-input" id="searchInput" placeholder="Поиск по названию, частоте..." autocomplete="off">
+      </div>
+      <div class="filter-chips">
+        <div class="chip-row chip-row--all">
+          <button type="button" class="chip chip--all" id="chipAll" data-filter="">ВСЕ</button>
+        </div>
+        <div class="chip-row chip-row--satellites" id="chipRowSatellites">
+          <!-- Сгенерируются в app.js -->
+        </div>
+        <div class="chip-row chip-row--bandwidth" id="chipRowBandwidth">
+          <!-- Сгенерируются в app.js -->
+        </div>
+        <div class="chip-row chip-row--sensitivity" id="chipRowSensitivity">
+          <button type="button" class="chip" data-filter="Чувствительный">Чувствительный</button>
+          <button type="button" class="chip" data-filter="Средняя">Средняя</button>
+          <button type="button" class="chip" data-filter="Тупой">Тупой</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="status-bar" id="statusBar">
+        <span class="status-bar__text" id="statusText">Загрузка...</span>
+      </div>
+      <div class="card-list" id="cardList">
+        <!-- Карточки генерируются в app.js -->
+      </div>
+      <div class="empty-state" id="emptyState" hidden>
+        <p>Нет совпадений по запросу</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
