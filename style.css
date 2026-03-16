@@ -171,6 +171,8 @@ body {
   padding: 4px 0;
   margin-bottom: 4px;
   -webkit-overflow-scrolling: touch;
+  /* Предотвращает передачу жеста браузеру при достижении края (закрытие вкладки/назад) */
+  overscroll-behavior-x: contain;
 }
 
 .chip-scroll.chip-row--collapsed {
