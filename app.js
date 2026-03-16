@@ -446,6 +446,7 @@
         } else {
           btn.classList.remove('chip--active');
         }
+        btn.blur();
         applyFilter();
       });
     });
