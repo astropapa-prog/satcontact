@@ -329,15 +329,26 @@
   }
 
   /**
+   * Получить Set фильтров по родительскому ряду чипса (надёжнее, чем data-category)
+   */
+  function getFilterSetForChip(btn) {
+    const parent = btn.closest('.chip-scroll');
+    if (!parent) return null;
+    if (parent.id === 'chipRowSatellites') return selectedFilters.satellites;
+    if (parent.id === 'chipRowBandwidth') return selectedFilters.bandwidths;
+    if (parent.id === 'chipRowSensitivity') return selectedFilters.sensitivities;
+    return null;
+  }
+
+  /**
    * Обновление визуального состояния всех кнопок-фильтров
+   * Категория определяется по родительскому ряду, а не по data-атрибуту
    */
   function updateChipActiveStates() {
-    document.querySelectorAll('.chip[data-category]').forEach((btn) => {
-      const cat = btn.dataset.category;
+    document.querySelectorAll('.chip[data-filter]').forEach((btn) => {
+      const set = getFilterSetForChip(btn);
       const val = btn.dataset.filter;
-      const set = cat === 'satellite' ? selectedFilters.satellites
-        : cat === 'bandwidth' ? selectedFilters.bandwidths
-        : selectedFilters.sensitivities;
+      if (!set || val == null) return;
       if (set.has(val)) {
         btn.classList.add('chip--active');
       } else {
@@ -414,6 +425,7 @@
 
   /**
    * Обработка кликов по чипсам — переключение выбора (toggle)
+   * Категория определяется по родительскому ряду
    */
   function bindChipClicks() {
     document.querySelectorAll('.chip').forEach((btn) => {
@@ -421,12 +433,9 @@
     });
     document.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const cat = btn.dataset.category;
+        const set = getFilterSetForChip(btn);
         const filter = btn.dataset.filter;
-        if (!cat || !filter) return;
-        const set = cat === 'satellite' ? selectedFilters.satellites
-          : cat === 'bandwidth' ? selectedFilters.bandwidths
-          : selectedFilters.sensitivities;
+        if (!set || !filter) return;
         if (set.has(filter)) {
           set.delete(filter);
         } else {
