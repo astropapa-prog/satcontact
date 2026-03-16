@@ -9,7 +9,7 @@
   const DATA_URL = 'data/Frequencies.xml';
 
   // DOM elements
-  let searchInput, cardList, emptyState, statusText;
+  let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth;
   let allEntries = [];
   let filteredEntries = [];
@@ -131,6 +131,23 @@
   }
 
   /**
+   * Генерация уникальных групп из GroupName (для выпадающего списка)
+   */
+  function getUniqueGroups(entries) {
+    const seen = new Set();
+    const list = [];
+    entries.forEach((e) => {
+      const g = e.groupName || '(Без группы)';
+      if (!seen.has(g)) {
+        seen.add(g);
+        list.push(g);
+      }
+    });
+    if (list.length > 1) list.sort((a, b) => a.localeCompare(b));
+    return list;
+  }
+
+  /**
    * Генерация уникальных спутников для кнопок (сортировка по градусам)
    */
   function getUniqueSatellites(entries) {
@@ -233,8 +250,10 @@
 
   /**
    * Отрисовка списка карточек
+   * @param {Array} entries - отфильтрованные записи
+   * @param {number} [totalInGroup] - всего в выбранной группе (для статус-бара)
    */
-  function renderCards(entries) {
+  function renderCards(entries, totalInGroup) {
     if (!cardList) return;
     cardList.innerHTML = entries.map(createCardHtml).join('');
 
@@ -243,8 +262,20 @@
     }
 
     if (statusText) {
-      statusText.textContent = `Показано: ${entries.length} из ${allEntries.length}`;
+      const total = totalInGroup !== undefined ? totalInGroup : allEntries.length;
+      statusText.textContent = `Показано: ${entries.length} из ${total}`;
     }
+  }
+
+  /**
+   * Заполнение выпадающего списка групп
+   */
+  function renderGroupSelect() {
+    if (!groupSelect) return;
+    const groups = getUniqueGroups(allEntries);
+    groupSelect.innerHTML = '<option value="">Все группы</option>' +
+      groups.map((g) => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+    groupSelect.addEventListener('change', () => applyFilter());
   }
 
   /**
@@ -271,6 +302,7 @@
 
   /**
    * Обработка кликов по чипсам
+   * При нажатии — очистить строку поиска и подставить только значение кнопки
    */
   function bindChipClicks() {
     document.querySelectorAll('.chip').forEach((btn) => {
@@ -282,9 +314,7 @@
           return;
         }
         if (filter) {
-          const current = searchInput.value.trim();
-          const newVal = current ? `${current} ${filter}` : filter;
-          searchInput.value = newVal;
+          searchInput.value = filter;
           applyFilter();
         }
       });
@@ -296,8 +326,13 @@
    */
   function applyFilter() {
     const query = searchInput ? searchInput.value.trim() : '';
-    filteredEntries = filterEntries(allEntries, query);
-    renderCards(filteredEntries);
+    const group = groupSelect ? groupSelect.value : '';
+    let base = allEntries;
+    if (group) {
+      base = base.filter((e) => (e.groupName || '(Без группы)') === group);
+    }
+    filteredEntries = filterEntries(base, query);
+    renderCards(filteredEntries, base.length);
   }
 
   /**
@@ -311,6 +346,7 @@
       allEntries = parseXml(xmlText);
       filteredEntries = [...allEntries];
 
+      renderGroupSelect();
       renderFilterChips();
       applyFilter();
       bindSearchInput();
@@ -348,6 +384,7 @@
     cardList = document.getElementById('cardList');
     emptyState = document.getElementById('emptyState');
     statusText = document.getElementById('statusText');
+    groupSelect = document.getElementById('groupSelect');
     chipAll = document.getElementById('chipAll');
     chipRowSatellites = document.getElementById('chipRowSatellites');
     chipRowBandwidth = document.getElementById('chipRowBandwidth');
