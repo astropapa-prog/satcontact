@@ -1,0 +1,3405 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfMemoryEntry xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>72° Intelsat 22 (316.725) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>13° ComSatBw 2 (300.400) [36582]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (298.200) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (317,015) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243915000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317,035) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243935000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317,045) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243945000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317,055) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243955000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317,065) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243965000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317,075) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>125° FltSatCom F8 6кгц (317.085) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243985000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317,085)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>243985000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6003</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>125° FltSatCom F8 6кгц (317.090) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243990000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>125° FltSatCom F8 6кгц (317.095) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243995000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.095) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>243995000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>125° FltSatCom F8 6кгц (317.100) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.105) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244005000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>125° FltSatCom F8 6кгц (317.110) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244010000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.115) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244015000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.125) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.180) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244030000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.135) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244035000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.230) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244040000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.145) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244045000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.240) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.155) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244055000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.210) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244060000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (317.165) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244065000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.200) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244070000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.175) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244075000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.185) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244085000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.190) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244090000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.195) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244095000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.205) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244105000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6003</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.110) ср</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>244115000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6003</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.215) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244115000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.225) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244125000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.235) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244135000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (317.245) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244145000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.255) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244155000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.265) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244165000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.275) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244175000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.285) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244185000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.295) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244195000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.305) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244205000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (316.775) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244225000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>62° ComSatBw 1 (301.025) [35943] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244275000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (293.550) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (293.000) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>244975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B (294.500) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>245150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B (296.200) [32294] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>245800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>95° Skynet 5A (314.230) [30794] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>245850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (313.000) [39034] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>245950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (295.600) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>246250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (297.750) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>246525000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (297.700) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>246700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (298.100) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>247350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (298.800) [39034] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>247450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (298.850) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>13° ComSatBw 2 (311.975) [36582] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294,375) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248825000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.445) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248845000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.455) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248855000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.465) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248865000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.475) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.485) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248885000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.495) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248895000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.505) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248905000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.515) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248915000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (297.550) ср</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>248925000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (316.975) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248930000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.535) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248935000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.545) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248945000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.555) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248955000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.565) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248965000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.575) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.585) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248985000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6003</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.525) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248990000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.595) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>248995000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.600) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.605) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249005000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц                [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249010000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.615) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249015000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.625) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.635) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249035000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.645) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249045000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.650) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.655) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249055000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.665) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249065000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.675) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249075000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.685) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249085000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 6 кгц (302.695) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249095000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.700) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249100000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.705) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249105000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.715) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249115000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.725) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249125000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.735) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249135000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.745) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249145000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.755) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249155000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.765) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249165000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.775) средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249175000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.785) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249185000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.795) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249195000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.805) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249205000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.815) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249215000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.825) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249225000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.835) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249235000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.845) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249245000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.850) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.855) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249255000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.865) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249265000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц  (302.875) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249275000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.885) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249285000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.895) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249295000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 6 кгц (302.900) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249300000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.905) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249305000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.915) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249315000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.925) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249325000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.935) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249335000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.945) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249345000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10  6 кгц (302.950) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6003</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (302.955) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249355000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>62° ComSatBw 1 (300.975) [35943] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>80° SDS 3-F2 USA 155 (299.000) [26635]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B (312.850) [32294] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249490000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B 8кгц (298.760) [32294] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249560000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>8000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B 8кгц (298.740) [32294] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249580000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>8000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (295.000) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (300.500) [39034] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249890000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B (308.750) [32294] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249930000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>80° SDS 3-F2 USA 155 (295.000) [26635]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>249970000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>40000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B 8кгц         [32294]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>8000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (312.600) [39034] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250090000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25°  цифра</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>8000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>95°</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250200000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.875) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.050) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (300.300) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>13° ComSatBw 2 (314.950) [36582] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250900000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>28000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (299.500) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>250950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>80° SDS 3-F2 USA 155 (296.500) [26635] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>251000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>40000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>72° Intelsat 22 (298.225) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>251350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>62° ComSatBw 1 (308.450) [35943] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>251575000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (298.225) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>251600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (300.350) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>251800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (292.850) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>251850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (292.900?) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>251900000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (292.950) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>251950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (292.950)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>251950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>95 СЛАБ</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>251990000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (293.050) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (293.050) [25967]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>72° Intelsat 22 (293.150) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (310.175) [40614]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252200000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (316.350) [40614] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>72° Intelsat 22 (293.300) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252300000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (310.225) [40614]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (293.275) [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (293.200) [34810] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (309.800) [34810] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252500000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (310.400) [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (311.450) [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (306.300) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>252750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (307.800) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253300000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.550) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.950?) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>253600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B (316.250) [32294]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11  (295.450) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (294.650)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>253650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>32° Skynet 4C (294.650) [20776] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.425) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>72° Intelsat 22 (293.725) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (294.750) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (294 750) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (294.050) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253825000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (294.850) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>125° FltSatCom F8 (294.850) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>28000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (312.800) [39034] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (294.975) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>253975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>80° SDS 3-F2 USA 155 (298.630) [26635] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>40000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (308.350) [38098]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-1.6° Skynet 4E (307,550 )</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>254155000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (308.100) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254500000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (308.130) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254530000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (295.625) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (306.400) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (312.550) [39034] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254730000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>13° ComSatBw 2 (317.825) [36582] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>254775000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (318.175) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255100000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>75° UFO F11 ГАЗ (296.250) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.400) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255275000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>13° ComSatBw 2 (296.350) [36582] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (296.350)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>255350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (296.400?) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>255400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (296.450) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (296.450) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>125° FltSatCom F8 ( 296.550 ) [20253] Пятёрки</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>28000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (306.630) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (296.675) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>62° ComSatBw 1 (315.100) [35943] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255775000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 6кгц (296.850) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>255850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (309.100) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (313.850) [39034] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (311.700) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.850) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (293.950) [25967] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (296.100?) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>256900000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (297.950) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.950) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22  (316.850) [38098] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>256975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (298.050) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (297.450) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257075000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72 Intelsat 22 (295.650) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>257100000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>125° FltSatCom F8 (298.150) [20253]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>28000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (298.125) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257175000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (308.800) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257200000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (316.900) [20776] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (309.725) [20776] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257300000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (307.200) [20776] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>13° ComSatBw 2 (305.950) [36582] румыны</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>95° Skynet 5A (305.950) [30794] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-1.6° Skynet 4E</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>257655000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>28462</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (316.150) [39034] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (308.400) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>72° Intelsat 22 (311.375) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257775000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>95°</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>257825000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.075)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>257850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>25° SKYNET 5B (317.975) [32294]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>29° UFO F2 (299.300) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258225000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (299.350) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (299.450) [20776] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (299.450) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (299.500) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258500000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (299.550) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (299.550) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (294.825) [25967]  средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>75° UFO F11 (299.650) [28117] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (312.900) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>62° ComSatBw 1 (317.925) [35943] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>259000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B   (307.450) ср</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>259050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (309.700) [34810] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>259975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (310.575) [34810] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (310.275) [34810] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260075000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>14° SICRAL1B (310.125) [34810] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260125000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (294.600) [34810] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260175000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (314.400) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (293.975) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260375000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (294.025) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260425000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (294.025) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260425000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.575) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>260425000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.575) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.075) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260475000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.130) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260500000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (294.125) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260525000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (294.125) [25967]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260525000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (293.800) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (294.175) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260575000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (294.175) [22787] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260575000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.225) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO  F11 (297.100) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.475)ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>260675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (294.275) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (294.275) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.350) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (313.050) [39034] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260900000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75°</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>260950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>95° Skynet 5A (298.380) [30794] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261100000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>18° MILSTAR 2-F3 (USA 164) (294.950) [27168] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261200000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>40000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (316.550) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.175) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261575000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (306.975) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (295.225) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.225) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (309.650) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.275) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (296.525) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (295.325) [25967]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.325) [23467] RU</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (295.400) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (307.075) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261775000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (297.600) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.425) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261825000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (300.275) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.475) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (316.625) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261900000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (295.525) [25967]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261925000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.525) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261925000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.625) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.000) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>261975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>52° Skynet 5D (314.200) [39034] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>38000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (316.650) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (295.675) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262075000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.675) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262075000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.725?)ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>262125000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11      (294.000)ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>262150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.775)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>262175000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (295.775) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262175000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.825)ср</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>262225000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (300.275) [22787] ?</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262275000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.875)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>262275000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>125° FltSatCom F8 575 кгц (295.900) [20253] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262300000</Frequency>
+    <DetectorType>WFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>575000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (295.975)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>262375000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (295.975) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262375000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (310.700) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>262950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (312.700) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (316.400) [20776] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (311.400) [20776] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>32° Skynet 4C (315.200) [20776] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263500000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.175) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263575000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.140) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263600000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.225) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 ( 295.075) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.275) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (295.125) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.325) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (298.525) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 6кгц (317.150) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>6000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (297.375) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263775000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.375) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263775000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.250) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.425) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263825000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>32° Skynet 4C (297.475) [20776] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.475) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.525) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263925000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (306.250) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.100) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265325000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (306.350) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (306.350) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.200) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265375000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (306.450) [23467] RU</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (306.450) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.500) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265475000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (306.550) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (306.625)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>265625000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>72° Intelsat 22 (306.675) [38098] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265675000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (306.850) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>265850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>29° UFO F2 (315.500) [22787] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>266300000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>75° UFO F11 (316.575) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>266750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (307.850) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>266850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (307.850)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>266850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (307.950) [22787]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>266950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (307.950) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>266950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.500) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>266975000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.350) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267025000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (308.050) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>267050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (308.100) [40614] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267100000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (308.150) [40614] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (308.200) [40614] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267200000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (308.050) [28117]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267225000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>41° SICRAL 2 (308.250) [40614] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>34000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>true</IsFavourite>
+    <Name>75° UFO F11 (294.900) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.125)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>267550000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297.625) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267575000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (310.525) [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (310.075) [34810] RU</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>267950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B                  [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268000000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (310.325 ) [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268050000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>14° SICRAL1B (293.325) [34810]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268100000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>37000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (309.150) [28117] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268150000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (296.050) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>268200000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (309.250)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>268250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (309.250) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-29° UFO F7 (309.350) [22787] чувствительный</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (309.350)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>268350000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.900) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>268400000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (297,150 ) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>268450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (310.650) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269650000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (309.925) ту</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>269700000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295,150) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269725000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (310.750) [25967] средняя</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (310.750)</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>269750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (310.025) ту РУ</Name>
+    <GroupName>SATCOM потухшие</GroupName>
+    <Frequency>269800000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>25000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (310.850) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>-22° UFO F10 (310.850) [25967] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269850000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (295.550) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269925000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>75° UFO F11 (294.325) [28117] тупой</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>269950000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>MERIDIAN VOSXOD EURASIA (442.875)</Name>
+    <GroupName>MERIDIAN</GroupName>
+    <Frequency>483500000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>43000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>MERIDIAN APOGEI EURASIA (442.875)</Name>
+    <GroupName>MERIDIAN</GroupName>
+    <Frequency>483750000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>43000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>MERIDIAN APOGEI AMERICA (442.875)</Name>
+    <GroupName>MERIDIAN</GroupName>
+    <Frequency>484250000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>43000</FilterBandwidth>
+  </MemoryEntry>
+</ArrayOfMemoryEntry>
