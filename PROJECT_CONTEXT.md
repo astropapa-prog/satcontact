@@ -70,15 +70,22 @@ satcontact/
 
 **Поведение тумблеров:**
 - При сворачивании ряда — сброс соответствующего Set (bandwidths/sensitivities)
-- После клика — `blur()` для снятия фокуса
+- После клика — `forceBlur()` + класс `btn--blurred` (сброс «залипшего» hover на мобильных)
 
 ### 4.5 Важные детали реализации
 
 - **Горизонтальный скролл мышью:** обработчик `wheel` преобразует deltaY в scrollLeft (passive: false)
-- **Подсветка чипсов:** `chip--active`, снятие фокуса через `blur()` после клика
+- **Оverscroll на мобильных:** `overscroll-behavior-x: none` на .chip-scroll и body; в `bindHorizontalScroll` — touchmove с preventDefault при достижении края (scrollLeft≤2 или ≥max-2) и свайпе в направлении overscroll — предотвращает закрытие браузера
+- **Подсветка чипсов:** `chip--active`; при отключении фильтра — `chip--blurred` + `forceBlur()`; при касании вне чипсов/тумблеров — сброс `chip--blurred`, `btn--blurred` через `bindChipBlurReset()`
+- **forceBlur(el):** blur() + fallback: если элемент остаётся в фокусе (типично на мобильных), создаётся временный input, фокус переносится на него, input удаляется
+- **Классы chip--blurred, btn--blurred:** CSS override для :hover/:focus — принудительно показывают дефолтный стиль, устраняют «залипание» на мобильных
 - **Сворачивание рядов:** CSS-класс `chip-row--collapsed` (display: none), не атрибут hidden
 - **Регенерация чипсов:** при смене группы — пересборка рядов спутников и полос из данных выбранной группы
 - **Кнопка ВСЕ:** не сбрасывает выбор группы
+
+**Мобильные исправления (style.css, app.js):**
+- style.css: overscroll-behavior-x (body, .chip-scroll); .chip.chip--blurred:not(.chip--active); .btn--toggle.btn--blurred:not(.active)
+- app.js: forceBlur(), bindChipBlurReset(), touchmove в bindHorizontalScroll
 
 ### 4.6 Дизайн (style.css)
 
@@ -111,4 +118,6 @@ satcontact/
 8. Сброс фильтров при сворачивании рядов Полоса/Чувств.
 9. Поиск по частоте: префикс (startsWith) вместо подстроки (includes)
 10. Placeholder «Поиск по частоте»
-11. overscroll-behavior-x: contain на chip-scroll — предотвращает передачу жеста браузеру при достижении края (закрытие вкладки/назад на мобильном)
+11. **Overscroll на мобильных:** при скролле строки фильтров вправо до конца следующий жест закрывал браузер. Решение: `overscroll-behavior-x: none` на .chip-scroll и body; touchmove с preventDefault при достижении края (scrollLeft≤2 или ≥max-2) и свайпе в направлении overscroll
+12. **Чипсы «залипают» на мобильных:** при отключении фильтра повторным кликом кнопка продолжала гореть. Решение: `forceBlur()` (blur + fallback с временным input); класс `chip--blurred` + CSS override; `bindChipBlurReset()` — сброс при касании вне чипсов
+13. **Тумблеры Полоса/Чувств. «залипают» на мобильных:** аналогично чипсам. Решение: класс `btn--blurred` + CSS override для .btn--toggle; в click-хендлерах: add btn--blurred + forceBlur(); `bindChipBlurReset` расширен — сброс при касании вне чипсов и тумблеров
