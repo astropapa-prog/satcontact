@@ -24,6 +24,26 @@
   };
 
   /**
+   * Снятие фокуса с элемента. На мобильных blur() часто не срабатывает —
+   * используем временный input для «кражи» фокуса.
+   */
+  function forceBlur(el) {
+    if (!el) return;
+    el.blur();
+    setTimeout(() => {
+      if (document.activeElement === el) {
+        const tmp = document.createElement('input');
+        tmp.setAttribute('type', 'text');
+        tmp.setAttribute('tabindex', '-1');
+        tmp.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+        document.body.appendChild(tmp);
+        tmp.focus();
+        tmp.remove();
+      }
+    }, 0);
+  }
+
+  /**
    * Извлечение NORAD ID из Name (значение в квадратных скобках)
    */
   function extractNoradId(name) {
@@ -474,7 +494,7 @@
         } else {
           btn.classList.remove('chip--active');
         }
-        btn.blur();
+        forceBlur(btn);
         applyFilter();
       });
     });
