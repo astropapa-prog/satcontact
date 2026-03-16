@@ -338,7 +338,11 @@
       const set = cat === 'satellite' ? selectedFilters.satellites
         : cat === 'bandwidth' ? selectedFilters.bandwidths
         : selectedFilters.sensitivities;
-      btn.classList.toggle('chip--active', set.has(val));
+      if (set.has(val)) {
+        btn.classList.add('chip--active');
+      } else {
+        btn.classList.remove('chip--active');
+      }
     });
   }
 
@@ -351,10 +355,10 @@
     selectedFilters.sensitivities.clear();
     if (searchInput) searchInput.value = '';
     if (chipRowBandwidth) {
-      chipRowBandwidth.hidden = true;
+      chipRowBandwidth.classList.add('chip-row--collapsed');
     }
     if (chipRowSensitivity) {
-      chipRowSensitivity.hidden = true;
+      chipRowSensitivity.classList.add('chip-row--collapsed');
     }
     if (toggleBandwidth) {
       toggleBandwidth.classList.remove('active');
@@ -376,22 +380,36 @@
         applyFilter();
       });
     }
-    if (toggleBandwidth) {
+    if (toggleBandwidth && chipRowBandwidth) {
       toggleBandwidth.addEventListener('click', () => {
-        const isHidden = chipRowBandwidth.hidden;
-        chipRowBandwidth.hidden = !isHidden;
-        toggleBandwidth.classList.toggle('active', !isHidden);
-        toggleBandwidth.setAttribute('aria-pressed', String(!isHidden));
+        const isCollapsed = chipRowBandwidth.classList.contains('chip-row--collapsed');
+        chipRowBandwidth.classList.toggle('chip-row--collapsed', !isCollapsed);
+        toggleBandwidth.classList.toggle('active', isCollapsed);
+        toggleBandwidth.setAttribute('aria-pressed', String(isCollapsed));
       });
     }
-    if (toggleSensitivity) {
+    if (toggleSensitivity && chipRowSensitivity) {
       toggleSensitivity.addEventListener('click', () => {
-        const isHidden = chipRowSensitivity.hidden;
-        chipRowSensitivity.hidden = !isHidden;
-        toggleSensitivity.classList.toggle('active', !isHidden);
-        toggleSensitivity.setAttribute('aria-pressed', String(!isHidden));
+        const isCollapsed = chipRowSensitivity.classList.contains('chip-row--collapsed');
+        chipRowSensitivity.classList.toggle('chip-row--collapsed', !isCollapsed);
+        toggleSensitivity.classList.toggle('active', isCollapsed);
+        toggleSensitivity.setAttribute('aria-pressed', String(isCollapsed));
       });
     }
+  }
+
+  /**
+   * Горизонтальный скролл колёсиком мыши на десктопе
+   */
+  function bindHorizontalScroll() {
+    document.querySelectorAll('.chip-scroll').forEach((el) => {
+      el.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0 && el.scrollWidth > el.clientWidth) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
+    });
   }
 
   /**
@@ -414,7 +432,11 @@
         } else {
           set.add(filter);
         }
-        btn.classList.toggle('chip--active', set.has(filter));
+        if (set.has(filter)) {
+          btn.classList.add('chip--active');
+        } else {
+          btn.classList.remove('chip--active');
+        }
         applyFilter();
       });
     });
@@ -457,6 +479,7 @@
 
       renderGroupSelect();
       bindControlPanel();
+      bindHorizontalScroll();
       applyFilter();
       bindSearchInput();
     } catch (err) {

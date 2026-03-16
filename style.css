@@ -173,6 +173,10 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.chip-scroll.chip-row--collapsed {
+  display: none !important;
+}
+
 .chip-scroll:last-child {
   margin-bottom: 0;
 }
