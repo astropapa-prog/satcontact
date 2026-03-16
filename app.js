@@ -10,7 +10,8 @@
 
   // DOM elements
   let searchInput, cardList, emptyState, statusText, groupSelect;
-  let chipAll, chipRowSatellites, chipRowBandwidth;
+  let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
+  let toggleBandwidth, toggleSensitivity;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -342,6 +343,58 @@
   }
 
   /**
+   * Сброс всех фильтров и сворачивание рядов (для кнопки ВСЕ)
+   */
+  function resetAllAndCollapse() {
+    selectedFilters.satellites.clear();
+    selectedFilters.bandwidths.clear();
+    selectedFilters.sensitivities.clear();
+    if (searchInput) searchInput.value = '';
+    if (chipRowBandwidth) {
+      chipRowBandwidth.hidden = true;
+    }
+    if (chipRowSensitivity) {
+      chipRowSensitivity.hidden = true;
+    }
+    if (toggleBandwidth) {
+      toggleBandwidth.classList.remove('active');
+      toggleBandwidth.setAttribute('aria-pressed', 'false');
+    }
+    if (toggleSensitivity) {
+      toggleSensitivity.classList.remove('active');
+      toggleSensitivity.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  /**
+   * Привязка панели управления (ВСЕ, тумблеры)
+   */
+  function bindControlPanel() {
+    if (chipAll) {
+      chipAll.addEventListener('click', () => {
+        resetAllAndCollapse();
+        applyFilter();
+      });
+    }
+    if (toggleBandwidth) {
+      toggleBandwidth.addEventListener('click', () => {
+        const isHidden = chipRowBandwidth.hidden;
+        chipRowBandwidth.hidden = !isHidden;
+        toggleBandwidth.classList.toggle('active', !isHidden);
+        toggleBandwidth.setAttribute('aria-pressed', String(!isHidden));
+      });
+    }
+    if (toggleSensitivity) {
+      toggleSensitivity.addEventListener('click', () => {
+        const isHidden = chipRowSensitivity.hidden;
+        chipRowSensitivity.hidden = !isHidden;
+        toggleSensitivity.classList.toggle('active', !isHidden);
+        toggleSensitivity.setAttribute('aria-pressed', String(!isHidden));
+      });
+    }
+  }
+
+  /**
    * Обработка кликов по чипсам — переключение выбора (toggle)
    */
   function bindChipClicks() {
@@ -350,14 +403,6 @@
     });
     document.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
-        if (btn.id === 'chipAll') {
-          selectedFilters.satellites.clear();
-          selectedFilters.bandwidths.clear();
-          selectedFilters.sensitivities.clear();
-          if (searchInput) searchInput.value = '';
-          applyFilter();
-          return;
-        }
         const cat = btn.dataset.category;
         const filter = btn.dataset.filter;
         if (!cat || !filter) return;
@@ -411,6 +456,7 @@
       filteredEntries = [...allEntries];
 
       renderGroupSelect();
+      bindControlPanel();
       applyFilter();
       bindSearchInput();
     } catch (err) {
@@ -454,6 +500,9 @@
     chipAll = document.getElementById('chipAll');
     chipRowSatellites = document.getElementById('chipRowSatellites');
     chipRowBandwidth = document.getElementById('chipRowBandwidth');
+    chipRowSensitivity = document.getElementById('chipRowSensitivity');
+    toggleBandwidth = document.getElementById('toggleBandwidth');
+    toggleSensitivity = document.getElementById('toggleSensitivity');
 
     loadData();
   }

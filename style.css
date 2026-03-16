@@ -48,69 +48,109 @@ body {
   flex-direction: column;
 }
 
-/* ========== Header (sticky) ========== */
+/* ========== Header (sticky, compact) ========== */
 .header {
   position: sticky;
   top: 0;
   z-index: 100;
   background: var(--bg-card);
-  padding: 12px 16px;
-  padding-top: calc(12px + var(--safe-top));
+  padding: 6px 10px;
+  padding-top: calc(6px + var(--safe-top));
   box-shadow: var(--shadow);
 }
 
-.header__title {
-  margin: 0 0 12px 0;
-  font-size: 1.25rem;
-  font-weight: 600;
+.header__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
-.group-select-wrap {
-  margin-bottom: 12px;
+.header__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .group-select {
-  width: 100%;
-  padding: 10px 14px;
-  padding-right: 36px;
-  font-size: 1rem;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 28px 6px 8px;
+  font-size: 0.8125rem;
   font-family: var(--font-sans);
   color: var(--text-primary);
   background: var(--bg-app);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   outline: none;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a9ba8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%238a9ba8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 6px center;
 }
 
 .group-select:focus {
   border-color: var(--accent);
 }
 
-.group-select option {
-  background: var(--bg-card);
-  color: var(--text-primary);
+/* ========== Control panel ========== */
+.control-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
-.search-wrap {
-  margin-bottom: 12px;
+.btn {
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-app);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn:hover,
+.btn:focus {
+  background: rgba(82, 136, 193, 0.2);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.btn--all {
+  font-weight: 600;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn--all:hover,
+.btn--all:focus {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn--toggle.active {
+  background: rgba(82, 136, 193, 0.4);
+  border-color: var(--accent);
 }
 
 .search-input {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 1rem;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 0.8125rem;
   font-family: var(--font-sans);
   color: var(--text-primary);
   background: var(--bg-app);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color 0.2s;
 }
 
 .search-input::placeholder {
@@ -121,35 +161,42 @@ body {
   border-color: var(--accent);
 }
 
-/* ========== Filter chips ========== */
-.filter-chips {
+/* ========== Chip rows (horizontal scroll) ========== */
+.chip-scroll {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
   gap: 6px;
-  align-items: center;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.chip-row--all {
-  margin-bottom: 4px;
+.chip-scroll:last-child {
+  margin-bottom: 0;
+}
+
+.chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .chip {
-  padding: 6px 12px;
-  font-size: 0.8125rem;
+  padding: 5px 10px;
+  font-size: 0.75rem;
   font-family: var(--font-sans);
   color: var(--text-primary);
   background: var(--bg-app);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 16px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .chip:hover,
@@ -162,19 +209,6 @@ body {
 .chip--active {
   background: rgba(82, 136, 193, 0.35);
   border-color: var(--accent);
-}
-
-.chip--all {
-  font-weight: 600;
-  padding: 8px 16px;
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.chip--all:hover,
-.chip--all:focus {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
 }
 
 /* ========== Main content ========== */
@@ -333,12 +367,12 @@ body {
 /* ========== Responsive (tablet/desktop) ========== */
 @media (min-width: 600px) {
   .header {
-    padding: 16px 24px;
-    padding-top: calc(16px + var(--safe-top));
+    padding: 8px 16px;
+    padding-top: calc(8px + var(--safe-top));
   }
 
   .header__title {
-    font-size: 1.5rem;
+    font-size: 1.125rem;
   }
 
   .main {
