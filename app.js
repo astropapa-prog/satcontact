@@ -207,7 +207,7 @@
 
   /**
    * Фильтрация по частоте (только цифры, без точек/запятых)
-   * Сопоставление RX и TX частот по подстроке цифр
+   * Ввод должен быть префиксом частоты: "25" → только частоты, начинающиеся на 25
    */
   function filterByFrequency(entries, freqInput) {
     const digits = (freqInput || '').replace(/\D/g, '');
@@ -215,10 +215,10 @@
 
     return entries.filter((e) => {
       const rxDigits = String(e.frequency);
-      if (rxDigits.includes(digits)) return true;
+      if (rxDigits.startsWith(digits)) return true;
       if (e.txFreq != null) {
         const txDigits = String(Math.round(e.txFreq * 1000));
-        if (txDigits.includes(digits)) return true;
+        if (txDigits.startsWith(digits)) return true;
       }
       return false;
     });
