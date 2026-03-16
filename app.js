@@ -431,6 +431,23 @@
           el.scrollLeft += e.deltaY;
         }
       }, { passive: false });
+
+      // Блокировка overscroll на touch: при достижении края предотвращаем передачу жеста браузеру
+      let touchStartX = 0;
+      el.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+      el.addEventListener('touchmove', (e) => {
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        if (maxScroll <= 0) return;
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const atLeft = el.scrollLeft <= 2;
+        const atRight = el.scrollLeft >= maxScroll - 2;
+        if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
+          e.preventDefault();
+        }
+        touchStartX = e.touches[0].clientX;
+      }, { passive: false });
     });
   }
 
