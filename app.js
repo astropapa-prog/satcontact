@@ -422,7 +422,8 @@
           selectedFilters.bandwidths.clear();
           applyFilter();
         }
-        toggleBandwidth.blur();
+        toggleBandwidth.classList.add('btn--blurred');
+        forceBlur(toggleBandwidth);
       });
     }
     if (toggleSensitivity && chipRowSensitivity) {
@@ -435,7 +436,8 @@
           selectedFilters.sensitivities.clear();
           applyFilter();
         }
-        toggleSensitivity.blur();
+        toggleSensitivity.classList.add('btn--blurred');
+        forceBlur(toggleSensitivity);
       });
     }
   }
@@ -472,12 +474,13 @@
   }
 
   /**
-   * При касании вне чипсов — снимаем chip--blurred (сброс «залипшего» hover на мобильных)
+   * При касании вне чипсов и тумблеров — снимаем chip--blurred, btn--blurred (сброс «залипшего» hover на мобильных)
    */
   function bindChipBlurReset() {
     const handler = (e) => {
-      if (!e.target.closest('.chip')) {
+      if (!e.target.closest('.chip') && !e.target.closest('.btn--toggle')) {
         document.querySelectorAll('.chip.chip--blurred').forEach((c) => c.classList.remove('chip--blurred'));
+        document.querySelectorAll('.btn--toggle.btn--blurred').forEach((b) => b.classList.remove('btn--blurred'));
       }
     };
     document.addEventListener('touchstart', handler, { passive: true });

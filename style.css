@@ -142,6 +142,13 @@ body {
   border-color: var(--accent);
 }
 
+/* Сброс «залипшего» hover/focus на мобильных для тумблеров Полоса/Чувств. */
+.btn--toggle.btn--blurred:not(.active):hover,
+.btn--toggle.btn--blurred:not(.active):focus {
+  background: var(--bg-app);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
 .search-input {
   flex: 1;
   min-width: 0;
