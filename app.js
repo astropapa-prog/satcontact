@@ -12,6 +12,7 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
+  let header, main, mapView, mapBack, mapTitle, mapShowAll, mapCanvas, mapLoading, mapHud;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -267,7 +268,7 @@
     const bwFormatted = entry.bandwidthFormatted || '';
 
     return `
-      <article class="freq-card" data-norad="${noradIds.join(',')}" data-searchable="${escapeHtml(entry.cleanName + ' ' + rxFreq + ' ' + noradIds.join(' '))}">
+      <article class="freq-card" data-norad="${noradIds.join(',')}" data-clean-name="${escapeHtml(entry.cleanName || '')}" data-searchable="${escapeHtml(entry.cleanName + ' ' + rxFreq + ' ' + noradIds.join(' '))}">
         <div class="freq-card__main">
           <div class="freq-card__left">
             <span class="freq-card__name">${escapeHtml(entry.cleanName || '—')}</span>
@@ -323,6 +324,47 @@
   }
 
   /**
+   * Открытие карты (SPA-переход). Скрытие списка, показ map-view.
+   * @param {string[]} noradIds - NORAD ID спутников
+   * @param {string} satelliteName - название для шапки
+   */
+  function openMapView(noradIds, satelliteName) {
+    if (!mapView || !header || !main) return;
+    if (noradIds.length === 0) return;
+
+    header.classList.add('hidden');
+    main.classList.add('hidden');
+    mapView.hidden = false;
+
+    if (mapTitle) mapTitle.textContent = satelliteName || 'Карта';
+    if (mapLoading) mapLoading.hidden = false;
+
+    if (typeof window.initMap === 'function') {
+      window.initMap({ noradIds, satelliteName });
+    } else {
+      // Заглушка до подключения map.js
+      setTimeout(() => {
+        if (mapLoading) mapLoading.hidden = true;
+      }, 500);
+    }
+  }
+
+  /**
+   * Закрытие карты, возврат к списку частот
+   */
+  function closeMapView() {
+    if (!mapView || !header || !main) return;
+
+    mapView.hidden = true;
+    header.classList.remove('hidden');
+    main.classList.remove('hidden');
+
+    if (typeof window.cleanupMap === 'function') {
+      window.cleanupMap();
+    }
+  }
+
+  /**
    * Привязка кнопок «посмотреть на карте» и «навестись» (заготовка для модулей 2–3)
    */
   function bindCardActionButtons() {
@@ -332,14 +374,32 @@
         e.stopPropagation();
         const card = btn.closest('.freq-card');
         const noradIds = (card?.dataset.norad || '').split(',').filter(Boolean);
+        const satelliteName = card?.dataset.cleanName || '';
         const action = btn.dataset.action;
         if (action === 'map') {
-          console.log('Посмотреть на карте:', noradIds);
+          openMapView(noradIds, satelliteName);
         } else if (action === 'track') {
           console.log('Навестись:', noradIds);
         }
       });
     });
+  }
+
+  /**
+   * Привязка кнопок карты (Назад, ВСЕ)
+   */
+  function bindMapButtons() {
+    if (mapBack) {
+      mapBack.addEventListener('click', () => closeMapView());
+    }
+    if (mapShowAll) {
+      mapShowAll.addEventListener('click', () => {
+        const allNoradIds = [...new Set(filteredEntries.flatMap((e) => e.noradIds || []))].filter(Boolean);
+        if (allNoradIds.length > 0) {
+          openMapView(allNoradIds, 'Все спутники');
+        }
+      });
+    }
   }
 
   /**
@@ -638,6 +698,17 @@
     toggleBandwidth = document.getElementById('toggleBandwidth');
     toggleSensitivity = document.getElementById('toggleSensitivity');
 
+    header = document.getElementById('header');
+    main = document.querySelector('.main');
+    mapView = document.getElementById('mapView');
+    mapBack = document.getElementById('mapBack');
+    mapTitle = document.getElementById('mapTitle');
+    mapShowAll = document.getElementById('mapShowAll');
+    mapCanvas = document.getElementById('mapCanvas');
+    mapLoading = document.getElementById('mapLoading');
+    mapHud = document.getElementById('mapHud');
+
+    bindMapButtons();
     loadData();
   }
 

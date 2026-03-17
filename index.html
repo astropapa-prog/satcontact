@@ -47,6 +47,40 @@
         <p>Нет совпадений по запросу</p>
       </div>
     </main>
+
+    <!-- Модуль 2: Интерактивная карта (SPA-переход) -->
+    <div id="mapView" class="map-view" hidden>
+      <header class="map-view__header">
+        <button type="button" class="map-view__back" id="mapBack" aria-label="Назад">⬅ Назад</button>
+        <h2 class="map-view__title" id="mapTitle">Карта</h2>
+        <button type="button" class="map-view__all" id="mapShowAll">ВСЕ</button>
+      </header>
+      <div class="map-view__canvas" id="mapCanvas">
+        <!-- D3-карта будет здесь -->
+      </div>
+      <div class="map-view__loading" id="mapLoading">
+        <div class="map-view__loading-status">Поиск GPS…</div>
+        <div class="map-view__loading-status">Загрузка орбит…</div>
+      </div>
+      <div class="map-view__hud" id="mapHud">
+        <div class="map-view__hud-row">
+          <span>Азимут:</span>
+          <span id="mapAzimuth">—</span>
+        </div>
+        <div class="map-view__hud-row">
+          <span>Элевация:</span>
+          <span id="mapElevation">—</span>
+        </div>
+        <div class="map-view__hud-row">
+          <span>Дистанция:</span>
+          <span id="mapDistance">—</span>
+        </div>
+        <div class="map-view__hud-row map-view__hud-coords">
+          <span id="mapCoords">—</span>
+          <button type="button" class="map-view__refresh" id="mapRefresh" aria-label="Обновить GPS">↻</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

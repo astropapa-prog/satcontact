@@ -507,3 +507,156 @@ body {
     width: auto;
   }
 }
+
+/* ========== Модуль 2: Интерактивная карта (map-view) ========== */
+.map-view {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+.map-view[hidden] {
+  display: none !important;
+}
+
+/* Скрытие списка при показе карты */
+.main.hidden,
+.header.hidden {
+  display: none !important;
+}
+
+.map-view__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.map-view__back {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.map-view__back:hover,
+.map-view__back:focus {
+  color: var(--accent-hover);
+  outline: none;
+}
+
+.map-view__title {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-view__all {
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.map-view__all:hover,
+.map-view__all:focus {
+  background: var(--accent-hover);
+  outline: none;
+}
+
+.map-view__canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #1c242d;
+}
+
+/* Загрузочный оверлей */
+.map-view__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(28, 36, 45, 0.95);
+  z-index: 10;
+}
+
+.map-view__loading[hidden] {
+  display: none !important;
+}
+
+.map-view__loading-status {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+/* HUD-панель телеметрии */
+.map-view__hud {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  background: #212d3b;
+  font-size: 0.8125rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+}
+
+.map-view__hud-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.map-view__hud-row span:last-child {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.map-view__hud-coords {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.map-view__refresh {
+  padding: 6px 10px;
+  font-size: 1rem;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.map-view__refresh:hover,
+.map-view__refresh:focus {
+  background: rgba(82, 136, 193, 0.2);
+  outline: none;
+}
