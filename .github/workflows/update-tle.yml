@@ -1,0 +1,46 @@
+name: Update TLE
+
+on:
+  schedule:
+    # Ежедневно в 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Ручной запуск из вкладки Actions
+
+jobs:
+  update-tle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # для push в репозиторий
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Download TLE from Space-Track
+        env:
+          SPACETRACK_USER: ${{ secrets.SPACETRACK_USER }}
+          SPACETRACK_PASS: ${{ secrets.SPACETRACK_PASS }}
+        run: python scripts/update_tle.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/tle.txt
+          if git diff --staged --quiet; then
+            echo "TLE не изменился, коммит не требуется"
+          else
+            git commit -m "chore: обновление TLE $(date -u +%Y-%m-%d)"
+            git push
+          fi
