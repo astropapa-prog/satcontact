@@ -14,7 +14,7 @@
 
 - **Frequencies.xml** (data/): XML из SDR#, теги MemoryEntry: Name, Frequency, GroupName, DetectorType, FilterBandwidth
 - **NORAD ID:** извлекаются все значения из Name в квадратных скобках [28117], [40296][44453][45254][52145] и т.д.
-- **TLE** (data/tle.txt): обновляется автоматически GitHub Actions раз в сутки из Space-Track. Парсится в tle.js, используется satellite.js для расчётов орбит
+- **TLE** (data/tle.txt): обновляется автоматически GitHub Actions раз в сутки из Space-Track + N2YO (дозагрузка 26635, 34810, 40614). Парсится в tle.js, используется satellite.js для расчётов орбит
 
 ## 4. ТЕКУЩАЯ РЕАЛИЗАЦИЯ — Модуль 1 (Менеджер частот)
 
@@ -26,7 +26,7 @@ satcontact/
 ├── style.css            # Telegram Dark, mobile-first, стили карты
 ├── app.js               # Парсинг XML, фильтры, рендер, openMapView/closeMapView
 ├── map.js               # Модуль 2: GPS, localStorage, HUD, initMap/cleanupMap
-├── map-render.js        # D3-картография: карта мира, орбиты, footprint, маркеры
+├── map-render.js        # D3-картография: карта день/ночь, терминатор, огни городов, орбиты, footprint, маркеры
 ├── tle.js               # TLE парсер, satellite.js расчёты (азимут, элевация, дистанция)
 ├── lib/                 # Локальные библиотеки (PWA/офлайн)
 │   ├── README.md        # Инструкции: что скачать
@@ -134,8 +134,8 @@ satcontact/
 
 ### 5.1 Шаг 1: GitHub Actions (TLE)
 
-- **scripts/update_tle.py:** авторизация Space-Track (POST ajaxauth/login), скачивание TLE по NORAD ID, сохранение в data/tle.txt. Учётные данные из env: SPACETRACK_USER, SPACETRACK_PASS.
-- **.github/workflows/update-tle.yml:** cron 00:00 UTC, workflow_dispatch, secrets.SPACETRACK_USER/PASS, авто-коммит data/tle.txt при изменении. **GitHub Secrets:** SPACETRACK_USER, SPACETRACK_PASS (Settings → Secrets and variables → Actions).
+- **scripts/update_tle.py:** авторизация Space-Track (POST ajaxauth/login), скачивание TLE по NORAD ID, дозагрузка 26635/34810/40614 с N2YO.com (Space-Track их не отдаёт), сохранение в data/tle.txt. Env: SPACETRACK_USER, SPACETRACK_PASS, N2YO_API_KEY.
+- **.github/workflows/update-tle.yml:** cron 00:00 UTC, workflow_dispatch, secrets.SPACETRACK_USER/PASS/N2YO_API_KEY, авто-коммит data/tle.txt при изменении. **GitHub Secrets:** SPACETRACK_USER, SPACETRACK_PASS, N2YO_API_KEY.
 
 ### 5.2 Шаг 2: Базовый UI карты и SPA-маршрутизация
 
@@ -168,12 +168,17 @@ satcontact/
 ### 5.6 Шаг 5: D3-картография (map-render.js)
 
 - **Библиотеки:** lib/d3.min.js, lib/topojson.min.js (topojson-client). data/world-50m.json или countries-50m.json.
-- **Цвета:** океан #1c242d, суша #212d3b, границы rgba(255,255,255,0.1).
-- **Карта:** fetch world-50m.json или countries-50m.json, topoToGeo(topology, 'countries'|'land'), d3.geoPath(), geoMercator.
-- **Орбита:** getTrajectory24h(noradId) — 24 ч, шаг 5 мин, GeoJSON LineString, d3.geoPath (антимеридиан).
+- **Проекция:** d3.geoMercator.
+- **Иерархия слоёв (строгий порядок):** layerOcean → layerLand → layerLandBorders → layerShadow → layerBordersNight → layerTerminatorLine → layerLights → layerOrbits → layerFootprint → layerMarkers.
+- **Дневная карта:** океан #6b9bc2, суша #c6dbe8, границы rgba(0,0,0,0.1).
+- **Линия терминатора (день/ночь):** getSunPosition(date) — подсолнечная точка по UTC (без API, математика: вращение Земли + наклон оси 23.45°). drawTerminator(): ночная тень — один d3.geoCircle радиус 90° от антипода Солнца, заливка rgba(28,36,45,0.55) (полупрозрачная, чтобы синева океана и суша были различимы); линия границы — stroke rgba(255,255,255,0.35).
+- **Контуры в ночной зоне:** layerBordersNight — границы стран rgba(255,255,255,0.12) поверх тени.
+- **Огни городов:** MAJOR_CITIES (75 городов), radialGradient id="city-glow" в defs. initCityLights() — circle r=2.5, fill="url(#city-glow)". updateCityLights() — d3.geoDistance (или geoDistanceFallback) от города до Солнца; если > π/2 радиан — ночь, opacity 0.85, иначе 0. Без D3 transition.
+- **Циклы обновления (Battery Saver):** fastLoop (1 с) — наблюдатель, спутник, орбиты, footprint; slowLoop (60 с) — drawTerminator, updateCityLights. При init — оба вызываются сразу.
+- **Орбита:** getTrajectory24h(noradId) — 24 ч, шаг 5 мин, GeoJSON LineString.
 - **Footprint:** d3.geoCircle по высоте орбиты (arcsin(R/(R+h))).
 - **Маркеры:** зелёный — наблюдатель, синий — спутник. Режим «ВСЕ» — только маркеры без орбит/footprint.
-- **Интеграция:** SatContactMapRender.init(mapCanvas), update() каждую 1 с, destroy() в cleanupMap.
+- **Интеграция:** SatContactMapRender.init(mapCanvas), update() = fastLoop (map.js вызывает каждую 1 с), destroy() в cleanupMap.
 - **topojson API:** поддержка window.topojson.feature и window.topojsonClient (функция или объект).
 
 ---
@@ -186,6 +191,22 @@ satcontact/
 
 ---
 
-## 7. КРАТКАЯ ИСТОРИЯ (для справки)
+## 7. ИСТОРИЯ СЕССИЙ (для контекста при продолжении)
 
-Модуль 1: каркас → группы, фильтры, поиск по частоте → редизайн шапки (тумблеры, чипсы) → мобильные фиксы (overscroll, forceBlur, chip--blurred) → брендинг SatContact, карточка 4 зоны, множественные NORAD ID. Модуль 2: GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → lib/ (офлайн) → D3-картография. Важно: topojson API — поддержка `topojson.feature` и `topojsonClient`; fallback для world-50m/countries-50m.
+### Модуль 1
+Каркас → группы, фильтры, поиск по частоте → редизайн шапки (тумблеры, чипсы) → мобильные фиксы (overscroll, forceBlur, chip--blurred) → брендинг SatContact, карточка 4 зоны, множественные NORAD ID.
+
+### Модуль 2 (до сессии карты)
+GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → lib/ (офлайн) → D3-картография. topojson API — поддержка `topojson.feature` и `topojsonClient`; fallback для world-50m/countries-50m.
+
+### Сессия: Карта день/ночь, терминатор, огни городов
+
+1. **Добавлена линия терминатора и ночная тень** — getSubsolarPoint/getAntisolarPoint по UTC, d3.geoCircle для ночного полушария, дневные цвета (#5b9bd5 океан, #e8e0d0 суша).
+
+2. **Полная переработка map-render.js** — MAJOR_CITIES (75 городов), иерархия слоёв, radialGradient city-glow, initCityLights/updateCityLights, разделение fastLoop (1 с) и slowLoop (60 с). Дневные цвета: #6b9bc2 океан, #c6dbe8 суша.
+
+3. **Плавный терминатор (4 накладывающихся geo-круга)** — радиусы 90°, 84°, 78°, 72° с разной opacity для градиента сумерек. **ОТМЕНЕНО** по запросу пользователя.
+
+4. **Восстановлена линия терминатора без плавного перехода** — один путь ночной тени (d3.geoCircle 90° от антипода) + линия границы (stroke). layerBordersNight для контуров в тёмной зоне.
+
+5. **Осветление ночной стороны** — ночная тень была #1c242d (полностью чёрная). Заменено на rgba(28,36,45,0.55) — полупрозрачная заливка, чтобы синева океана и суша оставались различимы.

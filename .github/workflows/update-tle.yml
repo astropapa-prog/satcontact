@@ -27,10 +27,11 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Download TLE from Space-Track
+      - name: Download TLE from Space-Track and N2YO
         env:
           SPACETRACK_USER: ${{ secrets.SPACETRACK_USER }}
           SPACETRACK_PASS: ${{ secrets.SPACETRACK_PASS }}
+          N2YO_API_KEY: ${{ secrets.N2YO_API_KEY }}
         run: python scripts/update_tle.py
 
       - name: Commit and push if changed
