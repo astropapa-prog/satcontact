@@ -245,7 +245,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.175) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (317.175) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244075000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -254,7 +254,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.185) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (317.185) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244085000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -272,7 +272,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.195) [22787]</Name>
+    <Name>-29° UFO F7 6 кгц (317.195) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244095000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -281,7 +281,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.205) [22787]</Name>
+    <Name>-29° UFO F7 6 кгц (317.205) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244105000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -290,7 +290,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.215) [22787] средняя</Name>
+    <Name>-29° UFO F7 6 кгц (317.215) [23967] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244115000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -299,7 +299,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.225) [22787] средняя</Name>
+    <Name>-29° UFO F7 6 кгц (317.225) [23967] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244125000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -308,7 +308,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.235) [22787] тупой</Name>
+    <Name>-29° UFO F7 6 кгц (317.235) [23967] тупой</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244135000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -317,7 +317,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (317.245) [22787] тупой</Name>
+    <Name>-29° UFO F7 6 кгц (317.245) [23967] тупой</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>244145000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -632,7 +632,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.575) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.575) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>248975000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -641,7 +641,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.585) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.585) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>248985000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -659,7 +659,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.595) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.595) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>248995000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -677,7 +677,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.605) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.605) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249005000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -695,7 +695,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.615) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.615) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249015000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -704,7 +704,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.625) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.625) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249025000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -713,7 +713,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.635) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.635) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249035000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -722,7 +722,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.645) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.645) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249045000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -740,7 +740,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.655) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.655) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249055000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -749,7 +749,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.665) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.665) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249065000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -758,7 +758,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.675) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.675) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249075000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -767,7 +767,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.685) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 6 кгц (302.685) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249085000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -776,7 +776,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 6 кгц (302.695) [22787] средняя</Name>
+    <Name>-29° UFO F7 6 кгц (302.695) [23967] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249095000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -857,7 +857,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-22° UFO F10 6 кгц (302.775) средняя</Name>
+    <Name>-22° UFO F10 6 кгц (302.775) [25967] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>249175000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1460,7 +1460,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (294 750) [22787]</Name>
+    <Name>-29° UFO F7 (294 750) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>253750000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1631,7 +1631,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (296.450) [23467]</Name>
+    <Name>-29° UFO F7 (296.450) [23967] тупой</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>255450000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1640,7 +1640,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (296.450) [22787] тупой</Name>
+    <Name>172° UFO F4 (296.450) [23467]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>255450000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1766,7 +1766,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (298.050) [22787] средняя</Name>
+    <Name>-29° UFO F7 (298.050) [23967] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>257050000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1919,21 +1919,21 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (299.450) [23467]</Name>
-    <GroupName>SATCOM</GroupName>
-    <Frequency>258450000</Frequency>
-    <DetectorType>NFM</DetectorType>
-    <Shift>0</Shift>
-    <FilterBandwidth>32000</FilterBandwidth>
-  </MemoryEntry>
-  <MemoryEntry>
-    <IsFavourite>false</IsFavourite>
     <Name>32° Skynet 4C (299.450) [20776] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>258450000</Frequency>
     <DetectorType>NFM</DetectorType>
     <Shift>0</Shift>
     <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (299.450) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
@@ -1955,7 +1955,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (299.550) [22787] средняя</Name>
+    <Name>-29° UFO F7 (299.550) [23967]средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>258550000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2108,7 +2108,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-22° UFO F10 (294.125) [25967]</Name>
+    <Name>172° UFO F4 (294.125) [23467]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>260525000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2117,7 +2117,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (294.125) [23467]</Name>
+    <Name>-22° UFO F10 (294.125) [25967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>260525000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2144,7 +2144,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (294.175) [22787] средняя</Name>
+    <Name>-29° UFO F7 (294.175) [23967]средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>260575000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2180,7 +2180,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (294.275) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 (294.275) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>260675000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2306,7 +2306,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (295.325) [23467]</Name>
+    <Name>-22° UFO F10 (295.325) [25967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>261725000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2315,7 +2315,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-22° UFO F10 (295.325) [25967]</Name>
+    <Name>172° UFO F4 (295.325) [23467]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>261725000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2441,7 +2441,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (295.675) [22787]</Name>
+    <Name>-29° UFO F7 (295.675) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>262075000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2459,7 +2459,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (295.775) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 (295.775) [23967]чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>262175000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2468,7 +2468,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (300.275) [22787]</Name>
+    <Name>-29° UFO F7 (300.275) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>262275000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2486,7 +2486,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (295.975) [22787]</Name>
+    <Name>-29° UFO F7 (295.975) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>262375000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2594,7 +2594,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>75° UFO F11 (298.525) [28117] средняя</Name>
+    <Name>172° UFO F4 (297.325) [23467]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>263725000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2603,7 +2603,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (297.325) [23467]</Name>
+    <Name>75° UFO F11 (298.525) [28117] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>263725000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2810,7 +2810,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (307.950) [22787]</Name>
+    <Name>-29° UFO F7 (307.950) [23967]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>266950000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2972,7 +2972,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (309.350) [22787] чувствительный</Name>
+    <Name>-29° UFO F7 (309.350) [23967] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>268350000</Frequency>
     <DetectorType>NFM</DetectorType>
