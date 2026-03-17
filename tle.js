@@ -83,8 +83,31 @@
       elevation: window.satellite.radiansToDegrees(lookAngles.elevation),
       distance: lookAngles.rangeSat,
       lat: window.satellite.degreesLat(positionGd.latitude),
-      lon: window.satellite.degreesLong(positionGd.longitude)
+      lon: window.satellite.degreesLong(positionGd.longitude),
+      height: positionGd.height // км, для footprint
     };
+  }
+
+  /**
+   * Суточная траектория (24 ч, шаг 5 мин) для отрисовки орбиты
+   * @param {string} noradId
+   * @param {Date} [baseDate]
+   * @returns {Array<{lon: number, lat: number}>}
+   */
+  function getTrajectory24h(noradId, baseDate) {
+    const tleMap = tleCache;
+    if (!tleMap) return [];
+    const tleData = tleMap.get(noradId);
+    if (!tleData) return [];
+    const date = baseDate || new Date();
+    const observer = { latitude: 0, longitude: 0, altitude: 0 };
+    const points = [];
+    for (let t = 0; t < 24 * 60; t += 5) {
+      const d = new Date(date.getTime() + t * 60 * 1000);
+      const r = computeSatellite(tleData, observer, d);
+      if (r) points.push([r.lon, r.lat]);
+    }
+    return points;
   }
 
   /**
@@ -110,6 +133,7 @@
     loadTle,
     parseTle,
     computeSatellite,
+    getTrajectory24h,
     formatAzimuth,
     formatElevation,
     getCache: () => tleCache

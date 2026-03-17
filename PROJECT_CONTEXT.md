@@ -27,6 +27,9 @@ satcontact/
 ├── app.js               # Парсинг XML, фильтры, рендер, openMapView/closeMapView
 ├── map.js               # Модуль 2: GPS, localStorage, HUD, initMap/cleanupMap
 ├── tle.js               # TLE парсер, satellite.js расчёты (азимут, элевация, дистанция)
+├── lib/                 # Локальные библиотеки (PWA/офлайн)
+│   ├── README.md        # Инструкции: что скачать
+│   └── satellite.min.js # скачать вручную, см. lib/README.md
 ├── data/
 │   ├── Frequencies.xml
 │   └── tle.txt          # TLE (Satcom, Меридианы), автообновление GitHub Actions
@@ -38,7 +41,9 @@ satcontact/
 └── README.md
 ```
 
-**Порядок скриптов в index.html:** satellite.js (CDN) → tle.js → map.js → app.js
+**Порядок скриптов в index.html:** lib/satellite.min.js → tle.js → map.js → app.js
+
+**lib/:** локальные копии библиотек (для PWA/офлайн). См. lib/README.md — что скачать.
 
 ### 4.2 Парсинг данных (app.js)
 

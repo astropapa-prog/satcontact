@@ -269,7 +269,10 @@
   function startHudUpdate() {
     stopHudUpdate();
     updateHudTelem();
-    hudTimerId = setInterval(updateHudTelem, HUD_UPDATE_MS);
+    hudTimerId = setInterval(() => {
+      updateHudTelem();
+      if (window.SatContactMapRender) window.SatContactMapRender.update();
+    }, HUD_UPDATE_MS);
   }
 
   function stopHudUpdate() {
@@ -286,6 +289,7 @@
     const { noradIds = [], satelliteName } = options || {};
     currentNoradIds = noradIds;
 
+    const mapCanvas = document.getElementById('mapCanvas');
     mapLoading = document.getElementById('mapLoading');
     mapGpsDenied = document.getElementById('mapGpsDenied');
     mapCoords = document.getElementById('mapCoords');
@@ -310,6 +314,9 @@
       if (mapLoading) mapLoading.hidden = true;
       if (!denied) startPolling();
       startHudUpdate();
+      if (window.SatContactMapRender && mapCanvas) {
+        window.SatContactMapRender.init(mapCanvas);
+      }
     });
 
     if (mapRefresh) {
@@ -346,6 +353,7 @@
   window.cleanupMap = function () {
     stopPolling();
     stopHudUpdate();
+    if (window.SatContactMapRender) window.SatContactMapRender.destroy();
   };
 
   /**
