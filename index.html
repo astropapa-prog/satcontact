@@ -57,10 +57,17 @@
       </header>
       <div class="map-view__canvas" id="mapCanvas">
         <!-- D3-карта будет здесь -->
-      </div>
-      <div class="map-view__loading" id="mapLoading">
-        <div class="map-view__loading-status">Поиск GPS…</div>
-        <div class="map-view__loading-status">Загрузка орбит…</div>
+        <div class="map-view__loading" id="mapLoading">
+          <div class="map-view__loading-status" id="mapLoadingStatus1">Поиск GPS…</div>
+          <div class="map-view__loading-status" id="mapLoadingStatus2">Загрузка орбит…</div>
+        </div>
+        <div class="map-view__gps-denied" id="mapGpsDenied" hidden>
+          <p class="map-view__gps-denied-text">GPS заблокирован. Разрешите доступ в браузере 🔒</p>
+          <div class="map-view__gps-denied-btns">
+            <button type="button" class="map-view__gps-btn" id="mapGpsRetry">Проверить снова</button>
+            <button type="button" class="map-view__gps-btn" id="mapGpsContinue">Продолжить без GPS</button>
+          </div>
+        </div>
       </div>
       <div class="map-view__hud" id="mapHud">
         <div class="map-view__hud-row">
@@ -83,6 +90,7 @@
     </div>
   </div>
 
+  <script src="map.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
