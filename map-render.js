@@ -131,6 +131,10 @@
   let cachedOrbitGeos = [];
   let observerPos = null;
 
+  let cachedLandPath2D = null;
+  let cachedTerminatorShadowPath2D = null;
+  let cachedTerminatorLinePath2D = null;
+
   /**
    * Позиция Солнца (подсолнечная точка) по UTC. Без API, чистая математика.
    */
@@ -209,7 +213,7 @@
     if (!ctx) return;
 
     ctx.scale(dpr, dpr);
-    path = d3.geoPath().projection(projection).context(ctx);
+    path = d3.geoPath().projection(projection);
 
     function zoomed(event) {
       currentTransform = event.transform;
@@ -259,7 +263,11 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
-    path = d3.geoPath().projection(projection).context(ctx);
+    path = d3.geoPath().projection(projection);
+
+    if (countriesGeo) {
+      cachedLandPath2D = new Path2D(path(countriesGeo));
+    }
 
     if (zoomBehavior) {
       zoomBehavior.extent([[0, 0], [width, height]]);
@@ -273,7 +281,7 @@
    * Рендер кадра: Painter's algorithm (снизу вверх)
    */
   function renderFrame() {
-    if (!ctx || !path || width <= 0 || height <= 0) return;
+    if (!ctx || width <= 0 || height <= 0) return;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -286,41 +294,31 @@
     ctx.fillStyle = COLORS.dayOcean;
     ctx.fillRect(0, 0, width, height);
 
-    if (!countriesGeo) {
+    if (!cachedLandPath2D) {
       ctx.restore();
       return;
     }
 
     ctx.fillStyle = COLORS.dayLand;
-    ctx.beginPath();
-    path(countriesGeo);
-    ctx.fill();
+    ctx.fill(cachedLandPath2D);
 
     ctx.strokeStyle = COLORS.dayBorder;
     ctx.lineWidth = 0.5 / k;
-    ctx.beginPath();
-    path(countriesGeo);
-    ctx.stroke();
+    ctx.stroke(cachedLandPath2D);
 
-    if (terminatorShadowGeo) {
+    if (cachedTerminatorShadowPath2D) {
       ctx.fillStyle = COLORS.nightOverlay;
-      ctx.beginPath();
-      path(terminatorShadowGeo);
-      ctx.fill();
+      ctx.fill(cachedTerminatorShadowPath2D);
+
+      ctx.strokeStyle = COLORS.nightBorder;
+      ctx.lineWidth = 0.5 / k;
+      ctx.stroke(cachedLandPath2D);
     }
 
-    ctx.strokeStyle = COLORS.nightBorder;
-    ctx.lineWidth = 0.5 / k;
-    ctx.beginPath();
-    path(countriesGeo);
-    ctx.stroke();
-
-    if (terminatorLineGeo) {
+    if (cachedTerminatorLinePath2D) {
       ctx.strokeStyle = COLORS.terminatorLine;
       ctx.lineWidth = 1 / k;
-      ctx.beginPath();
-      path(terminatorLineGeo);
-      ctx.stroke();
+      ctx.stroke(cachedTerminatorLinePath2D);
     }
 
     const geoDist = d3.geoDistance || geoDistanceFallback;
@@ -350,23 +348,19 @@
       ctx.globalAlpha = 1;
     });
 
-    cachedOrbitGeos.forEach((orbitGeo) => {
+    cachedOrbitGeos.forEach((p) => {
       ctx.strokeStyle = COLORS.orbit;
       ctx.lineWidth = 1.5 / k;
-      ctx.beginPath();
-      path(orbitGeo);
-      ctx.stroke();
+      ctx.stroke(p);
     });
 
     activeSatellites.forEach((sat) => {
-      if (sat.footprintGeo) {
+      if (sat.footprintPath2D) {
         ctx.fillStyle = COLORS.footprint;
+        ctx.fill(sat.footprintPath2D);
         ctx.strokeStyle = COLORS.orbit;
         ctx.lineWidth = 0.5 / k;
-        ctx.beginPath();
-        path(sat.footprintGeo);
-        ctx.fill();
-        ctx.stroke();
+        ctx.stroke(sat.footprintPath2D);
       }
     });
 
@@ -424,6 +418,9 @@
       .radius(90)
       .precision(2)();
 
+    cachedTerminatorShadowPath2D = new Path2D(path(terminatorShadowGeo));
+    cachedTerminatorLinePath2D = new Path2D(path(terminatorLineGeo));
+
     renderFrame();
   }
 
@@ -458,7 +455,7 @@
             }
           }
           if (trajectory && trajectory.length > 0) {
-            cachedOrbitGeos.push({ type: 'LineString', coordinates: trajectory });
+            cachedOrbitGeos.push(new Path2D(path({ type: 'LineString', coordinates: trajectory })));
           }
         });
       }
@@ -479,7 +476,7 @@
       if (isAllMode) {
         activeSatellites.push({
           pos: pos,
-          footprintGeo: null,
+          footprintPath2D: null,
           markerRadius: 5
         });
       } else {
@@ -505,7 +502,7 @@
         }
         activeSatellites.push({
           pos: pos,
-          footprintGeo: footprintGeo,
+          footprintPath2D: footprintGeo ? new Path2D(path(footprintGeo)) : null,
           markerRadius: 6
         });
       }
@@ -547,6 +544,9 @@
     observerPos = null;
     currentTransform = d3.zoomIdentity;
     zoomBehavior = null;
+    cachedLandPath2D = null;
+    cachedTerminatorShadowPath2D = null;
+    cachedTerminatorLinePath2D = null;
   }
 
   window.SatContactMapRender = {
