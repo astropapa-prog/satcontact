@@ -268,37 +268,28 @@ body {
   gap: 8px;
 }
 
-/* Зоны 1–2: имя, частота, транспондер, ширина */
-.freq-card__zone1-2 {
+/* Основной блок: слева — имя и частота, центр — транспондер, справа — овальные кнопки */
+.freq-card__main {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: stretch;
+  gap: 10px;
 }
 
-.freq-card__row {
+.freq-card__left {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .freq-card__name {
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--text-primary);
-  flex: 1;
-  min-width: 0;
-}
-
-.freq-card__transponder-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  flex-shrink: 0;
 }
 
 .freq-card__freq-block {
-  flex: 1;
   min-width: 0;
 }
 
@@ -317,11 +308,25 @@ body {
   margin-top: 2px;
 }
 
+.freq-card__center {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.freq-card__transponder-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 .freq-card__bw {
   font-family: var(--font-mono);
   font-size: 1rem;
   font-weight: 600;
-  flex-shrink: 0;
 }
 
 .freq-card__bw--bright {
@@ -330,6 +335,41 @@ body {
 
 .freq-card__bw--muted {
   color: var(--text-secondary);
+}
+
+/* Овальные кнопки справа */
+.freq-card__buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.freq-card__action-btn {
+  min-width: 48px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.5625rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.freq-card__action-btn:hover,
+.freq-card__action-btn:focus {
+  background: rgba(82, 136, 193, 0.2);
+  outline: none;
 }
 
 /* Футер: NFM, чувствительность (без полосы), NORAD */
@@ -347,40 +387,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-
-/* Зоны 3–4: круглые кнопки (по 1/4 карточки каждая) */
-.freq-card__zone3-4 {
-  display: flex;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.freq-card__action-btn {
-  flex: 0 0 calc(25% - 3px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: var(--bg-app);
-  color: var(--text-primary);
-  font-size: 0.625rem;
-  font-family: var(--font-sans);
-  font-weight: 500;
-  line-height: 1.15;
-  text-align: center;
-  padding: 4px 2px;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.freq-card__action-btn:hover,
-.freq-card__action-btn:focus {
-  background: rgba(82, 136, 193, 0.2);
-  border-color: var(--accent);
-  outline: none;
 }
 
 .badge {

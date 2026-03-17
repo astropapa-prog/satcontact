@@ -268,17 +268,21 @@
 
     return `
       <article class="freq-card" data-norad="${noradIds.join(',')}" data-searchable="${escapeHtml(entry.cleanName + ' ' + rxFreq + ' ' + noradIds.join(' '))}">
-        <div class="freq-card__zone1-2">
-          <div class="freq-card__row">
+        <div class="freq-card__main">
+          <div class="freq-card__left">
             <span class="freq-card__name">${escapeHtml(entry.cleanName || '—')}</span>
-            <span class="freq-card__transponder-label">(транспондер)</span>
-          </div>
-          <div class="freq-card__row">
             <div class="freq-card__freq-block">
               <span class="freq-card__rx">${escapeHtml(rxFreq)}</span>
               ${txLine ? `<span class="freq-card__tx">${escapeHtml(txLine)}</span>` : ''}
             </div>
+          </div>
+          <div class="freq-card__center">
+            <span class="freq-card__transponder-label">(транспондер)</span>
             <span class="freq-card__bw ${bwClass}">${escapeHtml(bwFormatted)}</span>
+          </div>
+          <div class="freq-card__buttons">
+            <button type="button" class="freq-card__action-btn" data-action="map">посмотреть на карте</button>
+            <button type="button" class="freq-card__action-btn" data-action="track">навестись</button>
           </div>
         </div>
         <div class="freq-card__footer">
@@ -287,10 +291,6 @@
             ${statusBadge}
           </div>
           ${noradHtml}
-        </div>
-        <div class="freq-card__zone3-4">
-          <button type="button" class="freq-card__action-btn" data-action="map">посмотреть на карте</button>
-          <button type="button" class="freq-card__action-btn" data-action="track">навестись</button>
         </div>
       </article>
     `;
