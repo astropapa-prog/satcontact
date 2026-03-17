@@ -282,7 +282,7 @@
           </div>
           <div class="freq-card__buttons">
             <button type="button" class="freq-card__action-btn" data-action="map">посмотреть на карте</button>
-            <button type="button" class="freq-card__action-btn" data-action="track">навестись</button>
+            <button type="button" class="freq-card__action-btn" data-action="track">НАВЕСТИСЬ</button>
           </div>
         </div>
         <div class="freq-card__footer">
