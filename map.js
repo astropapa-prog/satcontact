@@ -9,12 +9,16 @@
   const STORAGE_KEY = 'satcontact_observer';
   const GPS_TIMEOUT_MS = 6000;
   const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 час
+  const HUD_UPDATE_MS = 1000; // обновление телеметрии каждую секунду
 
   let pollTimerId = null;
+  let hudTimerId = null;
   let currentObserver = null;
+  let currentNoradIds = [];
 
   // DOM
   let mapLoading, mapGpsDenied, mapCoords, mapRefresh;
+  let mapAzimuth, mapElevation, mapDistance;
   let loadingStatus1, loadingStatus2;
   let gpsRetryBtn, gpsContinueBtn;
 
@@ -217,23 +221,95 @@
   }
 
   /**
+   * Обновление HUD: азимут, элевация, дистанция (из TLE + satellite.js)
+   */
+  function updateHudTelem() {
+    if (!mapAzimuth || !mapElevation || !mapDistance) return;
+    if (!window.SatContactTle) return;
+
+    const noradId = currentNoradIds[0];
+    if (!noradId) {
+      mapAzimuth.textContent = '—';
+      mapElevation.textContent = '—';
+      mapDistance.textContent = '—';
+      return;
+    }
+
+    const tleMap = window.SatContactTle.getCache();
+    if (!tleMap) return;
+
+    const tleData = tleMap.get(noradId);
+    if (!tleData) {
+      mapAzimuth.textContent = '—';
+      mapElevation.textContent = '—';
+      mapDistance.textContent = '—';
+      return;
+    }
+
+    if (!currentObserver) {
+      mapAzimuth.textContent = '—';
+      mapElevation.textContent = '—';
+      mapDistance.textContent = '—';
+      return;
+    }
+
+    const result = window.SatContactTle.computeSatellite(tleData, currentObserver, new Date());
+    if (!result) {
+      mapAzimuth.textContent = '—';
+      mapElevation.textContent = '—';
+      mapDistance.textContent = '—';
+      return;
+    }
+
+    mapAzimuth.textContent = window.SatContactTle.formatAzimuth(result.azimuth);
+    mapElevation.textContent = window.SatContactTle.formatElevation(result.elevation);
+    mapDistance.textContent = result.distance != null ? `${Math.round(result.distance)} км` : '—';
+  }
+
+  function startHudUpdate() {
+    stopHudUpdate();
+    updateHudTelem();
+    hudTimerId = setInterval(updateHudTelem, HUD_UPDATE_MS);
+  }
+
+  function stopHudUpdate() {
+    if (hudTimerId) {
+      clearInterval(hudTimerId);
+      hudTimerId = null;
+    }
+  }
+
+  /**
    * Инициализация карты (вызывается из app.js)
    */
   window.initMap = function (options) {
-    const { noradIds, satelliteName } = options || {};
+    const { noradIds = [], satelliteName } = options || {};
+    currentNoradIds = noradIds;
 
     mapLoading = document.getElementById('mapLoading');
     mapGpsDenied = document.getElementById('mapGpsDenied');
     mapCoords = document.getElementById('mapCoords');
     mapRefresh = document.getElementById('mapRefresh');
+    mapAzimuth = document.getElementById('mapAzimuth');
+    mapElevation = document.getElementById('mapElevation');
+    mapDistance = document.getElementById('mapDistance');
     loadingStatus1 = document.getElementById('mapLoadingStatus1');
     loadingStatus2 = document.getElementById('mapLoadingStatus2');
     gpsRetryBtn = document.getElementById('mapGpsRetry');
     gpsContinueBtn = document.getElementById('mapGpsContinue');
 
-    acquireObserver().then(({ denied }) => {
+    acquireObserver().then(async ({ denied }) => {
+      setLoadingStatus('Загрузка орбит…', '');
+      try {
+        if (window.SatContactTle) {
+          await window.SatContactTle.loadTle();
+        }
+      } catch (e) {
+        console.warn('map.js: не удалось загрузить TLE', e);
+      }
       if (mapLoading) mapLoading.hidden = true;
       if (!denied) startPolling();
+      startHudUpdate();
     });
 
     if (mapRefresh) {
@@ -269,6 +345,7 @@
    */
   window.cleanupMap = function () {
     stopPolling();
+    stopHudUpdate();
   };
 
   /**
@@ -276,5 +353,29 @@
    */
   window.getMapObserver = function () {
     return currentObserver;
+  };
+
+  /**
+   * Получить текущие NORAD ID (для D3-рендера)
+   */
+  window.getMapNoradIds = function () {
+    return currentNoradIds;
+  };
+
+  /**
+   * Вычислить позицию спутника (для D3-карты)
+   * @param {string} noradId
+   * @param {Date} [date]
+   * @returns {{ lat, lon } | null}
+   */
+  window.getSatellitePosition = function (noradId, date) {
+    if (!window.SatContactTle) return null;
+    const tleMap = window.SatContactTle.getCache();
+    if (!tleMap) return null;
+    const tleData = tleMap.get(noradId);
+    if (!tleData) return null;
+    const observer = currentObserver || { latitude: 0, longitude: 0, altitude: 0 };
+    const result = window.SatContactTle.computeSatellite(tleData, observer, date || new Date());
+    return result ? { lat: result.lat, lon: result.lon } : null;
   };
 })();
