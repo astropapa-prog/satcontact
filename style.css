@@ -355,9 +355,10 @@ body {
   min-width: 0;
 }
 
+/* На мобильном: фиксированный одинаковый размер, не зависит от длины надписи */
 .freq-card__action-btn {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 40px;
+  width: 100%;
   height: 40px;
   padding: 0 14px;
   border-radius: 9999px;
@@ -494,9 +495,15 @@ body {
     font-size: 1.25rem;
   }
 
-  /* На планшете/десктопе — кнопки в ряд, по центру */
+  /* На планшете/десктопе — кнопки в ряд, по центру, равный размер */
   .freq-card__buttons {
     flex-direction: row;
     align-self: center;
+  }
+
+  .freq-card__action-btn {
+    flex: 1;
+    min-width: 0;
+    width: auto;
   }
 }
