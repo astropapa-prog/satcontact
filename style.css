@@ -1,5 +1,5 @@
 /* ============================================
-   SDR Frequency Manager — Telegram Dark Theme
+   SatContact — Telegram Dark Theme
    Mobile-First, PWA-ready
    ============================================ */
 
@@ -262,23 +262,24 @@ body {
   border-radius: var(--radius-md);
   padding: 12px 14px;
   box-shadow: var(--shadow);
-  cursor: pointer;
   transition: background 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.freq-card:hover {
-  background: rgba(33, 45, 59, 0.9);
+/* Зоны 1–2: имя, частота, транспондер, ширина */
+.freq-card__zone1-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.freq-card:active {
-  background: rgba(33, 45, 59, 0.95);
-}
-
-.freq-card__top {
+.freq-card__row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  gap: 12px;
 }
 
 .freq-card__name {
@@ -289,8 +290,16 @@ body {
   min-width: 0;
 }
 
+.freq-card__transponder-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
 .freq-card__freq-block {
-  margin-bottom: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .freq-card__rx {
@@ -308,21 +317,72 @@ body {
   margin-top: 2px;
 }
 
+.freq-card__bw {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.freq-card__bw--bright {
+  color: var(--text-primary);
+}
+
+.freq-card__bw--muted {
+  color: var(--text-secondary);
+}
+
+/* Футер: NFM, чувствительность (без полосы), NORAD */
 .freq-card__footer {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 8px;
+  gap: 4px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .freq-card__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
+}
+
+/* Зоны 3–4: круглые кнопки */
+.freq-card__zone3-4 {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.freq-card__action-btn {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.freq-card__action-btn:hover,
+.freq-card__action-btn:focus {
+  background: rgba(82, 136, 193, 0.2);
+  border-color: var(--accent);
+  outline: none;
 }
 
 .badge {

@@ -1,5 +1,5 @@
 /**
- * SDR Frequency Manager — Module 1
+ * SatContact — Module 1
  * Vanilla JS, PWA-ready
  */
 
@@ -44,11 +44,12 @@
   }
 
   /**
-   * Извлечение NORAD ID из Name (значение в квадратных скобках)
+   * Извлечение всех NORAD ID из Name (все значения в квадратных скобках [123][456]...)
    */
-  function extractNoradId(name) {
-    const match = name.match(/\[(\d+)\]/);
-    return match ? match[1] : null;
+  function extractNoradIds(name) {
+    if (!name || typeof name !== 'string') return [];
+    const matches = [...name.matchAll(/\[(\d+)\]/g)];
+    return matches.map((m) => m[1]);
   }
 
   /**
@@ -133,7 +134,7 @@
       const detectorType = el.querySelector('DetectorType')?.textContent?.trim() || '';
       const filterBandwidth = el.querySelector('FilterBandwidth')?.textContent?.trim() || '';
 
-      const noradId = extractNoradId(name);
+      const noradIds = extractNoradIds(name);
       const txFreq = extractTxFreq(name);
       const cleanName = getCleanName(name);
       const status = getStatus(name, groupName);
@@ -147,7 +148,7 @@
         detectorType,
         filterBandwidth,
         bandwidthFormatted,
-        noradId,
+        noradIds,
         txFreq,
         status,
         degrees: extractDegrees(cleanName)
@@ -245,39 +246,51 @@
   }
 
   /**
-   * Создание HTML карточки
+   * Создание HTML карточки (4 зоны)
    */
   function createCardHtml(entry) {
     const rxFreq = formatFreq(entry.frequency);
     const txLine = entry.txFreq ? `TX: ${entry.txFreq.toFixed(3)} MHz` : '';
-    const noradHtml = entry.noradId
-      ? `<span class="freq-card__norad">NORAD ${entry.noradId}</span>`
+    const noradIds = entry.noradIds || [];
+    const noradHtml = noradIds.length > 0
+      ? noradIds.map((id) => `<span class="freq-card__norad">NORAD ${escapeHtml(id)}</span>`).join(' ')
       : '';
 
     const statusBadge = `<span class="badge badge--${entry.status.class}">${entry.status.emoji} ${entry.status.label}</span>`;
     const detectorBadge = entry.detectorType
       ? `<span class="badge badge--detector">${entry.detectorType}</span>`
       : '';
-    const bwBadge = entry.bandwidthFormatted
-      ? `<span class="badge badge--bandwidth">${entry.bandwidthFormatted}</span>`
-      : '';
+
+    const bwNum = parseInt(entry.filterBandwidth, 10) || 0;
+    const bwBright = bwNum >= 6000 && bwNum <= 8000;
+    const bwClass = bwBright ? 'freq-card__bw--bright' : 'freq-card__bw--muted';
+    const bwFormatted = entry.bandwidthFormatted || '';
 
     return `
-      <article class="freq-card" data-norad="${entry.noradId || ''}" data-searchable="${escapeHtml(entry.cleanName + ' ' + rxFreq + ' ' + (entry.noradId || ''))}">
-        <div class="freq-card__top">
-          <span class="freq-card__name">${escapeHtml(entry.cleanName || '—')}</span>
-        </div>
-        <div class="freq-card__freq-block">
-          <span class="freq-card__rx">${escapeHtml(rxFreq)}</span>
-          ${txLine ? `<span class="freq-card__tx">${escapeHtml(txLine)}</span>` : ''}
+      <article class="freq-card" data-norad="${noradIds.join(',')}" data-searchable="${escapeHtml(entry.cleanName + ' ' + rxFreq + ' ' + noradIds.join(' '))}">
+        <div class="freq-card__zone1-2">
+          <div class="freq-card__row">
+            <span class="freq-card__name">${escapeHtml(entry.cleanName || '—')}</span>
+            <span class="freq-card__transponder-label">(транспондер)</span>
+          </div>
+          <div class="freq-card__row">
+            <div class="freq-card__freq-block">
+              <span class="freq-card__rx">${escapeHtml(rxFreq)}</span>
+              ${txLine ? `<span class="freq-card__tx">${escapeHtml(txLine)}</span>` : ''}
+            </div>
+            <span class="freq-card__bw ${bwClass}">${escapeHtml(bwFormatted)}</span>
+          </div>
         </div>
         <div class="freq-card__footer">
           <div class="freq-card__badges">
             ${detectorBadge}
-            ${bwBadge}
             ${statusBadge}
           </div>
           ${noradHtml}
+        </div>
+        <div class="freq-card__zone3-4">
+          <button type="button" class="freq-card__action-btn" data-action="map">посмотреть на карте</button>
+          <button type="button" class="freq-card__action-btn" data-action="track">навестись</button>
         </div>
       </article>
     `;
@@ -297,6 +310,7 @@
   function renderCards(entries, totalInGroup) {
     if (!cardList) return;
     cardList.innerHTML = entries.map(createCardHtml).join('');
+    bindCardActionButtons();
 
     if (emptyState) {
       emptyState.hidden = entries.length > 0;
@@ -306,6 +320,26 @@
       const total = totalInGroup !== undefined ? totalInGroup : allEntries.length;
       statusText.textContent = `Показано: ${entries.length} из ${total}`;
     }
+  }
+
+  /**
+   * Привязка кнопок «посмотреть на карте» и «навестись» (заготовка для модулей 2–3)
+   */
+  function bindCardActionButtons() {
+    if (!cardList) return;
+    cardList.querySelectorAll('.freq-card__action-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const card = btn.closest('.freq-card');
+        const noradIds = (card?.dataset.norad || '').split(',').filter(Boolean);
+        const action = btn.dataset.action;
+        if (action === 'map') {
+          console.log('Посмотреть на карте:', noradIds);
+        } else if (action === 'track') {
+          console.log('Навестись:', noradIds);
+        }
+      });
+    });
   }
 
   /**

@@ -1,2 +1,2 @@
 # satcontact
-Frequency Manager and AR Satellite Tracker (PWA)
+SatContact — менеджер частот и AR-трекер спутников (PWA)
