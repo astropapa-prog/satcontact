@@ -1,6 +1,6 @@
 /**
  * SatContact — Модуль 2: D3-картография (map-render.js)
- * Отрисовка Земли, огней городов, орбит, маркеров.
+ * Отрисовка Земли, линии терминатора, огней городов, орбит, маркеров.
  * Оптимизировано для слабых мобильных устройств, оффлайн.
  */
 
@@ -100,6 +100,9 @@
     dayOcean: '#6b9bc2',
     dayLand: '#c6dbe8',
     dayBorder: 'rgba(0,0,0,0.1)',
+    nightOverlay: '#1c242d',
+    nightBorder: 'rgba(255,255,255,0.12)',
+    terminatorLine: 'rgba(255,255,255,0.35)',
     orbit: 'rgba(82, 136, 193, 0.6)',
     footprint: 'rgba(82, 136, 193, 0.15)',
     marker: '#5288c1',
@@ -107,9 +110,9 @@
   };
 
   let svg, g, projection, path;
-  let layerOcean, layerLand, layerLandBorders;
+  let layerOcean, layerLand, layerLandBorders, layerShadow, layerBordersNight, layerTerminatorLine;
   let layerLights, layerOrbits, layerFootprint, layerMarkers;
-  let landPath, bordersPath;
+  let landPath, bordersPath, bordersNightPath;
   let observerMarker, cityLightElements;
   let resizeObserver = null;
   let topology = null;
@@ -204,6 +207,9 @@
 
     layerLand = g.append('g').attr('class', 'layer-land');
     layerLandBorders = g.append('g').attr('class', 'layer-land-borders');
+    layerShadow = g.append('g').attr('class', 'layer-shadow').style('pointer-events', 'none');
+    layerBordersNight = g.append('g').attr('class', 'layer-borders-night').style('pointer-events', 'none');
+    layerTerminatorLine = g.append('g').attr('class', 'layer-terminator-line').style('pointer-events', 'none');
     layerLights = g.append('g').attr('class', 'layer-lights').style('pointer-events', 'none');
     layerOrbits = g.append('g').attr('class', 'layer-orbits');
     layerFootprint = g.append('g').attr('class', 'layer-footprint');
@@ -234,6 +240,13 @@
           .datum(countriesGeo)
           .attr('fill', 'none')
           .attr('stroke', COLORS.dayBorder)
+          .attr('stroke-width', 0.5)
+          .attr('d', path);
+
+        bordersNightPath = layerBordersNight.append('path')
+          .datum(countriesGeo)
+          .attr('fill', 'none')
+          .attr('stroke', COLORS.nightBorder)
           .attr('stroke-width', 0.5)
           .attr('d', path);
       }
@@ -271,9 +284,48 @@
 
     if (landPath) landPath.attr('d', path);
     if (bordersPath) bordersPath.attr('d', path);
+    if (bordersNightPath) bordersNightPath.attr('d', path);
 
+    drawTerminator();
     updateCityLights();
     fastLoop();
+  }
+
+  /**
+   * Терминатор: ночная тень (один путь) + линия границы день/ночь
+   */
+  function drawTerminator() {
+    if (!path || !layerShadow || !layerTerminatorLine) return;
+
+    const sun = getSunPosition(new Date());
+    let antiLon = sun.lon + 180;
+    if (antiLon > 180) antiLon -= 360;
+    const antiLat = -sun.lat;
+
+    const nightCap = d3.geoCircle()
+      .center([antiLon, antiLat])
+      .radius(90)
+      .precision(2)();
+
+    const terminatorCircle = d3.geoCircle()
+      .center([sun.lon, sun.lat])
+      .radius(90)
+      .precision(2)();
+
+    layerShadow.selectAll('path').remove();
+    layerShadow.append('path')
+      .datum(nightCap)
+      .attr('d', path)
+      .attr('fill', COLORS.nightOverlay)
+      .attr('stroke', 'none');
+
+    layerTerminatorLine.selectAll('path').remove();
+    layerTerminatorLine.append('path')
+      .datum(terminatorCircle)
+      .attr('d', path)
+      .attr('fill', 'none')
+      .attr('stroke', COLORS.terminatorLine)
+      .attr('stroke-width', 1);
   }
 
   /**
@@ -417,9 +469,10 @@
   }
 
   /**
-   * Медленный цикл (60 с): огни городов
+   * Медленный цикл (60 с): терминатор, огни городов
    */
   function slowLoop() {
+    drawTerminator();
     updateCityLights();
   }
 
@@ -444,12 +497,16 @@
     layerOcean = null;
     layerLand = null;
     layerLandBorders = null;
+    layerShadow = null;
+    layerBordersNight = null;
+    layerTerminatorLine = null;
     layerLights = null;
     layerOrbits = null;
     layerFootprint = null;
     layerMarkers = null;
     landPath = null;
     bordersPath = null;
+    bordersNightPath = null;
     projection = null;
     path = null;
     topology = null;
