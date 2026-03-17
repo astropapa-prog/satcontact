@@ -26,13 +26,17 @@ satcontact/
 ├── style.css            # Telegram Dark, mobile-first, стили карты
 ├── app.js               # Парсинг XML, фильтры, рендер, openMapView/closeMapView
 ├── map.js               # Модуль 2: GPS, localStorage, HUD, initMap/cleanupMap
+├── map-render.js        # D3-картография: карта мира, орбиты, footprint, маркеры
 ├── tle.js               # TLE парсер, satellite.js расчёты (азимут, элевация, дистанция)
 ├── lib/                 # Локальные библиотеки (PWA/офлайн)
 │   ├── README.md        # Инструкции: что скачать
-│   └── satellite.min.js # скачать вручную, см. lib/README.md
+│   ├── satellite.min.js
+│   ├── d3.min.js
+│   └── topojson.min.js  # topojson-client, см. lib/README.md
 ├── data/
 │   ├── Frequencies.xml
-│   └── tle.txt          # TLE (Satcom, Меридианы), автообновление GitHub Actions
+│   ├── tle.txt          # TLE (Satcom, Меридианы), автообновление GitHub Actions
+│   └── world-50m.json   # или countries-50m.json — карта мира TopoJSON
 ├── scripts/
 │   └── update_tle.py    # Скрипт загрузки TLE с Space-Track (SPACETRACK_USER, SPACETRACK_PASS)
 ├── .github/workflows/
@@ -41,9 +45,9 @@ satcontact/
 └── README.md
 ```
 
-**Порядок скриптов в index.html:** lib/satellite.min.js → tle.js → map.js → app.js
+**Порядок скриптов в index.html:** satellite.min.js → d3.min.js → topojson.min.js → tle.js → map.js → map-render.js → app.js
 
-**lib/:** локальные копии библиотек (для PWA/офлайн). См. lib/README.md — что скачать.
+**lib/:** локальные копии (PWA/офлайн). См. lib/README.md. **data/world-50m.json:** скачать countries-50m.json из world-atlas, переименовать.
 
 ### 4.2 Парсинг данных (app.js)
 
@@ -150,33 +154,35 @@ satcontact/
 
 ### 5.4 Шаг 4: TLE парсер и математика (tle.js)
 
-- **satellite.js:** CDN v6, `twoline2satrec`, `propagate`, `ecfToLookAngles`, `eciToGeodetic`.
+- **satellite.js:** lib/satellite.min.js v6, `twoline2satrec`, `propagate`, `ecfToLookAngles`, `eciToGeodetic`.
 - **loadTle():** fetch data/tle.txt, parseTle() → Map<NoradId, { line1, line2, satrec }>. NORAD ID из строки 2, символы 3–7.
-- **computeSatellite():** (tleData, observer, date) → { azimuth, elevation, distance, lat, lon }.
+- **computeSatellite():** (tleData, observer, date) → { azimuth, elevation, distance, lat, lon, height }.
+- **getTrajectory24h(noradId, baseDate):** суточная траектория, шаг 5 мин, GeoJSON coordinates [[lon,lat],...].
 - **map.js:** интеграция — loadTle после acquireObserver, HUD обновление каждую 1 с. Без GPS — «—» в HUD.
-- **API:** `window.getMapNoradIds()`, `window.getSatellitePosition(noradId, date)` — для D3 (Шаг 5).
+- **API:** `window.getMapNoradIds()`, `window.getSatellitePosition(noradId, date)`.
 
 ### 5.5 Кнопка «посмотреть на карте»
 
 - Активна. При клике: извлечение data-norad и data-clean-name из карточки, SPA-переход в mapView, вызов initMap.
 
+### 5.6 Шаг 5: D3-картография (map-render.js)
+
+- **Библиотеки:** lib/d3.min.js, lib/topojson.min.js (topojson-client). data/world-50m.json или countries-50m.json.
+- **Цвета:** океан #1c242d, суша #212d3b, границы rgba(255,255,255,0.1).
+- **Карта:** fetch world-50m.json или countries-50m.json, topoToGeo(topology, 'countries'|'land'), d3.geoPath(), geoMercator.
+- **Орбита:** getTrajectory24h(noradId) — 24 ч, шаг 5 мин, GeoJSON LineString, d3.geoPath (антимеридиан).
+- **Footprint:** d3.geoCircle по высоте орбиты (arcsin(R/(R+h))).
+- **Маркеры:** зелёный — наблюдатель, синий — спутник. Режим «ВСЕ» — только маркеры без орбит/footprint.
+- **Интеграция:** SatContactMapRender.init(mapCanvas), update() каждую 1 с, destroy() в cleanupMap.
+- **topojson API:** поддержка window.topojson.feature и window.topojsonClient (функция или объект).
+
 ---
 
 ## 6. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
 
-- **Шаг 5:** Картография и рендер (D3.js) — topojson world-50m, орбиты, footprint, маркер спутника.
-- **Шаг 6:** Режим «ВСЕ» на карте — все маркеры отфильтрованных спутников (без сложных орбит).
+- **Шаг 6:** Режим «ВСЕ» — уже работает (маркеры всех спутников), возможна полировка.
 - **Модуль 3:** AR-трекер (камера, DeviceOrientation, кнопка «НАВЕСТИСЬ»).
 - **PWA:** manifest.json, Service Worker, Cache Storage, IndexedDB.
-
-### План Шага 5 (D3.js) — для продолжения
-
-- **Библиотеки:** d3.js, topojson.js. Файл data/world-50m.json (Natural Earth).
-- **Цвета:** океан #1c242d, суша #212d3b, границы rgba(255,255,255,0.1).
-- **Суточная траектория:** t=0..24h, шаг 5 мин → d3.geoPath().
-- **Footprint:** круг радиовидимости по высоте орбиты.
-- **Маркер:** движущаяся точка спутника.
-- **API для рендера:** `getMapObserver()`, `getMapNoradIds()`, `getSatellitePosition(noradId, date)`.
 
 ---
 
@@ -213,3 +219,9 @@ satcontact/
 21. **Шаг 2 — UI карты:** index.html — mapView с шапкой, canvas, loading overlay, GPS denied overlay, HUD. app.js — openMapView/closeMapView, bindMapButtons. style.css — стили карты. data-clean-name на карточках.
 22. **Шаг 3 — Геолокация:** map.js — GPS с таймаутом 6 с, permissions check, localStorage (satcontact_observer), плашка denied, фоновый опрос 1/час, кнопка [↻], getMapObserver()
 23. **Шаг 4 — TLE и математика:** satellite.js (CDN v6), tle.js — loadTle, parseTle, computeSatellite, formatAzimuth, formatElevation. map.js — HUD update каждую 1 с, getMapNoradIds(), getSatellitePosition(). Без GPS: «—» в HUD
+
+### Сессия: Локальные lib, Шаг 5 (D3-карта)
+
+24. **Локальные библиотеки (PWA/офлайн):** CDN → lib/. Добавлены lib/README.md, пути lib/satellite.min.js, lib/d3.min.js, lib/topojson.min.js. data/world-50m.json (countries-50m.json переименовать).
+25. **Шаг 5 — D3-картография:** map-render.js — d3.geoMercator, fetch world-50m/countries-50m, topoToGeo, океан/суша/границы. Орбита (getTrajectory24h), footprint (geoCircle), маркеры (наблюдатель зелёный, спутник синий). Режим «ВСЕ» — только маркеры. ResizeObserver. tle.js: height в computeSatellite, getTrajectory24h.
+26. **Исправление карты:** карта не отображалась — fallback URL (world-50m, countries-50m), topojson API (topojson.feature / topojsonClient как функция), fallback object (countries, land).

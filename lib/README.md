@@ -2,20 +2,18 @@
 
 Скачайте и положите сюда файлы:
 
-## Сейчас нужен
+## lib/
 
-| Файл | URL | Назначение |
-|------|-----|------------|
-| **satellite.min.js** | https://cdn.jsdelivr.net/npm/satellite.js@6/dist/satellite.min.js | Расчёты орбит (TLE, азимут, элевация) |
+| Файл | URL |
+|------|-----|
+| **satellite.min.js** | https://cdn.jsdelivr.net/npm/satellite.js@6/dist/satellite.min.js |
+| **d3.min.js** | https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js |
+| **topojson.min.js** | https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js |
 
-Сохраните как: `lib/satellite.min.js`
+## data/
 
-## Для Шага 5 (D3-карта) — позже
+| Файл | URL |
+|------|-----|
+| **world-50m.json** | https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json |
 
-| Файл | URL | Назначение |
-|------|-----|------------|
-| **d3.min.js** | https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js | Картография |
-| **topojson.min.js** | https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js | Парсинг TopoJSON |
-| **world-50m.json** | https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json | Карта мира 1:50m |
-
-Положите в `lib/` и `data/` соответственно.
+Скачайте countries-50m.json и переименуйте в `world-50m.json` (или оставьте как countries-50m.json — оба имени поддерживаются).
