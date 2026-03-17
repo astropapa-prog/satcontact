@@ -277,7 +277,7 @@
             </div>
           </div>
           <div class="freq-card__center">
-            <span class="freq-card__transponder-label">(транспондер)</span>
+            <span class="freq-card__transponder-label">транспондер</span>
             <span class="freq-card__bw ${bwClass}">${escapeHtml(bwFormatted)}</span>
           </div>
           <div class="freq-card__buttons">
