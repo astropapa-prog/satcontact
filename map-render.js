@@ -119,6 +119,8 @@
   let countriesGeo = null;
   let fastLoopId = null;
   let slowLoopId = null;
+  let cachedTrajectories = new Map();
+  let lastNoradIds = [];
 
   /**
    * Позиция Солнца (подсолнечная точка) по UTC. Без API, чистая математика.
@@ -279,6 +281,7 @@
     if (landPath) landPath.attr('d', path);
     if (bordersPath) bordersPath.attr('d', path);
     if (bordersNightPath) bordersNightPath.attr('d', path);
+    if (layerOrbits) layerOrbits.selectAll('path').attr('d', path);
 
     drawTerminator();
     updateCityLights();
@@ -364,8 +367,18 @@
     });
   }
 
+  /** Сравнение массивов noradIds (состав и порядок) */
+  function noradIdsEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
   /**
-   * Быстрый цикл (1 с): наблюдатель, спутник, орбиты, footprint
+   * Быстрый цикл (1 с): наблюдатель, спутник, орбиты, footprint.
+   * Орбиты пересчитываются и перерисовываются только при смене noradIds.
    */
   function fastLoop() {
     if (!svg || !g || !projection || !path) return;
@@ -373,6 +386,37 @@
     const noradIds = typeof window.getMapNoradIds === 'function' ? window.getMapNoradIds() : [];
     const observer = typeof window.getMapObserver === 'function' ? window.getMapObserver() : null;
     const isAllMode = noradIds.length > 1;
+    const noradIdsChanged = !noradIdsEqual(noradIds, lastNoradIds);
+
+    if (noradIdsChanged) {
+      layerOrbits.selectAll('*').remove();
+      const noradSet = new Set(noradIds);
+      for (const id of cachedTrajectories.keys()) {
+        if (!noradSet.has(id)) cachedTrajectories.delete(id);
+      }
+      lastNoradIds = noradIds.slice();
+
+      if (window.SatContactTle && !isAllMode && noradIds.length > 0) {
+        noradIds.forEach((noradId) => {
+          let trajectory = cachedTrajectories.get(noradId);
+          if (!trajectory) {
+            trajectory = window.SatContactTle.getTrajectory24h(noradId);
+            if (trajectory && trajectory.length > 0) {
+              cachedTrajectories.set(noradId, trajectory);
+            }
+          }
+          if (trajectory && trajectory.length > 0) {
+            const lineString = { type: 'LineString', coordinates: trajectory };
+            layerOrbits.append('path')
+              .datum(lineString)
+              .attr('d', path)
+              .attr('fill', 'none')
+              .attr('stroke', COLORS.orbit)
+              .attr('stroke-width', 1.5);
+          }
+        });
+      }
+    }
 
     if (observer) {
       const xy = projection([observer.longitude, observer.latitude]);
@@ -383,7 +427,6 @@
       observerMarker.style('display', 'none');
     }
 
-    layerOrbits.selectAll('*').remove();
     layerFootprint.selectAll('*').remove();
     layerMarkers.selectAll('.sat-marker').remove();
 
@@ -409,17 +452,6 @@
           }
         }
       } else {
-        const trajectory = window.SatContactTle.getTrajectory24h(noradId);
-        if (trajectory && trajectory.length > 0) {
-          const lineString = { type: 'LineString', coordinates: trajectory };
-          layerOrbits.append('path')
-            .datum(lineString)
-            .attr('d', path)
-            .attr('fill', 'none')
-            .attr('stroke', COLORS.orbit)
-            .attr('stroke-width', 1.5);
-        }
-
         if (pos) {
           const tleMap = window.SatContactTle.getCache();
           const tleData = tleMap && tleMap.get(noradId);
@@ -506,6 +538,9 @@
     topology = null;
     countriesGeo = null;
     cityLightElements = null;
+    cachedTrajectories.clear();
+    cachedTrajectories = new Map();
+    lastNoradIds = [];
   }
 
   window.SatContactMapRender = {
