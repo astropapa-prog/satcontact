@@ -186,42 +186,6 @@ satcontact/
 
 ---
 
-## 7. ИСТОРИЯ СЕССИИ (для контекста)
+## 7. КРАТКАЯ ИСТОРИЯ (для справки)
 
-### Этапы разработки Модуля 1
-
-1. Создан каркас: index.html, style.css, app.js — парсинг XML, карточки, базовые фильтры
-2. Добавлен выпадающий список групп, заголовок «SAT Навигатор»
-3. Разделение: фильтры по кнопкам (множественный выбор) и поиск по частоте
-4. Удалён параметр IsFavourite
-5. Регенерация чипсов при смене группы
-6. Редизайн шапки: компактная панель, тумблеры Полоса/Чувств., горизонтальный скролл рядов
-7. Исправления: wheel-скролл на десктопе, chip-row--collapsed вместо hidden, категория по родителю, blur() для снятия фокуса
-8. Сброс фильтров при сворачивании рядов Полоса/Чувств.
-9. Поиск по частоте: префикс (startsWith) вместо подстроки (includes)
-10. Placeholder «Поиск по частоте»
-11. **Overscroll на мобильных:** при скролле строки фильтров вправо до конца следующий жест закрывал браузер. Решение: `overscroll-behavior-x: none` на .chip-scroll и body; touchmove с preventDefault при достижении края (scrollLeft≤2 или ≥max-2) и свайпе в направлении overscroll
-12. **Чипсы «залипают» на мобильных:** при отключении фильтра повторным кликом кнопка продолжала гореть. Решение: `forceBlur()` (blur + fallback с временным input); класс `chip--blurred` + CSS override; `bindChipBlurReset()` — сброс при касании вне чипсов
-13. **Тумблеры Полоса/Чувств. «залипают» на мобильных:** аналогично чипсам. Решение: класс `btn--blurred` + CSS override для .btn--toggle; в click-хендлерах: add btn--blurred + forceBlur(); `bindChipBlurReset` расширен — сброс при касании вне чипсов и тумблеров
-
-### Сессия: редизайн карточки и брендинг SatContact
-
-14. **Брендинг:** SDR Frequency Manager → SatContact (title, meta, description, app.js, style.css, README)
-15. **Множественные NORAD ID:** extractNoradIds() — извлечение всех [id] из Name; отображение всех ID в карточке; data-norad для модулей карты и AR-трекера
-16. **Карточка 4 зоны:** grid-раскладка — слева имя/частота, центр транспондер+полоса, справа кнопки; число полосы на уровне RX; яркость по ширине (6–8 kHz / >8 kHz)
-17. **Овальные кнопки:** «посмотреть на карте», «НАВЕСТИСЬ»; блок транспондера между частотой и кнопками; надпись без скобок
-18. **Мобильная адаптация:** кнопки вертикально (одна над другой), фиксированный одинаковый размер, не зависящий от длины надписи
-19. **Планшет/десктоп:** кнопки в ряд, по центру, равный размер
-
-### Сессия: Модуль 2 — Интерактивная карта (Шаги 1–4)
-
-20. **Шаг 1 — GitHub Actions:** scripts/update_tle.py (Space-Track auth, env vars), .github/workflows/update-tle.yml (cron 00:00 UTC, workflow_dispatch, secrets, авто-коммит data/tle.txt)
-21. **Шаг 2 — UI карты:** index.html — mapView с шапкой, canvas, loading overlay, GPS denied overlay, HUD. app.js — openMapView/closeMapView, bindMapButtons. style.css — стили карты. data-clean-name на карточках.
-22. **Шаг 3 — Геолокация:** map.js — GPS с таймаутом 6 с, permissions check, localStorage (satcontact_observer), плашка denied, фоновый опрос 1/час, кнопка [↻], getMapObserver()
-23. **Шаг 4 — TLE и математика:** satellite.js (CDN v6), tle.js — loadTle, parseTle, computeSatellite, formatAzimuth, formatElevation. map.js — HUD update каждую 1 с, getMapNoradIds(), getSatellitePosition(). Без GPS: «—» в HUD
-
-### Сессия: Локальные lib, Шаг 5 (D3-карта)
-
-24. **Локальные библиотеки (PWA/офлайн):** CDN → lib/. Добавлены lib/README.md, пути lib/satellite.min.js, lib/d3.min.js, lib/topojson.min.js. data/world-50m.json (countries-50m.json переименовать).
-25. **Шаг 5 — D3-картография:** map-render.js — d3.geoMercator, fetch world-50m/countries-50m, topoToGeo, океан/суша/границы. Орбита (getTrajectory24h), footprint (geoCircle), маркеры (наблюдатель зелёный, спутник синий). Режим «ВСЕ» — только маркеры. ResizeObserver. tle.js: height в computeSatellite, getTrajectory24h.
-26. **Исправление карты:** карта не отображалась — fallback URL (world-50m, countries-50m), topojson API (topojson.feature / topojsonClient как функция), fallback object (countries, land).
+Модуль 1: каркас → группы, фильтры, поиск по частоте → редизайн шапки (тумблеры, чипсы) → мобильные фиксы (overscroll, forceBlur, chip--blurred) → брендинг SatContact, карточка 4 зоны, множественные NORAD ID. Модуль 2: GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → lib/ (офлайн) → D3-картография. Важно: topojson API — поддержка `topojson.feature` и `topojsonClient`; fallback для world-50m/countries-50m.

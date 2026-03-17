@@ -15,13 +15,47 @@
     orbit: 'rgba(82, 136, 193, 0.6)',
     footprint: 'rgba(82, 136, 193, 0.15)',
     marker: '#5288c1',
-    observer: '#81c784'
+    observer: '#81c784',
+    // Дневная карта (светлая)
+    dayOcean: '#5b9bd5',
+    dayLand: '#e8e0d0',
+    dayBorder: 'rgba(0,0,0,0.12)',
+    // Ночная тень (Telegram Dark Theme)
+    nightOverlay: '#1c242d',
+    terminatorLine: 'rgba(255,255,255,0.35)'
   };
 
   let svg, g, projection, path;
-  let landPath, bordersPath, orbitsGroup, footprintGroup, markersGroup, observerMarker;
+  let oceanRect, landPath, bordersPath, terminatorNightGroup, terminatorLineGroup;
+  let orbitsGroup, footprintGroup, markersGroup, observerMarker;
   let resizeObserver = null;
   let topology = null;
+  let terminatorIntervalId = null;
+
+  /**
+   * Вычисление подсолнечной точки (где Солнце в зените) по системному времени UTC.
+   * Без внешних API и TLE. Математика: вращение Земли + наклон оси.
+   * @param {Date} date — текущее время (UTC)
+   * @returns {{ lon: number, lat: number }} подсолнечная точка в градусах
+   */
+  function getSubsolarPoint(date) {
+    const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+    const lon = 180 - 15 * utcHours;
+    const startOfYear = new Date(Date.UTC(date.getUTCFullYear(), 0, 0));
+    const dayOfYear = Math.floor((date - startOfYear) / 86400000);
+    const declination = 23.45 * Math.sin((2 * Math.PI / 365.25) * (dayOfYear - 81));
+    return { lon: ((lon + 540) % 360) - 180, lat: declination };
+  }
+
+  /**
+   * Антисолнечная точка (центр ночного полушария)
+   */
+  function getAntisolarPoint(subsolar) {
+    return {
+      lon: subsolar.lon + 180 > 180 ? subsolar.lon - 180 : subsolar.lon + 180,
+      lat: -subsolar.lat
+    };
+  }
 
   /**
    * Радиус footprint в градусах (половина угла видимости с орбиты)
@@ -71,11 +105,11 @@
 
     g = svg.append('g');
 
-    // Океан (фон)
-    g.append('rect')
+    // Океан (дневной фон — светлый)
+    oceanRect = g.append('rect')
       .attr('width', width)
       .attr('height', height)
-      .attr('fill', COLORS.ocean);
+      .attr('fill', COLORS.dayOcean);
 
     // Загрузка TopoJSON (пробуем world-50m и countries-50m)
     for (const url of WORLD_URLS) {
@@ -96,17 +130,21 @@
       if (countries) {
         landPath = g.append('path')
           .datum(countries)
-          .attr('fill', COLORS.land)
+          .attr('fill', COLORS.dayLand)
           .attr('d', path);
 
         bordersPath = g.append('path')
           .datum(countries)
           .attr('fill', 'none')
-          .attr('stroke', COLORS.border)
+          .attr('stroke', COLORS.dayBorder)
           .attr('stroke-width', 0.5)
           .attr('d', path);
       }
     }
+
+    // Терминатор: ночная тень + линия границы день/ночь
+    terminatorNightGroup = g.append('g').attr('class', 'terminator-night');
+    terminatorLineGroup = g.append('g').attr('class', 'terminator-line');
 
     orbitsGroup = g.append('g').attr('class', 'orbits');
     footprintGroup = g.append('g').attr('class', 'footprints');
@@ -123,6 +161,44 @@
     resizeObserver.observe(container);
 
     updateMapRender();
+    updateTerminatorPaths();
+
+    terminatorIntervalId = setInterval(updateTerminatorPaths, 500);
+  }
+
+  /**
+   * Обновление терминатора (ночная тень + линия). Вызывается при resize и по таймеру.
+   */
+  function updateTerminatorPaths() {
+    if (!path || !terminatorNightGroup || !terminatorLineGroup) return;
+
+    const subsolar = getSubsolarPoint(new Date());
+    const antisolar = getAntisolarPoint(subsolar);
+
+    const nightCap = d3.geoCircle()
+      .center([antisolar.lon, antisolar.lat])
+      .radius(90)
+      .precision(2)();
+
+    const terminatorCircle = d3.geoCircle()
+      .center([subsolar.lon, subsolar.lat])
+      .radius(90)
+      .precision(2)();
+
+    terminatorNightGroup.selectAll('path').remove();
+    terminatorNightGroup.append('path')
+      .datum(nightCap)
+      .attr('d', path)
+      .attr('fill', COLORS.nightOverlay)
+      .attr('stroke', 'none');
+
+    terminatorLineGroup.selectAll('path').remove();
+    terminatorLineGroup.append('path')
+      .datum(terminatorCircle)
+      .attr('d', path)
+      .attr('fill', 'none')
+      .attr('stroke', COLORS.terminatorLine)
+      .attr('stroke-width', 1);
   }
 
   /**
@@ -143,9 +219,11 @@
       .translate([width / 2, height / 2]);
 
     svg.attr('width', width).attr('height', height);
+    if (oceanRect) oceanRect.attr('width', width).attr('height', height);
 
     if (landPath) landPath.attr('d', path);
     if (bordersPath) bordersPath.attr('d', path);
+    updateTerminatorPaths();
 
     const noradIds = typeof window.getMapNoradIds === 'function' ? window.getMapNoradIds() : [];
     const observer = typeof window.getMapObserver === 'function' ? window.getMapObserver() : null;
@@ -250,6 +328,10 @@
    * Уничтожение карты
    */
   function destroyMapRender() {
+    if (terminatorIntervalId) {
+      clearInterval(terminatorIntervalId);
+      terminatorIntervalId = null;
+    }
     if (resizeObserver && svg && svg.node()) {
       resizeObserver.unobserve(svg.node().parentElement);
     }
@@ -259,6 +341,11 @@
       svg = null;
     }
     g = null;
+    oceanRect = null;
+    landPath = null;
+    bordersPath = null;
+    terminatorNightGroup = null;
+    terminatorLineGroup = null;
     projection = null;
     path = null;
     topology = null;
