@@ -14,7 +14,7 @@
 
 - **Frequencies.xml** (data/): XML из SDR#, теги MemoryEntry: Name, Frequency, GroupName, DetectorType, FilterBandwidth
 - **NORAD ID:** извлекаются все значения из Name в квадратных скобках [28117], [40296][44453][45254][52145] и т.д.
-- **TLE:** (пока не подключён) — для AR-трекинга
+- **TLE** (data/tle.txt): обновляется автоматически GitHub Actions раз в сутки из Space-Track. Парсится в tle.js, используется satellite.js для расчётов орбит
 
 ## 4. ТЕКУЩАЯ РЕАЛИЗАЦИЯ — Модуль 1 (Менеджер частот)
 
@@ -22,14 +22,23 @@
 
 ```
 satcontact/
-├── index.html      # SPA, шапка + список карточек
-├── style.css       # Telegram Dark, mobile-first
-├── app.js          # Парсинг XML, фильтры, рендер
+├── index.html           # SPA, шапка + список карточек + mapView
+├── style.css            # Telegram Dark, mobile-first, стили карты
+├── app.js               # Парсинг XML, фильтры, рендер, openMapView/closeMapView
+├── map.js               # Модуль 2: GPS, localStorage, HUD, initMap/cleanupMap
+├── tle.js               # TLE парсер, satellite.js расчёты (азимут, элевация, дистанция)
 ├── data/
-│   └── Frequencies.xml
+│   ├── Frequencies.xml
+│   └── tle.txt          # TLE (Satcom, Меридианы), автообновление GitHub Actions
+├── scripts/
+│   └── update_tle.py    # Скрипт загрузки TLE с Space-Track (SPACETRACK_USER, SPACETRACK_PASS)
+├── .github/workflows/
+│   └── update-tle.yml   # Ежедневно 00:00 UTC + workflow_dispatch, авто-коммит data/tle.txt
 ├── PROJECT_CONTEXT.md
 └── README.md
 ```
+
+**Порядок скриптов в index.html:** satellite.js (CDN) → tle.js → map.js → app.js
 
 ### 4.2 Парсинг данных (app.js)
 
@@ -112,16 +121,61 @@ satcontact/
 
 ---
 
-## 5. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
+## 5. МОДУЛЬ 2 — Интерактивная карта (реализовано)
 
-- **Модуль 2:** AR-трекер спутников (камера, GPS, DeviceOrientation, satellite.js, canvas)
-- **PWA:** manifest.json, Service Worker, Cache Storage, IndexedDB
-- **GitHub Actions:** автообновление TLE по расписанию
-- **Клик по карточке:** переход в режим AR по NORAD ID (заготовка data-norad)
+### 5.1 Шаг 1: GitHub Actions (TLE)
+
+- **scripts/update_tle.py:** авторизация Space-Track (POST ajaxauth/login), скачивание TLE по NORAD ID, сохранение в data/tle.txt. Учётные данные из env: SPACETRACK_USER, SPACETRACK_PASS.
+- **.github/workflows/update-tle.yml:** cron 00:00 UTC, workflow_dispatch, secrets.SPACETRACK_USER/PASS, авто-коммит data/tle.txt при изменении. **GitHub Secrets:** SPACETRACK_USER, SPACETRACK_PASS (Settings → Secrets and variables → Actions).
+
+### 5.2 Шаг 2: Базовый UI карты и SPA-маршрутизация
+
+- **index.html:** `<div id="mapView" class="map-view" hidden>` — шапка (Назад, Название, ВСЕ), #mapCanvas, оверлей загрузки, плашка GPS denied, HUD (азимут, элевация, дистанция, координаты, кнопка ↻).
+- **app.js:** `openMapView(noradIds, satelliteName)` — скрывает .header/.main, показывает mapView, вызывает `window.initMap()`. `closeMapView()` — возврат, вызывает `window.cleanupMap()`. Кнопка «посмотреть на карте» — data-norad, data-clean-name. Кнопка «ВСЕ» на карте — все NORAD IDs из filteredEntries.
+- **style.css:** .map-view (fixed, fullscreen), .map-view__header, .map-view__hud (#212d3b), .map-view__gps-denied.
+
+### 5.3 Шаг 3: Сервис геолокации (map.js)
+
+- **GPS:** запрос с таймаутом 6 с, `navigator.permissions` (при denied — показ плашки без спама).
+- **localStorage:** ключ `satcontact_observer`, lat, lon, altitude, timestamp.
+- **Плашка «GPS заблокирован»:** «Проверить снова» / «Продолжить без GPS».
+- **Фоновый опрос:** 1 раз в час (при denied не запускается).
+- **Кнопка [↻]:** ручной запрос GPS.
+- **API:** `window.getMapObserver()` — текущие координаты.
+
+### 5.4 Шаг 4: TLE парсер и математика (tle.js)
+
+- **satellite.js:** CDN v6, `twoline2satrec`, `propagate`, `ecfToLookAngles`, `eciToGeodetic`.
+- **loadTle():** fetch data/tle.txt, parseTle() → Map<NoradId, { line1, line2, satrec }>. NORAD ID из строки 2, символы 3–7.
+- **computeSatellite():** (tleData, observer, date) → { azimuth, elevation, distance, lat, lon }.
+- **map.js:** интеграция — loadTle после acquireObserver, HUD обновление каждую 1 с. Без GPS — «—» в HUD.
+- **API:** `window.getMapNoradIds()`, `window.getSatellitePosition(noradId, date)` — для D3 (Шаг 5).
+
+### 5.5 Кнопка «посмотреть на карте»
+
+- Активна. При клике: извлечение data-norad и data-clean-name из карточки, SPA-переход в mapView, вызов initMap.
 
 ---
 
-## 6. ИСТОРИЯ СЕССИИ (для контекста)
+## 6. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
+
+- **Шаг 5:** Картография и рендер (D3.js) — topojson world-50m, орбиты, footprint, маркер спутника.
+- **Шаг 6:** Режим «ВСЕ» на карте — все маркеры отфильтрованных спутников (без сложных орбит).
+- **Модуль 3:** AR-трекер (камера, DeviceOrientation, кнопка «НАВЕСТИСЬ»).
+- **PWA:** manifest.json, Service Worker, Cache Storage, IndexedDB.
+
+### План Шага 5 (D3.js) — для продолжения
+
+- **Библиотеки:** d3.js, topojson.js. Файл data/world-50m.json (Natural Earth).
+- **Цвета:** океан #1c242d, суша #212d3b, границы rgba(255,255,255,0.1).
+- **Суточная траектория:** t=0..24h, шаг 5 мин → d3.geoPath().
+- **Footprint:** круг радиовидимости по высоте орбиты.
+- **Маркер:** движущаяся точка спутника.
+- **API для рендера:** `getMapObserver()`, `getMapNoradIds()`, `getSatellitePosition(noradId, date)`.
+
+---
+
+## 7. ИСТОРИЯ СЕССИИ (для контекста)
 
 ### Этапы разработки Модуля 1
 
@@ -147,3 +201,10 @@ satcontact/
 17. **Овальные кнопки:** «посмотреть на карте», «НАВЕСТИСЬ»; блок транспондера между частотой и кнопками; надпись без скобок
 18. **Мобильная адаптация:** кнопки вертикально (одна над другой), фиксированный одинаковый размер, не зависящий от длины надписи
 19. **Планшет/десктоп:** кнопки в ряд, по центру, равный размер
+
+### Сессия: Модуль 2 — Интерактивная карта (Шаги 1–4)
+
+20. **Шаг 1 — GitHub Actions:** scripts/update_tle.py (Space-Track auth, env vars), .github/workflows/update-tle.yml (cron 00:00 UTC, workflow_dispatch, secrets, авто-коммит data/tle.txt)
+21. **Шаг 2 — UI карты:** index.html — mapView с шапкой, canvas, loading overlay, GPS denied overlay, HUD. app.js — openMapView/closeMapView, bindMapButtons. style.css — стили карты. data-clean-name на карточках.
+22. **Шаг 3 — Геолокация:** map.js — GPS с таймаутом 6 с, permissions check, localStorage (satcontact_observer), плашка denied, фоновый опрос 1/час, кнопка [↻], getMapObserver()
+23. **Шаг 4 — TLE и математика:** satellite.js (CDN v6), tle.js — loadTle, parseTle, computeSatellite, formatAzimuth, formatElevation. map.js — HUD update каждую 1 с, getMapNoradIds(), getSatellitePosition(). Без GPS: «—» в HUD
