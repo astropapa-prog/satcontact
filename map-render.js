@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const WORLD_URLS = ['data/world-50m.json', 'data/countries-50m.json'];
+  const WORLD_URL = 'data/countries-50m.json';
   const EARTH_RADIUS_KM = 6378.135;
   const FAST_LOOP_MS = 1000;
   const SLOW_LOOP_MS = 60000;
@@ -215,18 +215,12 @@
     layerFootprint = g.append('g').attr('class', 'layer-footprint');
     layerMarkers = g.append('g').attr('class', 'layer-markers');
 
-    for (const url of WORLD_URLS) {
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          topology = await res.json();
-          break;
-        }
-      } catch (e) {
-        continue;
-      }
+    try {
+      const res = await fetch(WORLD_URL);
+      if (res.ok) topology = await res.json();
+    } catch (e) {
+      console.warn('map-render: не удалось загрузить карту', e);
     }
-    if (!topology) console.warn('map-render: не удалось загрузить карту');
 
     if (topology) {
       countriesGeo = topoToGeo(topology, 'countries') || topoToGeo(topology, 'land');

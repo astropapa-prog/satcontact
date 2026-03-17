@@ -36,7 +36,7 @@ satcontact/
 ├── data/
 │   ├── Frequencies.xml
 │   ├── tle.txt          # TLE (Satcom, Меридианы), автообновление GitHub Actions
-│   └── world-50m.json   # или countries-50m.json — карта мира TopoJSON
+│   └── countries-50m.json   # карта мира TopoJSON (world-atlas)
 ├── scripts/
 │   └── update_tle.py    # Скрипт загрузки TLE с Space-Track (SPACETRACK_USER, SPACETRACK_PASS)
 ├── .github/workflows/
@@ -47,7 +47,7 @@ satcontact/
 
 **Порядок скриптов в index.html:** satellite.min.js → d3.min.js → topojson.min.js → tle.js → map.js → map-render.js → app.js
 
-**lib/:** локальные копии (PWA/офлайн). См. lib/README.md. **data/world-50m.json:** скачать countries-50m.json из world-atlas, переименовать.
+**lib/:** локальные копии (PWA/офлайн). См. lib/README.md. **data/countries-50m.json:** скачать из world-atlas.
 
 ### 4.2 Парсинг данных (app.js)
 
@@ -167,7 +167,7 @@ satcontact/
 
 ### 5.6 Шаг 5: D3-картография (map-render.js)
 
-- **Библиотеки:** lib/d3.min.js, lib/topojson.min.js (topojson-client). data/world-50m.json или countries-50m.json.
+- **Библиотеки:** lib/d3.min.js, lib/topojson.min.js (topojson-client). data/countries-50m.json.
 - **Проекция:** d3.geoMercator.
 - **Иерархия слоёв (строгий порядок):** layerOcean → layerLand → layerLandBorders → layerShadow → layerBordersNight → layerTerminatorLine → layerLights → layerOrbits → layerFootprint → layerMarkers.
 - **Дневная карта:** океан #6b9bc2, суша #c6dbe8, границы rgba(0,0,0,0.1).
@@ -197,7 +197,7 @@ satcontact/
 Каркас → группы, фильтры, поиск по частоте → редизайн шапки (тумблеры, чипсы) → мобильные фиксы (overscroll, forceBlur, chip--blurred) → брендинг SatContact, карточка 4 зоны, множественные NORAD ID.
 
 ### Модуль 2 (до сессии карты)
-GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → lib/ (офлайн) → D3-картография. topojson API — поддержка `topojson.feature` и `topojsonClient`; fallback для world-50m/countries-50m.
+GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → lib/ (офлайн) → D3-картография. topojson API — поддержка `topojson.feature` и `topojsonClient`.
 
 ### Сессия: Карта день/ночь, терминатор, огни городов
 

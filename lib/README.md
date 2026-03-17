@@ -14,6 +14,4 @@
 
 | Файл | URL |
 |------|-----|
-| **world-50m.json** | https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json |
-
-Скачайте countries-50m.json и переименуйте в `world-50m.json` (или оставьте как countries-50m.json — оба имени поддерживаются).
+| **countries-50m.json** | https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json |
