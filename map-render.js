@@ -1,6 +1,6 @@
 /**
  * SatContact — Модуль 2: D3-картография (map-render.js)
- * Отрисовка Земли, терминатора, огней городов, орбит, маркеров.
+ * Отрисовка Земли, огней городов, орбит, маркеров.
  * Оптимизировано для слабых мобильных устройств, оффлайн.
  */
 
@@ -100,8 +100,6 @@
     dayOcean: '#6b9bc2',
     dayLand: '#c6dbe8',
     dayBorder: 'rgba(0,0,0,0.1)',
-    nightOverlay: '#1c242d',
-    nightBorder: 'rgba(255,255,255,0.12)',
     orbit: 'rgba(82, 136, 193, 0.6)',
     footprint: 'rgba(82, 136, 193, 0.15)',
     marker: '#5288c1',
@@ -109,9 +107,9 @@
   };
 
   let svg, g, projection, path;
-  let layerOcean, layerLand, layerLandBorders, layerShadow, layerBordersNight;
+  let layerOcean, layerLand, layerLandBorders;
   let layerLights, layerOrbits, layerFootprint, layerMarkers;
-  let landPath, bordersPath, bordersNightPath;
+  let landPath, bordersPath;
   let observerMarker, cityLightElements;
   let resizeObserver = null;
   let topology = null;
@@ -206,8 +204,6 @@
 
     layerLand = g.append('g').attr('class', 'layer-land');
     layerLandBorders = g.append('g').attr('class', 'layer-land-borders');
-    layerShadow = g.append('g').attr('class', 'layer-shadow').style('pointer-events', 'none');
-    layerBordersNight = g.append('g').attr('class', 'layer-borders-night').style('pointer-events', 'none');
     layerLights = g.append('g').attr('class', 'layer-lights').style('pointer-events', 'none');
     layerOrbits = g.append('g').attr('class', 'layer-orbits');
     layerFootprint = g.append('g').attr('class', 'layer-footprint');
@@ -238,13 +234,6 @@
           .datum(countriesGeo)
           .attr('fill', 'none')
           .attr('stroke', COLORS.dayBorder)
-          .attr('stroke-width', 0.5)
-          .attr('d', path);
-
-        bordersNightPath = layerBordersNight.append('path')
-          .datum(countriesGeo)
-          .attr('fill', 'none')
-          .attr('stroke', COLORS.nightBorder)
           .attr('stroke-width', 0.5)
           .attr('d', path);
       }
@@ -282,45 +271,9 @@
 
     if (landPath) landPath.attr('d', path);
     if (bordersPath) bordersPath.attr('d', path);
-    if (bordersNightPath) bordersNightPath.attr('d', path);
 
-    drawTerminator();
     updateCityLights();
     fastLoop();
-  }
-
-  /**
-   * Плавный терминатор: 4 накладывающихся geo-круга (сумерки → глубокая ночь)
-   */
-  function drawTerminator() {
-    if (!path || !layerShadow) return;
-
-    const sun = getSunPosition(new Date());
-    let antiLon = sun.lon + 180;
-    if (antiLon > 180) antiLon -= 360;
-    const antiLat = -sun.lat;
-
-    const shadowPaths = [
-      { radius: 90, opacity: 0.2 },
-      { radius: 84, opacity: 0.2 },
-      { radius: 78, opacity: 0.2 },
-      { radius: 72, opacity: 0.25 }
-    ];
-
-    layerShadow.selectAll('path').remove();
-    shadowPaths.forEach(({ radius, opacity }) => {
-      const cap = d3.geoCircle()
-        .center([antiLon, antiLat])
-        .radius(radius)
-        .precision(2)();
-      layerShadow.append('path')
-        .datum(cap)
-        .attr('d', path)
-        .attr('fill', COLORS.nightOverlay)
-        .attr('stroke', 'none')
-        .attr('opacity', opacity)
-        .style('pointer-events', 'none');
-    });
   }
 
   /**
@@ -464,10 +417,9 @@
   }
 
   /**
-   * Медленный цикл (60 с): терминатор, огни городов
+   * Медленный цикл (60 с): огни городов
    */
   function slowLoop() {
-    drawTerminator();
     updateCityLights();
   }
 
@@ -492,15 +444,12 @@
     layerOcean = null;
     layerLand = null;
     layerLandBorders = null;
-    layerShadow = null;
-    layerBordersNight = null;
     layerLights = null;
     layerOrbits = null;
     layerFootprint = null;
     layerMarkers = null;
     landPath = null;
     bordersPath = null;
-    bordersNightPath = null;
     projection = null;
     path = null;
     topology = null;
