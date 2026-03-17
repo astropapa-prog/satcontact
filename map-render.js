@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const WORLD_URL = 'data/world-50m.json';
+  const WORLD_URLS = ['data/world-50m.json', 'data/countries-50m.json'];
   const EARTH_RADIUS_KM = 6378.135;
   const COLORS = {
     ocean: '#1c242d',
@@ -18,7 +18,7 @@
     observer: '#81c784'
   };
 
-  let svg, g, projection, path, pathLine;
+  let svg, g, projection, path;
   let landPath, bordersPath, orbitsGroup, footprintGroup, markersGroup, observerMarker;
   let resizeObserver = null;
   let topology = null;
@@ -34,14 +34,15 @@
   }
 
   /**
-   * TopoJSON → GeoJSON (поддержка topojson и topojsonClient)
+   * TopoJSON → GeoJSON (поддержка topojson и topojson-client)
    */
   function topoToGeo(topology, objectName) {
     const obj = topology.objects[objectName];
     if (!obj) return null;
-    const topo = window.topojson || window.topojsonClient;
-    if (!topo || !topo.feature) return null;
-    return topo.feature(topology, obj);
+    const topo = window.topojson || window.topojsonClient || {};
+    const featureFn = typeof topo === 'function' ? topo : topo.feature;
+    if (!featureFn) return null;
+    return featureFn(topology, obj);
   }
 
   /**
@@ -76,17 +77,22 @@
       .attr('height', height)
       .attr('fill', COLORS.ocean);
 
-    // Загрузка TopoJSON
-    try {
-      const res = await fetch(WORLD_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      topology = await res.json();
-    } catch (e) {
-      console.warn('map-render: не удалось загрузить карту', e);
+    // Загрузка TopoJSON (пробуем world-50m и countries-50m)
+    for (const url of WORLD_URLS) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          topology = await res.json();
+          break;
+        }
+      } catch (e) {
+        continue;
+      }
     }
+    if (!topology) console.warn('map-render: не удалось загрузить карту (world-50m.json или countries-50m.json)');
 
     if (topology) {
-      const countries = topoToGeo(topology, 'countries');
+      const countries = topoToGeo(topology, 'countries') || topoToGeo(topology, 'land');
       if (countries) {
         landPath = g.append('path')
           .datum(countries)
