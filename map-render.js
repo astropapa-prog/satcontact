@@ -1,7 +1,7 @@
 /**
  * SatContact — Модуль 2: D3-картография (map-render.js)
  * Отрисовка Земли, линии терминатора, огней городов, орбит, маркеров.
- * Оптимизировано для слабых мобильных устройств, оффлайн.
+ * Canvas-рендер для 60 FPS на слабых мобильных устройствах, оффлайн.
  */
 
 (function () {
@@ -109,11 +109,7 @@
     observer: '#81c784'
   };
 
-  let svg, g, projection, path;
-  let layerOcean, layerLand, layerLandBorders, layerShadow, layerBordersNight, layerTerminatorLine;
-  let layerLights, layerOrbits, layerFootprint, layerMarkers;
-  let landPath, bordersPath, bordersNightPath;
-  let observerMarker, cityLightElements;
+  let canvas, ctx, projection, path;
   let resizeObserver = null;
   let topology = null;
   let countriesGeo = null;
@@ -121,6 +117,17 @@
   let slowLoopId = null;
   let cachedTrajectories = new Map();
   let lastNoradIds = [];
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+
+  /** Состояние для рендера (обновляется в циклах) */
+  let currentSunPos = null;
+  let terminatorShadowGeo = null;
+  let terminatorLineGeo = null;
+  let activeSatellites = [];
+  let cachedOrbitGeos = [];
+  let observerPos = null;
 
   /**
    * Позиция Солнца (подсолнечная точка) по UTC. Без API, чистая математика.
@@ -161,212 +168,6 @@
     return featureFn(topology, obj);
   }
 
-  /**
-   * Инициализация D3-карты (initD3Map)
-   */
-  async function initD3Map(container) {
-    if (!container || !window.d3) return;
-
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    if (width <= 0 || height <= 0) return;
-
-    projection = d3.geoMercator()
-      .scale(width / (2 * Math.PI))
-      .translate([width / 2, height / 2]);
-
-    path = d3.geoPath().projection(projection);
-
-    svg = d3.select(container)
-      .selectAll('svg')
-      .data([1])
-      .join('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .style('display', 'block');
-
-    const defs = svg.append('defs');
-    defs.append('radialGradient')
-      .attr('id', 'city-glow')
-      .selectAll('stop')
-      .data([
-        { offset: '0%', color: '#ffde6b', opacity: 1 },
-        { offset: '40%', color: '#ffde6b', opacity: 0.6 },
-        { offset: '100%', color: '#ffde6b', opacity: 0 }
-      ])
-      .join('stop')
-      .attr('offset', d => d.offset)
-      .attr('stop-color', d => d.color)
-      .attr('stop-opacity', d => d.opacity);
-
-    g = svg.append('g');
-
-    layerOcean = g.append('g').attr('class', 'layer-ocean');
-    layerOcean.append('rect')
-      .attr('width', width)
-      .attr('height', height)
-      .attr('fill', COLORS.dayOcean);
-
-    layerLand = g.append('g').attr('class', 'layer-land');
-    layerLandBorders = g.append('g').attr('class', 'layer-land-borders');
-    layerShadow = g.append('g').attr('class', 'layer-shadow').style('pointer-events', 'none');
-    layerBordersNight = g.append('g').attr('class', 'layer-borders-night').style('pointer-events', 'none');
-    layerTerminatorLine = g.append('g').attr('class', 'layer-terminator-line').style('pointer-events', 'none');
-    layerLights = g.append('g').attr('class', 'layer-lights').style('pointer-events', 'none');
-    layerOrbits = g.append('g').attr('class', 'layer-orbits');
-    layerFootprint = g.append('g').attr('class', 'layer-footprint');
-    layerMarkers = g.append('g').attr('class', 'layer-markers');
-
-    try {
-      const res = await fetch(WORLD_URL);
-      if (res.ok) topology = await res.json();
-    } catch (e) {
-      console.warn('map-render: не удалось загрузить карту', e);
-    }
-
-    if (topology) {
-      countriesGeo = topoToGeo(topology, 'countries') || topoToGeo(topology, 'land');
-      if (countriesGeo) {
-        landPath = layerLand.append('path')
-          .datum(countriesGeo)
-          .attr('fill', COLORS.dayLand)
-          .attr('d', path);
-
-        bordersPath = layerLandBorders.append('path')
-          .datum(countriesGeo)
-          .attr('fill', 'none')
-          .attr('stroke', COLORS.dayBorder)
-          .attr('stroke-width', 0.5)
-          .attr('d', path);
-
-        bordersNightPath = layerBordersNight.append('path')
-          .datum(countriesGeo)
-          .attr('fill', 'none')
-          .attr('stroke', COLORS.nightBorder)
-          .attr('stroke-width', 0.5)
-          .attr('d', path);
-      }
-    }
-
-    initCityLights();
-    observerMarker = layerMarkers.append('circle')
-      .attr('r', 4)
-      .attr('fill', COLORS.observer)
-      .attr('stroke', '#fff')
-      .attr('stroke-width', 1)
-      .style('display', 'none');
-
-    resizeObserver = new ResizeObserver(() => onResize());
-    resizeObserver.observe(container);
-
-    onResize();
-    fastLoop();
-    slowLoop();
-    fastLoopId = setInterval(fastLoop, FAST_LOOP_MS);
-    slowLoopId = setInterval(slowLoop, SLOW_LOOP_MS);
-  }
-
-  function onResize() {
-    if (!svg || !g || !projection || !path) return;
-    const container = svg.node().parentElement;
-    if (!container) return;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    if (width <= 0 || height <= 0) return;
-
-    projection.scale(width / (2 * Math.PI)).translate([width / 2, height / 2]);
-    svg.attr('width', width).attr('height', height);
-    layerOcean.select('rect').attr('width', width).attr('height', height);
-
-    if (landPath) landPath.attr('d', path);
-    if (bordersPath) bordersPath.attr('d', path);
-    if (bordersNightPath) bordersNightPath.attr('d', path);
-    if (layerOrbits) layerOrbits.selectAll('path').attr('d', path);
-
-    drawTerminator();
-    updateCityLights();
-    fastLoop();
-  }
-
-  /**
-   * Терминатор: ночная тень (один путь) + линия границы день/ночь
-   */
-  function drawTerminator() {
-    if (!path || !layerShadow || !layerTerminatorLine) return;
-
-    const sun = getSunPosition(new Date());
-    let antiLon = sun.lon + 180;
-    if (antiLon > 180) antiLon -= 360;
-    const antiLat = -sun.lat;
-
-    const nightCap = d3.geoCircle()
-      .center([antiLon, antiLat])
-      .radius(90)
-      .precision(2)();
-
-    const terminatorCircle = d3.geoCircle()
-      .center([sun.lon, sun.lat])
-      .radius(90)
-      .precision(2)();
-
-    layerShadow.selectAll('path').remove();
-    layerShadow.append('path')
-      .datum(nightCap)
-      .attr('d', path)
-      .attr('fill', COLORS.nightOverlay)
-      .attr('stroke', 'none');
-
-    layerTerminatorLine.selectAll('path').remove();
-    layerTerminatorLine.append('path')
-      .datum(terminatorCircle)
-      .attr('d', path)
-      .attr('fill', 'none')
-      .attr('stroke', COLORS.terminatorLine)
-      .attr('stroke-width', 1);
-  }
-
-  /**
-   * Инициализация огней городов
-   */
-  function initCityLights() {
-    if (!layerLights || !projection) return;
-    layerLights.selectAll('circle').remove();
-    cityLightElements = [];
-    MAJOR_CITIES.forEach((city) => {
-      const circle = layerLights.append('circle')
-        .attr('r', 2.5)
-        .attr('fill', 'url(#city-glow)')
-        .attr('opacity', 0)
-        .style('pointer-events', 'none');
-      cityLightElements.push({ city, circle });
-    });
-  }
-
-  /**
-   * Обновление видимости огней (день/ночь по d3.geoDistance)
-   * d3.geoDistance принимает [lon, lat] в градусах, возвращает радианы
-   */
-  function updateCityLights() {
-    if (!projection || !cityLightElements) return;
-    const geoDist = d3.geoDistance || geoDistanceFallback;
-    if (!geoDist) return;
-
-    const sun = getSunPosition(new Date());
-    const sunPt = [sun.lon, sun.lat];
-    const nightThreshold = Math.PI / 2;
-
-    cityLightElements.forEach(({ city, circle }) => {
-      const cityPt = [city.lon, city.lat];
-      const dist = geoDist(cityPt, sunPt);
-      const isNight = dist > nightThreshold;
-      const xy = projection([city.lon, city.lat]);
-      if (xy) {
-        circle.attr('cx', xy[0]).attr('cy', xy[1]);
-      }
-      circle.attr('opacity', isNight ? 0.85 : 0);
-    });
-  }
-
   /** Сравнение массивов noradIds (состав и порядок) */
   function noradIdsEqual(a, b) {
     if (a.length !== b.length) return false;
@@ -377,24 +178,250 @@
   }
 
   /**
-   * Быстрый цикл (1 с): наблюдатель, спутник, орбиты, footprint.
-   * Орбиты пересчитываются и перерисовываются только при смене noradIds.
+   * Инициализация Canvas-карты
+   */
+  async function initD3Map(container) {
+    if (!container || !window.d3) return;
+
+    width = container.clientWidth;
+    height = container.clientHeight;
+    if (width <= 0 || height <= 0) return;
+
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    projection = d3.geoMercator()
+      .scale(width / (2 * Math.PI))
+      .translate([width / 2, height / 2]);
+
+    canvas = d3.select(container)
+      .selectAll('canvas')
+      .data([1])
+      .join('canvas')
+      .attr('width', width * dpr)
+      .attr('height', height * dpr)
+      .style('width', width + 'px')
+      .style('height', height + 'px')
+      .style('display', 'block');
+
+    ctx = canvas.node().getContext('2d');
+    if (!ctx) return;
+
+    ctx.scale(dpr, dpr);
+    path = d3.geoPath().projection(projection).context(ctx);
+
+    try {
+      const res = await fetch(WORLD_URL);
+      if (res.ok) topology = await res.json();
+    } catch (e) {
+      console.warn('map-render: не удалось загрузить карту', e);
+    }
+
+    if (topology) {
+      countriesGeo = topoToGeo(topology, 'countries') || topoToGeo(topology, 'land');
+    }
+
+    resizeObserver = new ResizeObserver(() => onResize());
+    resizeObserver.observe(container);
+
+    onResize();
+    slowLoop();
+    fastLoop();
+    fastLoopId = setInterval(fastLoop, FAST_LOOP_MS);
+    slowLoopId = setInterval(slowLoop, SLOW_LOOP_MS);
+  }
+
+  function onResize() {
+    if (!canvas || !ctx || !projection || !path) return;
+    const container = canvas.node().parentElement;
+    if (!container) return;
+    width = container.clientWidth;
+    height = container.clientHeight;
+    if (width <= 0 || height <= 0) return;
+
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    projection.scale(width / (2 * Math.PI)).translate([width / 2, height / 2]);
+
+    canvas
+      .attr('width', width * dpr)
+      .attr('height', height * dpr)
+      .style('width', width + 'px')
+      .style('height', height + 'px');
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    path = d3.geoPath().projection(projection).context(ctx);
+
+    slowLoop();
+    fastLoop();
+  }
+
+  /**
+   * Рендер кадра: Painter's algorithm (снизу вверх)
+   */
+  function renderFrame() {
+    if (!ctx || !path || width <= 0 || height <= 0) return;
+
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.fillStyle = COLORS.dayOcean;
+    ctx.fillRect(0, 0, width, height);
+
+    if (!countriesGeo) return;
+
+    ctx.fillStyle = COLORS.dayLand;
+    ctx.beginPath();
+    path(countriesGeo);
+    ctx.fill();
+
+    ctx.strokeStyle = COLORS.dayBorder;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    path(countriesGeo);
+    ctx.stroke();
+
+    if (terminatorShadowGeo) {
+      ctx.fillStyle = COLORS.nightOverlay;
+      ctx.beginPath();
+      path(terminatorShadowGeo);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = COLORS.nightBorder;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    path(countriesGeo);
+    ctx.stroke();
+
+    if (terminatorLineGeo) {
+      ctx.strokeStyle = COLORS.terminatorLine;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      path(terminatorLineGeo);
+      ctx.stroke();
+    }
+
+    const geoDist = d3.geoDistance || geoDistanceFallback;
+    const sunPt = currentSunPos ? [currentSunPos.lon, currentSunPos.lat] : [0, 0];
+    const nightThreshold = Math.PI / 2;
+
+    MAJOR_CITIES.forEach((city) => {
+      const cityPt = [city.lon, city.lat];
+      const dist = geoDist(cityPt, sunPt);
+      const isNight = dist > nightThreshold;
+      if (!isNight) return;
+
+      const xy = projection([city.lon, city.lat]);
+      if (!xy) return;
+
+      const grad = ctx.createRadialGradient(xy[0], xy[1], 0, xy[0], xy[1], 2.5);
+      grad.addColorStop(0, 'rgba(255, 222, 107, 1)');
+      grad.addColorStop(0.4, 'rgba(255, 222, 107, 0.6)');
+      grad.addColorStop(1, 'rgba(255, 222, 107, 0)');
+
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(xy[0], xy[1], 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    cachedOrbitGeos.forEach((orbitGeo) => {
+      ctx.strokeStyle = COLORS.orbit;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      path(orbitGeo);
+      ctx.stroke();
+    });
+
+    activeSatellites.forEach((sat) => {
+      if (sat.footprintGeo) {
+        ctx.fillStyle = COLORS.footprint;
+        ctx.strokeStyle = COLORS.orbit;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        path(sat.footprintGeo);
+        ctx.fill();
+        ctx.stroke();
+      }
+    });
+
+    activeSatellites.forEach((sat) => {
+      if (sat.pos) {
+        const xy = projection([sat.pos.lon, sat.pos.lat]);
+        if (xy) {
+          ctx.fillStyle = COLORS.marker;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = sat.markerRadius === 6 ? 2 : 1;
+          ctx.beginPath();
+          ctx.arc(xy[0], xy[1], sat.markerRadius, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+    });
+
+    if (observerPos) {
+      const xy = projection([observerPos.lon, observerPos.lat]);
+      if (xy) {
+        ctx.fillStyle = COLORS.observer;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(xy[0], xy[1], 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+
+  /**
+   * Медленный цикл (60 с): обновление терминатора
+   */
+  function slowLoop() {
+    if (!projection) return;
+
+    const sun = getSunPosition(new Date());
+    currentSunPos = sun;
+
+    let antiLon = sun.lon + 180;
+    if (antiLon > 180) antiLon -= 360;
+    const antiLat = -sun.lat;
+
+    terminatorShadowGeo = d3.geoCircle()
+      .center([antiLon, antiLat])
+      .radius(90)
+      .precision(2)();
+
+    terminatorLineGeo = d3.geoCircle()
+      .center([sun.lon, sun.lat])
+      .radius(90)
+      .precision(2)();
+
+    renderFrame();
+  }
+
+  /**
+   * Быстрый цикл (1 с): наблюдатель, спутники, орбиты, footprints
    */
   function fastLoop() {
-    if (!svg || !g || !projection || !path) return;
+    if (!projection || !path) return;
 
     const noradIds = typeof window.getMapNoradIds === 'function' ? window.getMapNoradIds() : [];
     const observer = typeof window.getMapObserver === 'function' ? window.getMapObserver() : null;
     const isAllMode = noradIds.length > 1;
     const noradIdsChanged = !noradIdsEqual(noradIds, lastNoradIds);
 
+    observerPos = observer ? { lon: observer.longitude, lat: observer.latitude } : null;
+
     if (noradIdsChanged) {
-      layerOrbits.selectAll('*').remove();
       const noradSet = new Set(noradIds);
       for (const id of cachedTrajectories.keys()) {
         if (!noradSet.has(id)) cachedTrajectories.delete(id);
       }
       lastNoradIds = noradIds.slice();
+      cachedOrbitGeos = [];
 
       if (window.SatContactTle && !isAllMode && noradIds.length > 0) {
         noradIds.forEach((noradId) => {
@@ -406,31 +433,18 @@
             }
           }
           if (trajectory && trajectory.length > 0) {
-            const lineString = { type: 'LineString', coordinates: trajectory };
-            layerOrbits.append('path')
-              .datum(lineString)
-              .attr('d', path)
-              .attr('fill', 'none')
-              .attr('stroke', COLORS.orbit)
-              .attr('stroke-width', 1.5);
+            cachedOrbitGeos.push({ type: 'LineString', coordinates: trajectory });
           }
         });
       }
     }
 
-    if (observer) {
-      const xy = projection([observer.longitude, observer.latitude]);
-      if (xy) {
-        observerMarker.attr('cx', xy[0]).attr('cy', xy[1]).style('display', 'block');
-      }
-    } else {
-      observerMarker.style('display', 'none');
+    activeSatellites = [];
+
+    if (!window.SatContactTle || !noradIds.length) {
+      renderFrame();
+      return;
     }
-
-    layerFootprint.selectAll('*').remove();
-    layerMarkers.selectAll('.sat-marker').remove();
-
-    if (!window.SatContactTle || !noradIds.length) return;
 
     noradIds.forEach((noradId) => {
       const pos = typeof window.getSatellitePosition === 'function'
@@ -438,20 +452,13 @@
         : null;
 
       if (isAllMode) {
-        if (pos) {
-          const xy = projection([pos.lon, pos.lat]);
-          if (xy) {
-            layerMarkers.append('circle')
-              .attr('class', 'sat-marker')
-              .attr('cx', xy[0])
-              .attr('cy', xy[1])
-              .attr('r', 5)
-              .attr('fill', COLORS.marker)
-              .attr('stroke', '#fff')
-              .attr('stroke-width', 1);
-          }
-        }
+        activeSatellites.push({
+          pos: pos,
+          footprintGeo: null,
+          markerRadius: 5
+        });
       } else {
+        let footprintGeo = null;
         if (pos) {
           const tleMap = window.SatContactTle.getCache();
           const tleData = tleMap && tleMap.get(noradId);
@@ -464,42 +471,22 @@
             );
             if (r && r.height != null) heightKm = r.height;
           }
-
           const radiusDeg = footprintRadiusDeg(heightKm);
           if (radiusDeg > 0) {
-            const circle = d3.geoCircle()
+            footprintGeo = d3.geoCircle()
               .center([pos.lon, pos.lat])
               .radius(radiusDeg)();
-            layerFootprint.append('path')
-              .datum(circle)
-              .attr('d', path)
-              .attr('fill', COLORS.footprint)
-              .attr('stroke', COLORS.orbit)
-              .attr('stroke-width', 0.5);
-          }
-
-          const xy = projection([pos.lon, pos.lat]);
-          if (xy) {
-            layerMarkers.append('circle')
-              .attr('class', 'sat-marker')
-              .attr('cx', xy[0])
-              .attr('cy', xy[1])
-              .attr('r', 6)
-              .attr('fill', COLORS.marker)
-              .attr('stroke', '#fff')
-              .attr('stroke-width', 2);
           }
         }
+        activeSatellites.push({
+          pos: pos,
+          footprintGeo: footprintGeo,
+          markerRadius: 6
+        });
       }
     });
-  }
 
-  /**
-   * Медленный цикл (60 с): терминатор, огни городов
-   */
-  function slowLoop() {
-    drawTerminator();
-    updateCityLights();
+    renderFrame();
   }
 
   function destroyMapRender() {
@@ -511,36 +498,28 @@
       clearInterval(slowLoopId);
       slowLoopId = null;
     }
-    if (resizeObserver && svg && svg.node()) {
-      resizeObserver.unobserve(svg.node().parentElement);
+    if (resizeObserver && canvas && canvas.node()) {
+      resizeObserver.unobserve(canvas.node().parentElement);
     }
     resizeObserver = null;
-    if (svg) {
-      svg.remove();
-      svg = null;
+    if (canvas) {
+      canvas.remove();
+      canvas = null;
     }
-    g = null;
-    layerOcean = null;
-    layerLand = null;
-    layerLandBorders = null;
-    layerShadow = null;
-    layerBordersNight = null;
-    layerTerminatorLine = null;
-    layerLights = null;
-    layerOrbits = null;
-    layerFootprint = null;
-    layerMarkers = null;
-    landPath = null;
-    bordersPath = null;
-    bordersNightPath = null;
+    ctx = null;
     projection = null;
     path = null;
     topology = null;
     countriesGeo = null;
-    cityLightElements = null;
     cachedTrajectories.clear();
     cachedTrajectories = new Map();
     lastNoradIds = [];
+    currentSunPos = null;
+    terminatorShadowGeo = null;
+    terminatorLineGeo = null;
+    activeSatellites = [];
+    cachedOrbitGeos = [];
+    observerPos = null;
   }
 
   window.SatContactMapRender = {
