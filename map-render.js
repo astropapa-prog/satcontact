@@ -120,6 +120,8 @@
   let width = 0;
   let height = 0;
   let dpr = 1;
+  let currentTransform = d3.zoomIdentity;
+  let zoomBehavior = null;
 
   /** Состояние для рендера (обновляется в циклах) */
   let currentSunPos = null;
@@ -209,6 +211,13 @@
     ctx.scale(dpr, dpr);
     path = d3.geoPath().projection(projection).context(ctx);
 
+    function zoomed(event) {
+      currentTransform = event.transform;
+      renderFrame();
+    }
+    zoomBehavior = d3.zoom().scaleExtent([1, 8]).on('zoom', zoomed);
+    d3.select(canvas.node()).call(zoomBehavior);
+
     try {
       const res = await fetch(WORLD_URL);
       if (res.ok) topology = await res.json();
@@ -252,6 +261,10 @@
 
     path = d3.geoPath().projection(projection).context(ctx);
 
+    if (zoomBehavior) {
+      zoomBehavior.extent([[0, 0], [width, height]]);
+    }
+
     slowLoop();
     fastLoop();
   }
@@ -264,10 +277,19 @@
 
     ctx.clearRect(0, 0, width, height);
 
+    ctx.save();
+    ctx.translate(currentTransform.x, currentTransform.y);
+    ctx.scale(currentTransform.k, currentTransform.k);
+
+    const k = currentTransform.k;
+
     ctx.fillStyle = COLORS.dayOcean;
     ctx.fillRect(0, 0, width, height);
 
-    if (!countriesGeo) return;
+    if (!countriesGeo) {
+      ctx.restore();
+      return;
+    }
 
     ctx.fillStyle = COLORS.dayLand;
     ctx.beginPath();
@@ -275,7 +297,7 @@
     ctx.fill();
 
     ctx.strokeStyle = COLORS.dayBorder;
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 0.5 / k;
     ctx.beginPath();
     path(countriesGeo);
     ctx.stroke();
@@ -288,14 +310,14 @@
     }
 
     ctx.strokeStyle = COLORS.nightBorder;
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 0.5 / k;
     ctx.beginPath();
     path(countriesGeo);
     ctx.stroke();
 
     if (terminatorLineGeo) {
       ctx.strokeStyle = COLORS.terminatorLine;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1 / k;
       ctx.beginPath();
       path(terminatorLineGeo);
       ctx.stroke();
@@ -314,7 +336,8 @@
       const xy = projection([city.lon, city.lat]);
       if (!xy) return;
 
-      const grad = ctx.createRadialGradient(xy[0], xy[1], 0, xy[0], xy[1], 2.5);
+      const r = 2.5 / k;
+      const grad = ctx.createRadialGradient(xy[0], xy[1], 0, xy[0], xy[1], r);
       grad.addColorStop(0, 'rgba(255, 222, 107, 1)');
       grad.addColorStop(0.4, 'rgba(255, 222, 107, 0.6)');
       grad.addColorStop(1, 'rgba(255, 222, 107, 0)');
@@ -322,14 +345,14 @@
       ctx.fillStyle = grad;
       ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.arc(xy[0], xy[1], 2.5, 0, 2 * Math.PI);
+      ctx.arc(xy[0], xy[1], r, 0, 2 * Math.PI);
       ctx.fill();
       ctx.globalAlpha = 1;
     });
 
     cachedOrbitGeos.forEach((orbitGeo) => {
       ctx.strokeStyle = COLORS.orbit;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 / k;
       ctx.beginPath();
       path(orbitGeo);
       ctx.stroke();
@@ -339,7 +362,7 @@
       if (sat.footprintGeo) {
         ctx.fillStyle = COLORS.footprint;
         ctx.strokeStyle = COLORS.orbit;
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 0.5 / k;
         ctx.beginPath();
         path(sat.footprintGeo);
         ctx.fill();
@@ -353,9 +376,9 @@
         if (xy) {
           ctx.fillStyle = COLORS.marker;
           ctx.strokeStyle = '#fff';
-          ctx.lineWidth = sat.markerRadius === 6 ? 2 : 1;
+          ctx.lineWidth = (sat.markerRadius === 6 ? 2 : 1) / k;
           ctx.beginPath();
-          ctx.arc(xy[0], xy[1], sat.markerRadius, 0, 2 * Math.PI);
+          ctx.arc(xy[0], xy[1], sat.markerRadius / k, 0, 2 * Math.PI);
           ctx.fill();
           ctx.stroke();
         }
@@ -367,13 +390,15 @@
       if (xy) {
         ctx.fillStyle = COLORS.observer;
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1 / k;
         ctx.beginPath();
-        ctx.arc(xy[0], xy[1], 4, 0, 2 * Math.PI);
+        ctx.arc(xy[0], xy[1], 4 / k, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
       }
     }
+
+    ctx.restore();
   }
 
   /**
@@ -520,6 +545,8 @@
     activeSatellites = [];
     cachedOrbitGeos = [];
     observerPos = null;
+    currentTransform = d3.zoomIdentity;
+    zoomBehavior = null;
   }
 
   window.SatContactMapRender = {
