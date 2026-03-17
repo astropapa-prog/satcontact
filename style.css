@@ -254,18 +254,18 @@ body {
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .freq-card {
   background: var(--bg-card);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
+  padding: 10px 12px;
   box-shadow: var(--shadow);
   transition: background 0.2s;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 /* Зоны 1–2: имя, частота, транспондер, ширина */
@@ -349,28 +349,26 @@ body {
   gap: 4px;
 }
 
-/* Зоны 3–4: круглые кнопки */
+/* Зоны 3–4: круглые кнопки (по 1/4 карточки каждая) */
 .freq-card__zone3-4 {
   display: flex;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .freq-card__action-btn {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 calc(25% - 3px);
   aspect-ratio: 1;
-  width: 100%;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: var(--bg-app);
   color: var(--text-primary);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-family: var(--font-sans);
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 1.15;
   text-align: center;
-  padding: 6px 4px;
+  padding: 4px 2px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
   display: flex;
@@ -465,11 +463,11 @@ body {
   }
 
   .card-list {
-    gap: 12px;
+    gap: 10px;
   }
 
   .freq-card {
-    padding: 14px 18px;
+    padding: 10px 14px;
   }
 
   .freq-card__name {
