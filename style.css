@@ -343,14 +343,14 @@ body {
   color: var(--text-secondary);
 }
 
-/* Овальные кнопки — по вертикали по центру строки с частотой RX */
+/* Овальные кнопки: на мобильном — одна над другой, без центрирования */
 .freq-card__buttons {
   grid-column: 3;
   grid-row: 1 / -1;
-  align-self: center;
+  align-self: start;
   display: flex;
-  flex-direction: row;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   flex: 1;
   min-width: 0;
 }
@@ -492,5 +492,11 @@ body {
 
   .freq-card__rx {
     font-size: 1.25rem;
+  }
+
+  /* На планшете/десктопе — кнопки в ряд, по центру */
+  .freq-card__buttons {
+    flex-direction: row;
+    align-self: center;
   }
 }
