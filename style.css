@@ -192,11 +192,13 @@ body {
   margin-bottom: 0;
 }
 
-.chip-scroll::-webkit-scrollbar {
+.chip-scroll::-webkit-scrollbar,
+.ribbon-scroll::-webkit-scrollbar {
   display: none;
 }
 
-.chip-scroll {
+.chip-scroll,
+.ribbon-scroll {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -413,11 +415,6 @@ body {
 .badge--detector {
   background: rgba(82, 136, 193, 0.25);
   color: var(--accent);
-}
-
-.badge--bandwidth {
-  background: rgba(138, 155, 168, 0.2);
-  color: var(--text-secondary);
 }
 
 .badge--status-sens {
@@ -650,15 +647,6 @@ body {
   overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   cursor: grab;
-}
-
-.ribbon-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.ribbon-scroll {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 .ribbon-scroll.ribbon-scroll--dragging {

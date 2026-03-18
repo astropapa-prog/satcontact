@@ -11,8 +11,7 @@
   let worker = null;
 
   try {
-    const baseEl = document.querySelector('base');
-    const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
+    const base = window.SatContactResolveUrl ? window.SatContactResolveUrl('') : './';
     worker = new Worker(base + 'tle-worker.js');
     worker.onerror = function (err) {
       console.error('TLE Worker error, falling back to sync mode:', err);
@@ -57,9 +56,7 @@
   async function loadTle() {
     if (tleCache) return tleCache;
 
-    const baseEl = document.querySelector('base');
-    const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
-    const url = base + TLE_URL.replace(/^\//, '');
+    const url = window.SatContactResolveUrl(TLE_URL);
     const res = await fetch(url);
     if (!res.ok) throw new Error(`TLE: HTTP ${res.status}`);
     const text = await res.text();

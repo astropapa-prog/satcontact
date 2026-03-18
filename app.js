@@ -84,7 +84,7 @@
   function getCleanName(name) {
     if (!name || typeof name !== 'string') return '';
     let clean = name
-      .replace(/\s*\[[\d]+\]\s*/g, '')           // NORAD [28117]
+      .replace(/\s*\[\d+\]\s*/g, '')           // NORAD [28117]
       .replace(/\s*\([\d.,\s]+\)\s*/g, '')       // TX (317.045)
       .replace(/\s*(чувствительный|средняя|ср|тупой|ту)\s*$/gi, '')
       .replace(/\s*\d+\s*кгц\s*/gi, '')          // 6кгц, 8 кгц, 575 кгц
@@ -376,24 +376,7 @@
       });
     });
 
-    let touchStartX = 0;
-    ribbonScroll.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-    }, { passive: true });
-
-    ribbonScroll.addEventListener('touchmove', (e) => {
-      const maxScroll = ribbonScroll.scrollWidth - ribbonScroll.clientWidth;
-      if (maxScroll <= 0) return;
-
-      const deltaX = e.touches[0].clientX - touchStartX;
-      const atLeft = ribbonScroll.scrollLeft <= 2;
-      const atRight = ribbonScroll.scrollLeft >= maxScroll - 2;
-
-      if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
-        e.preventDefault();
-      }
-      touchStartX = e.touches[0].clientX;
-    }, { passive: false });
+    bindTouchOverscrollPrevention(ribbonScroll);
   }
 
   function updateRibbonBottomOffset() {
@@ -565,7 +548,7 @@
       chipRowSatellites.innerHTML = satellites
         .map((s) => {
           const active = selectedFilters.satellites.has(s) ? ' chip--active' : '';
-          return `<button type="button" class="chip${active}" data-category="satellite" data-filter="${escapeHtml(s)}">${escapeHtml(s)}</button>`;
+          return `<button type="button" class="chip${active}" data-filter="${escapeHtml(s)}">${escapeHtml(s)}</button>`;
         })
         .join('');
     }
@@ -574,7 +557,7 @@
       chipRowBandwidth.innerHTML = bandwidths
         .map((b) => {
           const active = selectedFilters.bandwidths.has(b) ? ' chip--active' : '';
-          return `<button type="button" class="chip${active}" data-category="bandwidth" data-filter="${escapeHtml(b)}">${escapeHtml(b)}</button>`;
+          return `<button type="button" class="chip${active}" data-filter="${escapeHtml(b)}">${escapeHtml(b)}</button>`;
         })
         .join('');
     }
@@ -677,6 +660,27 @@
   }
 
   /**
+   * Блокировка overscroll на touch: при достижении края предотвращаем передачу жеста браузеру
+   */
+  function bindTouchOverscrollPrevention(el) {
+    let touchStartX = 0;
+    el.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 0) return;
+      const deltaX = e.touches[0].clientX - touchStartX;
+      const atLeft = el.scrollLeft <= 2;
+      const atRight = el.scrollLeft >= maxScroll - 2;
+      if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
+        e.preventDefault();
+      }
+      touchStartX = e.touches[0].clientX;
+    }, { passive: false });
+  }
+
+  /**
    * Горизонтальный скролл колёсиком мыши на десктопе
    */
   function bindHorizontalScroll() {
@@ -687,23 +691,7 @@
           el.scrollLeft += e.deltaY;
         }
       }, { passive: false });
-
-      // Блокировка overscroll на touch: при достижении края предотвращаем передачу жеста браузеру
-      let touchStartX = 0;
-      el.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-      }, { passive: true });
-      el.addEventListener('touchmove', (e) => {
-        const maxScroll = el.scrollWidth - el.clientWidth;
-        if (maxScroll <= 0) return;
-        const deltaX = e.touches[0].clientX - touchStartX;
-        const atLeft = el.scrollLeft <= 2;
-        const atRight = el.scrollLeft >= maxScroll - 2;
-        if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
-          e.preventDefault();
-        }
-        touchStartX = e.touches[0].clientX;
-      }, { passive: false });
+      bindTouchOverscrollPrevention(el);
     });
   }
 

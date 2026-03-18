@@ -261,12 +261,6 @@
   /**
    * Инициализация Canvas-карты
    */
-  function resolveUrl(relativePath) {
-    const baseEl = document.querySelector('base');
-    const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
-    return base + (relativePath || '').replace(/^\//, '');
-  }
-
   async function initD3Map(container) {
     if (!container || !window.d3) return;
 
@@ -337,7 +331,7 @@
       .on('click', onCanvasClick); // Клик на canvas, а не на zoom (d3.zoom не имеет события click)
 
     try {
-      const res = await fetch(resolveUrl(WORLD_URL));
+      const res = await fetch(window.SatContactResolveUrl(WORLD_URL));
       if (res.ok) topology = await res.json();
     } catch (e) {
       console.warn('map-render: не удалось загрузить карту', e);
@@ -582,7 +576,7 @@
       cachedOrbitGeos = [];
 
       if (window.SatContactTle && typeof window.SatContactTle.requestTrajectories === 'function' && noradIds.length > 0) {
-          const requestedNoradIds = noradIds.slice();
+        const requestedNoradIds = noradIds.slice();
         window.SatContactTle.requestTrajectories(requestedNoradIds).then((trajectories) => {
           if (!noradIdsEqual(lastNoradIds, requestedNoradIds)) return;
           (trajectories || []).forEach((segments, i) => {
