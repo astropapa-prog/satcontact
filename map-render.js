@@ -104,7 +104,7 @@
     nightBorder: 'rgba(255,255,255,0.12)',
     terminatorLine: 'rgba(255,255,255,0.35)',
     orbit: 'rgba(82, 136, 193, 0.6)',
-    footprint: 'rgba(82, 136, 193, 0.15)',
+    footprint: 'rgba(154, 205, 50, 0.15)',
     marker: '#5288c1',
     observer: '#81c784'
   };
@@ -412,6 +412,18 @@
         ctx.arc(xy[0], xy[1], sat.markerRadius / k, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
+        if (sat.name) {
+          const fontSize = Math.max(9, 11 / k);
+          ctx.font = `${fontSize}px sans-serif`;
+          ctx.fillStyle = '#fff';
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.lineWidth = 2 / k;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          const labelY = xy[1] + sat.markerRadius / k + 4 / k;
+          ctx.strokeText(sat.name, xy[0], labelY);
+          ctx.fillText(sat.name, xy[0], labelY);
+        }
       }
     });
 
@@ -505,11 +517,13 @@
       return;
     }
 
+    const noradIdToName = typeof window.getMapNoradIdToName === 'function' ? window.getMapNoradIdToName() : {};
     noradIds.forEach((noradId) => {
       const pos = typeof window.getSatellitePosition === 'function'
         ? window.getSatellitePosition(noradId)
         : null;
       const showFootprint = focusedNoradIds.has(noradId);
+      const name = noradIdToName[noradId] || `NORAD ${noradId}`;
 
       let footprintPath2D = null;
       if (showFootprint && pos) {
@@ -538,7 +552,8 @@
         pos: pos,
         baseXY: pos ? projection([pos.lon, pos.lat]) : null,
         footprintPath2D: footprintPath2D,
-        markerRadius: showFootprint ? 6 : 5
+        markerRadius: showFootprint ? 6 : 5,
+        name: name
       });
     });
 

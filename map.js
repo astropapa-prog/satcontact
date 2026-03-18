@@ -15,6 +15,7 @@
   let hudTimerId = null;
   let currentObserver = null;
   let currentNoradIds = [];
+  let currentNoradIdToName = {};
 
   // DOM
   let mapLoading, mapGpsDenied, mapCoords, mapRefresh;
@@ -286,8 +287,11 @@
    * Инициализация карты (вызывается из app.js)
    */
   window.initMap = function (options) {
-    const { noradIds = [], satelliteName } = options || {};
+    const { noradIds = [], satelliteName, noradIdToName = {} } = options || {};
     currentNoradIds = noradIds;
+    currentNoradIdToName = (noradIdToName && Object.keys(noradIdToName).length > 0)
+      ? noradIdToName
+      : Object.fromEntries(noradIds.map((id) => [id, satelliteName || `NORAD ${id}`]));
 
     const mapCanvas = document.getElementById('mapCanvas');
     mapLoading = document.getElementById('mapLoading');
@@ -368,6 +372,13 @@
    */
   window.getMapNoradIds = function () {
     return currentNoradIds;
+  };
+
+  /**
+   * Получить соответствие NORAD ID → название спутника
+   */
+  window.getMapNoradIdToName = function () {
+    return currentNoradIdToName || {};
   };
 
   /**

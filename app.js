@@ -326,9 +326,10 @@
   /**
    * Открытие карты (SPA-переход). Скрытие списка, показ map-view.
    * @param {string[]} noradIds - NORAD ID спутников
-   * @param {string} satelliteName - название для шапки
+   * @param {string} satelliteName - название для шапки (и для меток, если noradIdToName не передан)
+   * @param {Object} [noradIdToName] - соответствие NORAD ID → название (для режима «ВСЕ»)
    */
-  function openMapView(noradIds, satelliteName) {
+  function openMapView(noradIds, satelliteName, noradIdToName) {
     if (!mapView || !header || !main) return;
     if (noradIds.length === 0) return;
 
@@ -340,7 +341,7 @@
     if (mapLoading) mapLoading.hidden = false;
 
     if (typeof window.initMap === 'function') {
-      window.initMap({ noradIds, satelliteName });
+      window.initMap({ noradIds, satelliteName, noradIdToName });
     } else {
       // Заглушка до подключения map.js
       setTimeout(() => {
@@ -395,8 +396,14 @@
     if (mapShowAll) {
       mapShowAll.addEventListener('click', () => {
         const allNoradIds = [...new Set(filteredEntries.flatMap((e) => e.noradIds || []))].filter(Boolean);
+        const noradIdToName = {};
+        filteredEntries.forEach((e) => {
+          (e.noradIds || []).forEach((id) => {
+            if (!(id in noradIdToName)) noradIdToName[id] = e.cleanName || `NORAD ${id}`;
+          });
+        });
         if (allNoradIds.length > 0) {
-          openMapView(allNoradIds, 'Все спутники');
+          openMapView(allNoradIds, 'Все спутники', noradIdToName);
         }
       });
     }
