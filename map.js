@@ -150,8 +150,8 @@
    * Обновление статуса загрузки
    */
   function setLoadingStatus(line1, line2) {
-    if (loadingStatus1) loadingStatus1.textContent = line1 || 'Поиск GPS…';
-    if (loadingStatus2) loadingStatus2.textContent = line2 || 'Загрузка орбит…';
+    if (loadingStatus1) loadingStatus1.textContent = line1 ?? 'Поиск GPS…';
+    if (loadingStatus2) loadingStatus2.textContent = line2 ?? 'Загрузка орбит…';
   }
 
   /**
@@ -258,7 +258,8 @@
     if (!mapRefresh) return;
     mapRefresh.disabled = true;
     setLoadingStatus('Поиск GPS…', '');
-    hideGpsDenied();
+    if (mapGpsDenied) mapGpsDenied.hidden = true;
+    if (mapLoading) mapLoading.hidden = true;
 
     const coords = await requestGps();
 
@@ -266,9 +267,12 @@
       saveObserver(coords);
       currentObserver = coords;
       updateCoordsDisplay(currentObserver);
+      if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
+        window.SatContactMapRender.update();
+      }
     }
 
-    setLoadingStatus('Загрузка орбит…', '');
+    setLoadingStatus('', '');
     mapRefresh.disabled = false;
   }
 
