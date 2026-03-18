@@ -599,6 +599,31 @@ body {
   touch-action: none;
 }
 
+.map-view__elevation-float {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(33, 45, 59, 0.88);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  backdrop-filter: blur(2px);
+  max-width: min(76vw, 320px);
+}
+
+.map-view__elevation-float span:last-child {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .map-view__freq-ribbon {
   position: absolute;
   left: 0;
@@ -810,6 +835,49 @@ body {
   align-items: center;
 }
 
+.map-view__hud-manual {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-view__manual-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(28, 36, 45, 0.9);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.map-view__manual-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.map-view__manual-input[readonly] {
+  opacity: 0.8;
+  cursor: default;
+}
+
+.map-view__manual-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.map-view__manual-toggle input {
+  accent-color: var(--accent);
+}
+
 .map-view__coords-stack {
   display: flex;
   flex-direction: column;
@@ -844,6 +912,12 @@ body {
   color: #81c784;
   border-color: rgba(129, 199, 132, 0.55);
   background: rgba(129, 199, 132, 0.12);
+}
+
+.map-view__gps-badge--manual {
+  color: #90caf9;
+  border-color: rgba(144, 202, 249, 0.55);
+  background: rgba(144, 202, 249, 0.12);
 }
 
 .map-view__gps-badge--network {
@@ -897,6 +971,12 @@ body {
 }
 
 @media (min-width: 600px) {
+  .map-view__elevation-float {
+    top: 12px;
+    left: 12px;
+    font-size: 0.8125rem;
+  }
+
   .map-view__freq-ribbon {
     left: 50%;
     width: min(720px, 100%);

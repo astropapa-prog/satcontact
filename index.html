@@ -59,6 +59,10 @@
       </header>
       <div class="map-view__canvas" id="mapCanvas">
         <!-- D3-карта будет здесь -->
+        <div class="map-view__elevation-float" id="mapElevationFloat" aria-live="polite">
+          <span>Элевация:</span>
+          <span id="mapElevation">—</span>
+        </div>
         <div class="map-view__loading" id="mapLoading">
           <div class="map-view__loading-status" id="mapLoadingStatus1">Поиск GPS…</div>
           <div class="map-view__loading-status" id="mapLoadingStatus2">Загрузка орбит…</div>
@@ -78,12 +82,22 @@
           <span id="mapAzimuth">—</span>
         </div>
         <div class="map-view__hud-row">
-          <span>Элевация:</span>
-          <span id="mapElevation">—</span>
-        </div>
-        <div class="map-view__hud-row">
           <span>Дистанция:</span>
           <span id="mapDistance">—</span>
+        </div>
+        <div class="map-view__hud-row map-view__hud-manual">
+          <input
+            type="text"
+            id="mapManualCoordsInput"
+            class="map-view__manual-input"
+            placeholder="53.28024034333129, 63.24983460394551"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <label class="map-view__manual-toggle">
+            <input type="checkbox" id="mapManualCoordsToggle">
+            <span>Применить</span>
+          </label>
         </div>
         <div class="map-view__hud-row map-view__hud-coords">
           <div class="map-view__coords-stack">
