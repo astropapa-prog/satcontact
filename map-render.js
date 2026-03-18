@@ -203,7 +203,8 @@
 
     projection = d3.geoMercator()
       .scale(width / (2 * Math.PI))
-      .translate([width / 2, height / 2]);
+      .translate([width / 2, height / 2])
+      .clipExtent([[0, -height * 0.3], [width, height * 1.3]]); // Отступ сверху/снизу — убирает обрыв на севере на десктопе
 
     canvas = d3.select(container)
       .selectAll('canvas')
@@ -290,7 +291,10 @@
     height = Math.max(container.clientHeight, 1);
 
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    projection.scale(width / (2 * Math.PI)).translate([width / 2, height / 2]);
+    projection
+      .scale(width / (2 * Math.PI))
+      .translate([width / 2, height / 2])
+      .clipExtent([[0, -height * 0.3], [width, height * 1.3]]);
 
     canvas
       .attr('width', width * dpr)
