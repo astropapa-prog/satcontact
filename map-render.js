@@ -203,8 +203,7 @@
 
     projection = d3.geoMercator()
       .scale(width / (2 * Math.PI))
-      .translate([width / 2, height / 2])
-      .clipExtent([[0, -height * 0.3], [width, height * 1.3]]); // Отступ сверху/снизу — убирает обрыв на севере на десктопе
+      .translate([width / 2, height / 2]);
 
     canvas = d3.select(container)
       .selectAll('canvas')
@@ -293,8 +292,7 @@
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     projection
       .scale(width / (2 * Math.PI))
-      .translate([width / 2, height / 2])
-      .clipExtent([[0, -height * 0.3], [width, height * 1.3]]);
+      .translate([width / 2, height / 2]);
 
     canvas
       .attr('width', width * dpr)
@@ -331,15 +329,16 @@
 
     ctx.clearRect(0, 0, width, height);
 
+    // Фон океана рисуем в экранных координатах (без transform),
+    // чтобы он всегда покрывал весь viewport при любом pan/zoom.
+    ctx.fillStyle = COLORS.dayOcean;
+    ctx.fillRect(0, 0, width, height);
+
     ctx.save();
     ctx.translate(currentTransform.x, currentTransform.y);
     ctx.scale(currentTransform.k, currentTransform.k);
 
     const k = currentTransform.k;
-
-    ctx.fillStyle = COLORS.dayOcean;
-    // Океан покрывает ту же площадь, что и clipExtent проекции (-0.3 до 1.3 = высота 1.6)
-    ctx.fillRect(0, -height * 0.3, width, height * 1.6);
 
     if (cachedLandPath2D) {
       ctx.fillStyle = COLORS.dayLand;
@@ -354,9 +353,11 @@
       ctx.fillStyle = COLORS.nightOverlay;
       ctx.fill(cachedTerminatorShadowPath2D);
 
-      ctx.strokeStyle = COLORS.nightBorder;
-      ctx.lineWidth = 0.5 / k;
-      ctx.stroke(cachedLandPath2D);
+      if (cachedLandPath2D) {
+        ctx.strokeStyle = COLORS.nightBorder;
+        ctx.lineWidth = 0.5 / k;
+        ctx.stroke(cachedLandPath2D);
+      }
     }
 
     if (cachedTerminatorLinePath2D) {
