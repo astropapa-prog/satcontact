@@ -315,12 +315,42 @@
     return `
       <article class="ribbon-card ${escapeHtml(statusClass)}">
         <div class="ribbon-card__content">
-          <span class="ribbon-card__tx">${escapeHtml(txText)}</span>
-          <span class="ribbon-card__bw${bwClass}">${escapeHtml(bwText)}</span>
           <span class="ribbon-card__rx">${escapeHtml(rxText)}</span>
+          <span class="ribbon-card__bw${bwClass}">${escapeHtml(bwText)}</span>
+          <span class="ribbon-card__tx">${escapeHtml(txText)}</span>
         </div>
       </article>
     `;
+  }
+
+  function bindRibbonScrollLock(scrollEl) {
+    if (!scrollEl) return;
+
+    scrollEl.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0 && scrollEl.scrollWidth > scrollEl.clientWidth) {
+        e.preventDefault();
+        scrollEl.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+
+    let touchStartX = 0;
+
+    scrollEl.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    scrollEl.addEventListener('touchmove', (e) => {
+      const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth;
+      if (maxScroll <= 0) return;
+
+      const deltaX = e.touches[0].clientX - touchStartX;
+      const atLeft = scrollEl.scrollLeft <= 2;
+      const atRight = scrollEl.scrollLeft >= maxScroll - 2;
+      if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
+        e.preventDefault();
+      }
+      touchStartX = e.touches[0].clientX;
+    }, { passive: false });
   }
 
   function hideMapFreqRibbon() {
@@ -350,6 +380,7 @@
     }
 
     mapFreqRibbon.innerHTML = `<div class="ribbon-scroll">${relatedEntries.map(createRibbonCardHtml).join('')}</div>`;
+    bindRibbonScrollLock(mapFreqRibbon.querySelector('.ribbon-scroll'));
     mapFreqRibbon.classList.add('map-view__freq-ribbon--visible');
   }
 
