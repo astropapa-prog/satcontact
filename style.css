@@ -818,6 +818,46 @@ body {
   min-width: 0;
 }
 
+.map-view__coords-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.map-view__gps-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.625rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.map-view__gps-badge--gps {
+  color: #81c784;
+  border-color: rgba(129, 199, 132, 0.55);
+  background: rgba(129, 199, 132, 0.12);
+}
+
+.map-view__gps-badge--network {
+  color: #ffd54f;
+  border-color: rgba(255, 213, 79, 0.55);
+  background: rgba(255, 213, 79, 0.12);
+}
+
+.map-view__gps-badge--none {
+  color: var(--text-secondary);
+  border-color: rgba(138, 155, 168, 0.35);
+  background: rgba(138, 155, 168, 0.12);
+}
+
 .map-view__refresh-feedback {
   display: block;
   min-height: 1em;

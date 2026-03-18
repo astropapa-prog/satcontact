@@ -26,6 +26,7 @@
   let loadingStatus1, loadingStatus2;
   let gpsRetryBtn, gpsContinueBtn;
   let mapRefreshFeedback;
+  let mapGpsSourceBadge;
   let refreshFeedbackTimerId = null;
 
   function setMapShowAllButtonState(active) {
@@ -151,8 +152,28 @@
     const lon = coords.longitude.toFixed(5);
     const alt = coords.altitude != null ? ` ${coords.altitude.toFixed(0)} м` : '';
     const acc = Number.isFinite(coords.accuracy) ? ` ±${Math.round(coords.accuracy)} м` : '';
-    const sourceHint = coords.source === 'network' ? ' (по сети)' : '';
-    mapCoords.textContent = `${lat}°, ${lon}°${alt}${acc}${sourceHint}`;
+    mapCoords.textContent = `${lat}°, ${lon}°${alt}${acc}`;
+  }
+
+  function updateGpsSourceBadge(source) {
+    if (!mapGpsSourceBadge) return;
+    mapGpsSourceBadge.classList.remove(
+      'map-view__gps-badge--gps',
+      'map-view__gps-badge--network',
+      'map-view__gps-badge--none'
+    );
+    if (source === 'gps') {
+      mapGpsSourceBadge.textContent = 'GPS';
+      mapGpsSourceBadge.classList.add('map-view__gps-badge--gps');
+      return;
+    }
+    if (source === 'network' || source === 'cached') {
+      mapGpsSourceBadge.textContent = 'СЕТЬ';
+      mapGpsSourceBadge.classList.add('map-view__gps-badge--network');
+      return;
+    }
+    mapGpsSourceBadge.textContent = 'НЕТ GPS';
+    mapGpsSourceBadge.classList.add('map-view__gps-badge--none');
   }
 
   /**
@@ -300,6 +321,7 @@
           showGpsDenied();
           currentObserver = loadObserver();
           updateCoordsDisplay(currentObserver);
+          updateGpsSourceBadge(currentObserver && currentObserver.source ? currentObserver.source : null);
           return { coords: currentObserver, denied: true };
         }
       } catch (e) {
@@ -312,6 +334,7 @@
       showGpsDenied();
       currentObserver = loadObserver();
       updateCoordsDisplay(currentObserver);
+      updateGpsSourceBadge(currentObserver && currentObserver.source ? currentObserver.source : null);
       return { coords: currentObserver, denied: true };
     }
 
@@ -319,6 +342,7 @@
       saveObserver(gpsResult.coords);
       currentObserver = gpsResult.coords;
       updateCoordsDisplay(currentObserver);
+      updateGpsSourceBadge(currentObserver.source);
       setLoadingStatus(gpsResult.isPrecise ? 'Загрузка орбит…' : 'Координаты по сети (неточно)', '');
       return { coords: gpsResult.coords, denied: false };
     }
@@ -326,6 +350,7 @@
     // Таймаут или ошибка — берём из localStorage
     currentObserver = loadObserver();
     updateCoordsDisplay(currentObserver);
+    updateGpsSourceBadge(currentObserver && currentObserver.source ? currentObserver.source : null);
     setLoadingStatus('Загрузка орбит…', '');
     return { coords: currentObserver, denied: false };
   }
@@ -345,6 +370,7 @@
 
     if (gpsResult.status === 'denied') {
       showGpsDenied();
+      updateGpsSourceBadge(null);
       showManualRefreshFeedback('Доступ к GPS запрещен в браузере', 'warning');
       setLoadingStatus('', '');
       mapRefresh.disabled = false;
@@ -355,6 +381,7 @@
       saveObserver(gpsResult.coords);
       currentObserver = gpsResult.coords;
       updateCoordsDisplay(currentObserver);
+      updateGpsSourceBadge(currentObserver.source);
       if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
         window.SatContactMapRender.update();
       }
@@ -368,11 +395,13 @@
       if (cached) {
         currentObserver = cached;
         updateCoordsDisplay(currentObserver);
+        updateGpsSourceBadge(currentObserver.source);
         if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
           window.SatContactMapRender.update();
         }
         showManualRefreshFeedback('GPS недоступен, используются сохраненные координаты', 'warning');
       } else {
+        updateGpsSourceBadge(null);
         showManualRefreshFeedback('GPS недоступен на устройстве', 'warning');
       }
     }
@@ -392,6 +421,7 @@
         saveObserver(gpsResult.coords);
         currentObserver = gpsResult.coords;
         updateCoordsDisplay(gpsResult.coords);
+        updateGpsSourceBadge(gpsResult.coords.source);
       }
     }, POLL_INTERVAL_MS);
   }
@@ -490,6 +520,8 @@
     gpsRetryBtn = document.getElementById('mapGpsRetry');
     gpsContinueBtn = document.getElementById('mapGpsContinue');
     mapRefreshFeedback = document.getElementById('mapRefreshFeedback');
+    mapGpsSourceBadge = document.getElementById('mapGpsSourceBadge');
+    updateGpsSourceBadge(null);
     clearManualRefreshFeedback();
     bindMapShowAllButton();
 

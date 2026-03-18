@@ -87,7 +87,10 @@
         </div>
         <div class="map-view__hud-row map-view__hud-coords">
           <div class="map-view__coords-stack">
-            <span id="mapCoords">—</span>
+            <div class="map-view__coords-main">
+              <span id="mapCoords">—</span>
+              <span id="mapGpsSourceBadge" class="map-view__gps-badge map-view__gps-badge--none">НЕТ GPS</span>
+            </div>
             <small id="mapRefreshFeedback" class="map-view__refresh-feedback" aria-live="polite"></small>
           </div>
           <button type="button" class="map-view__refresh" id="mapRefresh" aria-label="Обновить GPS">↻</button>
