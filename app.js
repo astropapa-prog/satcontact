@@ -12,7 +12,7 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
-  let header, main, mapView, mapBack, mapTitle, mapShowAll, mapCanvas, mapLoading, mapHud, mapFreqRibbon;
+  let header, main, mapView, mapBack, mapTitle, mapLoading, mapFreqRibbon;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -792,10 +792,7 @@
     mapView = document.getElementById('mapView');
     mapBack = document.getElementById('mapBack');
     mapTitle = document.getElementById('mapTitle');
-    mapShowAll = document.getElementById('mapShowAll');
-    mapCanvas = document.getElementById('mapCanvas');
     mapLoading = document.getElementById('mapLoading');
-    mapHud = document.getElementById('mapHud');
     mapFreqRibbon = document.getElementById('mapFreqRibbon');
 
     bindMapButtons();
@@ -805,10 +802,6 @@
 
   window.getSatContactFilteredEntries = function () {
     return filteredEntries.slice();
-  };
-
-  window.getSatContactAllEntries = function () {
-    return allEntries.slice();
   };
 
   if (document.readyState === 'loading') {
