@@ -9,7 +9,7 @@
   const STORAGE_KEY = 'satcontact_observer';
   const GPS_TIMEOUT_MS = 6000;
   const IP_LOCATION_TIMEOUT_MS = 5000;
-  const PRECISE_GPS_MAX_ACCURACY_M = 250;
+  const PRECISE_GPS_MAX_ACCURACY_M = 100;
   const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 час
   const HUD_UPDATE_MS = 1000; // обновление телеметрии каждую секунду
 
@@ -303,36 +303,52 @@
    * @returns {Promise<{latitude, longitude, altitude, accuracy, source}|null>}
    */
   async function requestIpLocation() {
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    let timeoutId = null;
-    try {
-      if (controller) {
-        timeoutId = setTimeout(() => controller.abort(), IP_LOCATION_TIMEOUT_MS);
+    const providers = [
+      {
+        url: 'https://ipwhois.app/json/',
+        validate: (data) => {
+          const hasValidCoords = Number.isFinite(Number(data?.latitude)) && Number.isFinite(Number(data?.longitude));
+          const successFlag = data?.success === true || data?.success === 'true';
+          return successFlag || hasValidCoords;
+        }
+      },
+      {
+        url: 'https://freeipapi.com/api/json',
+        validate: (data) => Number.isFinite(Number(data?.latitude)) && Number.isFinite(Number(data?.longitude))
       }
-      const res = await fetch('https://ipwhois.app/json/', {
-        method: 'GET',
-        signal: controller ? controller.signal : undefined
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
+    ];
 
-      const hasValidCoords = Number.isFinite(Number(data?.latitude)) && Number.isFinite(Number(data?.longitude));
-      const successFlag = data?.success === true || data?.success === 'true';
-      if (!(successFlag || hasValidCoords)) return null;
+    for (const provider of providers) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      let timeoutId = null;
+      try {
+        if (controller) {
+          timeoutId = setTimeout(() => controller.abort(), IP_LOCATION_TIMEOUT_MS);
+        }
+        const res = await fetch(provider.url, {
+          method: 'GET',
+          signal: controller ? controller.signal : undefined
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${provider.url}`);
+        const data = await res.json();
+        if (!provider.validate(data)) throw new Error(`Invalid IP geo payload from ${provider.url}`);
 
-      const normalized = normalizeCoords({
-        latitude: data.latitude,
-        longitude: data.longitude,
-        altitude: null,
-        accuracy: 5000
-      });
-      if (!normalized) return null;
-      return { ...normalized, source: 'network', accuracy: 5000 };
-    } catch (e) {
-      return null;
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId);
+        const normalized = normalizeCoords({
+          latitude: data.latitude,
+          longitude: data.longitude,
+          altitude: null,
+          accuracy: 5000
+        });
+        if (!normalized) throw new Error(`Invalid normalized coordinates from ${provider.url}`);
+        return { ...normalized, source: 'network', accuracy: 5000 };
+      } catch (e) {
+        console.warn('IP Location error:', e);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
     }
+
+    return null;
   }
 
   /**
@@ -370,7 +386,7 @@
           currentObserver = loadObserver();
           updateCoordsDisplay(currentObserver);
           updateGpsSourceBadge(currentObserver && currentObserver.source ? currentObserver.source : null);
-          setLoadingStatus('GPS запрещен, используются сохраненные координаты', '');
+          setLoadingStatus('GPS запрещен, API недоступно, загружен кэш', '');
           return { coords: currentObserver, denied: true };
         }
       } catch (e) {
@@ -394,7 +410,7 @@
       currentObserver = loadObserver();
       updateCoordsDisplay(currentObserver);
       updateGpsSourceBadge(currentObserver && currentObserver.source ? currentObserver.source : null);
-      setLoadingStatus('GPS запрещен, используются сохраненные координаты', '');
+      setLoadingStatus('GPS запрещен, API недоступно, загружен кэш', '');
       return { coords: currentObserver, denied: true };
     }
 
@@ -427,7 +443,7 @@
     currentObserver = loadObserver();
     updateCoordsDisplay(currentObserver);
     updateGpsSourceBadge(currentObserver && currentObserver.source ? currentObserver.source : null);
-    setLoadingStatus('Загрузка орбит…', '');
+    setLoadingStatus('API недоступно, загружен кэш', '');
     return { coords: currentObserver, denied: false };
   }
 
@@ -465,7 +481,7 @@
           if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
             window.SatContactMapRender.update();
           }
-          showManualRefreshFeedback('GPS запрещен, используются сохраненные координаты', 'warning');
+          showManualRefreshFeedback('GPS запрещен, API недоступно, загружен кэш', 'warning');
         } else {
           updateGpsSourceBadge(null);
           showManualRefreshFeedback('Доступ к GPS запрещен в браузере', 'warning');
@@ -514,7 +530,7 @@
           if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
             window.SatContactMapRender.update();
           }
-          showManualRefreshFeedback('GPS недоступен, используются сохраненные координаты', 'warning');
+          showManualRefreshFeedback('API недоступно, загружен кэш', 'warning');
         } else {
           updateGpsSourceBadge(null);
           showManualRefreshFeedback('GPS недоступен на устройстве', 'warning');
