@@ -133,6 +133,7 @@
   let cachedLandPath2D = null;
   let cachedTerminatorShadowPath2D = null;
   let cachedTerminatorLinePath2D = null;
+  let observerBaseXY = null;
 
   /**
    * Позиция Солнца (подсолнечная точка) по UTC. Без API, чистая математика.
@@ -268,6 +269,10 @@
       cachedLandPath2D = new Path2D(path(countriesGeo));
     }
 
+    MAJOR_CITIES.forEach((city) => {
+      city.baseXY = projection([city.lon, city.lat]);
+    });
+
     if (zoomBehavior) {
       zoomBehavior.extent([[0, 0], [width, height]]);
     }
@@ -320,19 +325,10 @@
       ctx.stroke(cachedTerminatorLinePath2D);
     }
 
-    const geoDist = d3.geoDistance || geoDistanceFallback;
-    const sunPt = currentSunPos ? [currentSunPos.lon, currentSunPos.lat] : [0, 0];
-    const nightThreshold = Math.PI / 2;
-
     MAJOR_CITIES.forEach((city) => {
-      const cityPt = [city.lon, city.lat];
-      const dist = geoDist(cityPt, sunPt);
-      const isNight = dist > nightThreshold;
-      if (!isNight) return;
+      if (!city.isNight || !city.baseXY) return;
 
-      const xy = projection([city.lon, city.lat]);
-      if (!xy) return;
-
+      const xy = city.baseXY;
       const r = 2.5 / k;
       const grad = ctx.createRadialGradient(xy[0], xy[1], 0, xy[0], xy[1], r);
       grad.addColorStop(0, 'rgba(255, 222, 107, 1)');
@@ -364,31 +360,27 @@
     });
 
     activeSatellites.forEach((sat) => {
-      if (sat.pos) {
-        const xy = projection([sat.pos.lon, sat.pos.lat]);
-        if (xy) {
-          ctx.fillStyle = COLORS.marker;
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = (sat.markerRadius === 6 ? 2 : 1) / k;
-          ctx.beginPath();
-          ctx.arc(xy[0], xy[1], sat.markerRadius / k, 0, 2 * Math.PI);
-          ctx.fill();
-          ctx.stroke();
-        }
-      }
-    });
-
-    if (observerPos) {
-      const xy = projection([observerPos.lon, observerPos.lat]);
+      const xy = sat.baseXY;
       if (xy) {
-        ctx.fillStyle = COLORS.observer;
+        ctx.fillStyle = COLORS.marker;
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1 / k;
+        ctx.lineWidth = (sat.markerRadius === 6 ? 2 : 1) / k;
         ctx.beginPath();
-        ctx.arc(xy[0], xy[1], 4 / k, 0, 2 * Math.PI);
+        ctx.arc(xy[0], xy[1], sat.markerRadius / k, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
       }
+    });
+
+    if (observerBaseXY) {
+      const xy = observerBaseXY;
+      ctx.fillStyle = COLORS.observer;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1 / k;
+      ctx.beginPath();
+      ctx.arc(xy[0], xy[1], 4 / k, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
     }
 
     ctx.restore();
@@ -402,6 +394,14 @@
 
     const sun = getSunPosition(new Date());
     currentSunPos = sun;
+
+    const geoDist = d3.geoDistance || geoDistanceFallback;
+    const sunPt = [sun.lon, sun.lat];
+    const nightThreshold = Math.PI / 2;
+    MAJOR_CITIES.forEach((city) => {
+      const dist = geoDist([city.lon, city.lat], sunPt);
+      city.isNight = dist > nightThreshold;
+    });
 
     let antiLon = sun.lon + 180;
     if (antiLon > 180) antiLon -= 360;
@@ -435,6 +435,7 @@
     const noradIdsChanged = !noradIdsEqual(noradIds, lastNoradIds);
 
     observerPos = observer ? { lon: observer.longitude, lat: observer.latitude } : null;
+    observerBaseXY = observerPos ? projection([observerPos.lon, observerPos.lat]) : null;
 
     if (noradIdsChanged) {
       lastNoradIds = noradIds.slice();
@@ -469,6 +470,7 @@
       if (isAllMode) {
         activeSatellites.push({
           pos: pos,
+          baseXY: pos ? projection([pos.lon, pos.lat]) : null,
           footprintPath2D: null,
           markerRadius: 5
         });
@@ -495,6 +497,7 @@
         }
         activeSatellites.push({
           pos: pos,
+          baseXY: pos ? projection([pos.lon, pos.lat]) : null,
           footprintPath2D: footprintGeo ? new Path2D(path(footprintGeo)) : null,
           markerRadius: 6
         });
@@ -533,6 +536,7 @@
     activeSatellites = [];
     cachedOrbitGeos = [];
     observerPos = null;
+    observerBaseXY = null;
     currentTransform = d3.zoomIdentity;
     zoomBehavior = null;
     cachedLandPath2D = null;
