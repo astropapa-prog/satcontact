@@ -8,6 +8,7 @@
 
   const STORAGE_KEY = 'satcontact_observer';
   const GPS_TIMEOUT_MS = 6000;
+  const PRECISE_GPS_MAX_ACCURACY_M = 250;
   const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 час
   const HUD_UPDATE_MS = 1000; // обновление телеметрии каждую секунду
 
@@ -107,6 +108,8 @@
         lat: coords.latitude,
         lon: coords.longitude,
         altitude: coords.altitude ?? null,
+        accuracy: coords.accuracy ?? null,
+        source: coords.source || 'unknown',
         timestamp: Date.now()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -126,7 +129,9 @@
       return {
         latitude: data.lat,
         longitude: data.lon,
-        altitude: data.altitude
+        altitude: data.altitude,
+        accuracy: data.accuracy ?? null,
+        source: data.source || 'cached'
       };
     } catch (e) {
       return null;
@@ -145,7 +150,9 @@
     const lat = coords.latitude.toFixed(5);
     const lon = coords.longitude.toFixed(5);
     const alt = coords.altitude != null ? ` ${coords.altitude.toFixed(0)} м` : '';
-    mapCoords.textContent = `${lat}°, ${lon}°${alt}`;
+    const acc = Number.isFinite(coords.accuracy) ? ` ±${Math.round(coords.accuracy)} м` : '';
+    const sourceHint = coords.source === 'network' ? ' (по сети)' : '';
+    mapCoords.textContent = `${lat}°, ${lon}°${alt}${acc}${sourceHint}`;
   }
 
   /**
@@ -207,33 +214,62 @@
     if (mapLoading) mapLoading.hidden = false;
   }
 
+  function normalizeCoords(rawCoords) {
+    if (!rawCoords) return null;
+    const latitude = Number(rawCoords.latitude);
+    const longitude = Number(rawCoords.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+    const altitude = Number.isFinite(Number(rawCoords.altitude)) ? Number(rawCoords.altitude) : null;
+    const accuracyRaw = Number(rawCoords.accuracy);
+    const accuracy = Number.isFinite(accuracyRaw) && accuracyRaw > 0 ? accuracyRaw : null;
+    const source = accuracy != null && accuracy <= PRECISE_GPS_MAX_ACCURACY_M ? 'gps' : 'network';
+    return { latitude, longitude, altitude, accuracy, source };
+  }
+
   /**
-   * Запрос GPS с таймаутом
-   * @returns {Promise<{latitude, longitude, altitude?}|null>}
+   * Запрос GPS с таймаутом и классификацией качества координат
+   * @returns {Promise<{coords: object|null, status: string, isPrecise: boolean}>}
    */
   function requestGps() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
-        resolve(null);
+        resolve({ coords: null, status: 'unsupported', isPrecise: false });
         return;
       }
 
+      let settled = false;
+      const finish = (payload) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(payload);
+      };
+
       const timeoutId = setTimeout(() => {
-        resolve(null);
+        finish({ coords: null, status: 'timeout', isPrecise: false });
       }, GPS_TIMEOUT_MS);
 
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          clearTimeout(timeoutId);
-          resolve({
+          const coords = normalizeCoords({
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
-            altitude: pos.coords.altitude
+            altitude: pos.coords.altitude,
+            accuracy: pos.coords.accuracy
           });
+          if (!coords) {
+            finish({ coords: null, status: 'invalid', isPrecise: false });
+            return;
+          }
+          const isPrecise = coords.source === 'gps';
+          finish({ coords, status: isPrecise ? 'ok' : 'coarse', isPrecise });
         },
-        () => {
-          clearTimeout(timeoutId);
-          resolve(null);
+        (err) => {
+          const status = err && err.code === 1
+            ? 'denied'
+            : (err && err.code === 3 ? 'timeout' : 'unavailable');
+          finish({ coords: null, status, isPrecise: false });
         },
         { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS - 500, maximumAge: 0 }
       );
@@ -271,14 +307,20 @@
       }
     }
 
-    const coords = await requestGps();
-
-    if (coords) {
-      saveObserver(coords);
-      currentObserver = coords;
+    const gpsResult = await requestGps();
+    if (gpsResult.status === 'denied') {
+      showGpsDenied();
+      currentObserver = loadObserver();
       updateCoordsDisplay(currentObserver);
-      setLoadingStatus('Загрузка орбит…', '');
-      return { coords, denied: false };
+      return { coords: currentObserver, denied: true };
+    }
+
+    if (gpsResult.coords) {
+      saveObserver(gpsResult.coords);
+      currentObserver = gpsResult.coords;
+      updateCoordsDisplay(currentObserver);
+      setLoadingStatus(gpsResult.isPrecise ? 'Загрузка орбит…' : 'Координаты по сети (неточно)', '');
+      return { coords: gpsResult.coords, denied: false };
     }
 
     // Таймаут или ошибка — берём из localStorage
@@ -299,18 +341,40 @@
     if (mapGpsDenied) mapGpsDenied.hidden = true;
     if (mapLoading) mapLoading.hidden = true;
 
-    const coords = await requestGps();
+    const gpsResult = await requestGps();
 
-    if (coords) {
-      saveObserver(coords);
-      currentObserver = coords;
+    if (gpsResult.status === 'denied') {
+      showGpsDenied();
+      showManualRefreshFeedback('Доступ к GPS запрещен в браузере', 'warning');
+      setLoadingStatus('', '');
+      mapRefresh.disabled = false;
+      return;
+    }
+
+    if (gpsResult.coords) {
+      saveObserver(gpsResult.coords);
+      currentObserver = gpsResult.coords;
       updateCoordsDisplay(currentObserver);
       if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
         window.SatContactMapRender.update();
       }
-      showManualRefreshFeedback('GPS обновлен', 'success');
+      if (gpsResult.isPrecise) {
+        showManualRefreshFeedback('GPS обновлен', 'success');
+      } else {
+        showManualRefreshFeedback('Точный GPS не найден, координаты по сети', 'warning');
+      }
     } else {
-      showManualRefreshFeedback('GPS недоступен', 'warning');
+      const cached = loadObserver();
+      if (cached) {
+        currentObserver = cached;
+        updateCoordsDisplay(currentObserver);
+        if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
+          window.SatContactMapRender.update();
+        }
+        showManualRefreshFeedback('GPS недоступен, используются сохраненные координаты', 'warning');
+      } else {
+        showManualRefreshFeedback('GPS недоступен на устройстве', 'warning');
+      }
     }
 
     setLoadingStatus('', '');
@@ -323,11 +387,11 @@
   function startPolling() {
     stopPolling();
     pollTimerId = setInterval(async () => {
-      const coords = await requestGps();
-      if (coords) {
-        saveObserver(coords);
-        currentObserver = coords;
-        updateCoordsDisplay(coords);
+      const gpsResult = await requestGps();
+      if (gpsResult.coords) {
+        saveObserver(gpsResult.coords);
+        currentObserver = gpsResult.coords;
+        updateCoordsDisplay(gpsResult.coords);
       }
     }, POLL_INTERVAL_MS);
   }
