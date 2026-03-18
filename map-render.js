@@ -134,6 +134,7 @@
   let cachedTerminatorShadowPath2D = null;
   let cachedTerminatorLinePath2D = null;
   let observerBaseXY = null;
+  let focusedNoradIds = new Set();
 
   /**
    * Позиция Солнца (подсолнечная точка) по UTC. Без API, чистая математика.
@@ -219,7 +220,38 @@
       currentTransform = event.transform;
       renderFrame();
     }
-    zoomBehavior = d3.zoom().scaleExtent([1, 8]).on('zoom', zoomed);
+    function onCanvasClick(event) {
+      if (event.defaultPrevented) return;
+      if (!activeSatellites.length) return;
+
+      const [mouseX, mouseY] = d3.pointer(event);
+
+      let clickedSatId = null;
+
+      for (const sat of activeSatellites) {
+        if (!sat.baseXY) continue;
+        const [screenX, screenY] = currentTransform.apply(sat.baseXY);
+        const dist = Math.hypot(mouseX - screenX, mouseY - screenY);
+
+        if (dist < 20) {
+          clickedSatId = sat.noradId;
+          break;
+        }
+      }
+
+      if (clickedSatId) {
+        if (focusedNoradIds.has(clickedSatId)) {
+          focusedNoradIds.delete(clickedSatId);
+        } else {
+          focusedNoradIds.add(clickedSatId);
+        }
+      } else {
+        focusedNoradIds.clear();
+      }
+
+      fastLoop();
+    }
+    zoomBehavior = d3.zoom().scaleExtent([1, 8]).on('zoom', zoomed).on('click', onCanvasClick);
     d3.select(canvas.node()).call(zoomBehavior);
 
     try {
@@ -431,17 +463,17 @@
 
     const noradIds = typeof window.getMapNoradIds === 'function' ? window.getMapNoradIds() : [];
     const observer = typeof window.getMapObserver === 'function' ? window.getMapObserver() : null;
-    const isAllMode = noradIds.length > 1;
     const noradIdsChanged = !noradIdsEqual(noradIds, lastNoradIds);
 
     observerPos = observer ? { lon: observer.longitude, lat: observer.latitude } : null;
     observerBaseXY = observerPos ? projection([observerPos.lon, observerPos.lat]) : null;
 
     if (noradIdsChanged) {
+      focusedNoradIds.clear();
       lastNoradIds = noradIds.slice();
       cachedOrbitGeos = [];
 
-      if (window.SatContactTle && typeof window.SatContactTle.requestTrajectories === 'function' && !isAllMode && noradIds.length > 0) {
+      if (window.SatContactTle && typeof window.SatContactTle.requestTrajectories === 'function' && noradIds.length > 0) {
         const requestedNoradIds = noradIds.slice();
         window.SatContactTle.requestTrajectories(requestedNoradIds).then((trajectories) => {
           if (!noradIdsEqual(lastNoradIds, requestedNoradIds)) return;
@@ -466,42 +498,37 @@
       const pos = typeof window.getSatellitePosition === 'function'
         ? window.getSatellitePosition(noradId)
         : null;
+      const showFootprint = focusedNoradIds.has(noradId);
 
-      if (isAllMode) {
-        activeSatellites.push({
-          pos: pos,
-          baseXY: pos ? projection([pos.lon, pos.lat]) : null,
-          footprintPath2D: null,
-          markerRadius: 5
-        });
-      } else {
-        let footprintGeo = null;
-        if (pos) {
-          const tleMap = window.SatContactTle.getCache();
-          const tleData = tleMap && tleMap.get(noradId);
-          let heightKm = 0;
-          if (tleData) {
-            const r = window.SatContactTle.computeSatellite(
-              tleData,
-              observer || { latitude: 0, longitude: 0, altitude: 0 },
-              new Date()
-            );
-            if (r && r.height != null) heightKm = r.height;
-          }
-          const radiusDeg = footprintRadiusDeg(heightKm);
-          if (radiusDeg > 0) {
-            footprintGeo = d3.geoCircle()
-              .center([pos.lon, pos.lat])
-              .radius(radiusDeg)();
-          }
+      let footprintPath2D = null;
+      if (showFootprint && pos) {
+        const tleMap = window.SatContactTle.getCache();
+        const tleData = tleMap && tleMap.get(noradId);
+        let heightKm = 0;
+        if (tleData) {
+          const r = window.SatContactTle.computeSatellite(
+            tleData,
+            observer || { latitude: 0, longitude: 0, altitude: 0 },
+            new Date()
+          );
+          if (r && r.height != null) heightKm = r.height;
         }
-        activeSatellites.push({
-          pos: pos,
-          baseXY: pos ? projection([pos.lon, pos.lat]) : null,
-          footprintPath2D: footprintGeo ? new Path2D(path(footprintGeo)) : null,
-          markerRadius: 6
-        });
+        const radiusDeg = footprintRadiusDeg(heightKm);
+        if (radiusDeg > 0) {
+          const footprintGeo = d3.geoCircle()
+            .center([pos.lon, pos.lat])
+            .radius(radiusDeg)();
+          footprintPath2D = new Path2D(path(footprintGeo));
+        }
       }
+
+      activeSatellites.push({
+        noradId: noradId,
+        pos: pos,
+        baseXY: pos ? projection([pos.lon, pos.lat]) : null,
+        footprintPath2D: footprintPath2D,
+        markerRadius: showFootprint ? 6 : 5
+      });
     });
 
     renderFrame();
@@ -537,6 +564,7 @@
     cachedOrbitGeos = [];
     observerPos = null;
     observerBaseXY = null;
+    focusedNoradIds.clear();
     currentTransform = d3.zoomIdentity;
     zoomBehavior = null;
     cachedLandPath2D = null;
