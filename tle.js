@@ -8,7 +8,15 @@
 
   const TLE_URL = 'data/tle.txt';
   let tleCache = null; // Map<noradId, { line1, line2, satrec }>
-  const worker = new Worker('tle-worker.js');
+  let worker = null;
+
+  try {
+    const baseEl = document.querySelector('base');
+    const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
+    worker = new Worker(base + 'tle-worker.js');
+  } catch (e) {
+    console.warn('tle.js: Worker недоступен, орбиты будут считаться в основном потоке', e);
+  }
 
   /**
    * Парсинг TLE: текст → Map<NoradId, { line1, line2, satrec }>
@@ -45,11 +53,14 @@
   async function loadTle() {
     if (tleCache) return tleCache;
 
-    const res = await fetch(TLE_URL);
+    const baseEl = document.querySelector('base');
+    const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
+    const url = base + TLE_URL.replace(/^\//, '');
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`TLE: HTTP ${res.status}`);
     const text = await res.text();
     tleCache = parseTle(text);
-    worker.postMessage({ type: 'INIT_TLE', text });
+    if (worker) worker.postMessage({ type: 'INIT_TLE', text });
     return tleCache;
   }
 
@@ -91,21 +102,43 @@
   }
 
   /**
-   * Запрос траекторий в воркере (асинхронно)
+   * Расчёт траектории 24ч в основном потоке (fallback при отсутствии Worker)
+   */
+  function getTrajectory24hSync(noradId, baseDate) {
+    if (!tleCache) return [];
+    const tleData = tleCache.get(noradId);
+    if (!tleData) return [];
+    const date = baseDate || new Date();
+    const observer = { latitude: 0, longitude: 0, altitude: 0 };
+    const points = [];
+    for (let t = 0; t < 24 * 60; t += 5) {
+      const d = new Date(date.getTime() + t * 60 * 1000);
+      const r = computeSatellite(tleData, observer, d);
+      if (r) points.push([r.lon, r.lat]);
+    }
+    return points;
+  }
+
+  /**
+   * Запрос траекторий в воркере (асинхронно) или fallback в основном потоке
    * @param {string[]} noradIds
    * @returns {Promise<Array<Array<[number,number]>>>} trajectories[i] соответствует noradIds[i]
    */
   function requestTrajectories(noradIds) {
-    return new Promise((resolve) => {
-      const handler = (e) => {
-        if (e.data && e.data.type === 'TRAJECTORIES_READY') {
-          worker.removeEventListener('message', handler);
-          resolve(e.data.trajectories || []);
-        }
-      };
-      worker.addEventListener('message', handler);
-      worker.postMessage({ type: 'CALCULATE_TRAJECTORIES', noradIds: noradIds || [] });
-    });
+    const ids = noradIds || [];
+    if (worker) {
+      return new Promise((resolve) => {
+        const handler = (e) => {
+          if (e.data && e.data.type === 'TRAJECTORIES_READY') {
+            worker.removeEventListener('message', handler);
+            resolve(e.data.trajectories || []);
+          }
+        };
+        worker.addEventListener('message', handler);
+        worker.postMessage({ type: 'CALCULATE_TRAJECTORIES', noradIds: ids });
+      });
+    }
+    return Promise.resolve(ids.map((id) => getTrajectory24hSync(id)));
   }
 
   /**

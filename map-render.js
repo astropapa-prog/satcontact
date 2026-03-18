@@ -187,12 +187,17 @@
   /**
    * Инициализация Canvas-карты
    */
+  function resolveUrl(relativePath) {
+    const baseEl = document.querySelector('base');
+    const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
+    return base + (relativePath || '').replace(/^\//, '');
+  }
+
   async function initD3Map(container) {
     if (!container || !window.d3) return;
 
-    width = container.clientWidth;
-    height = container.clientHeight;
-    if (width <= 0 || height <= 0) return;
+    width = Math.max(container.clientWidth, 1);
+    height = Math.max(container.clientHeight, 1);
 
     dpr = Math.min(window.devicePixelRatio || 1, 2);
 
@@ -255,7 +260,7 @@
     d3.select(canvas.node()).call(zoomBehavior);
 
     try {
-      const res = await fetch(WORLD_URL);
+      const res = await fetch(resolveUrl(WORLD_URL));
       if (res.ok) topology = await res.json();
     } catch (e) {
       console.warn('map-render: не удалось загрузить карту', e);
@@ -279,9 +284,8 @@
     if (!canvas || !ctx || !projection || !path) return;
     const container = canvas.node().parentElement;
     if (!container) return;
-    width = container.clientWidth;
-    height = container.clientHeight;
-    if (width <= 0 || height <= 0) return;
+    width = Math.max(container.clientWidth, 1);
+    height = Math.max(container.clientHeight, 1);
 
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     projection.scale(width / (2 * Math.PI)).translate([width / 2, height / 2]);
