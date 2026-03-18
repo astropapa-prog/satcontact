@@ -252,6 +252,12 @@
     return true;
   }
 
+  function dispatchFocusChange() {
+    window.dispatchEvent(new CustomEvent('satcontact:map-focus', {
+      detail: { focusedIds: Array.from(focusedNoradIds) }
+    }));
+  }
+
   /**
    * Инициализация Canvas-карты
    */
@@ -322,6 +328,7 @@
         focusedNoradIds.clear();
       }
 
+      dispatchFocusChange();
       fastLoop();
     }
     zoomBehavior = d3.zoom().scaleExtent([1, 8]).on('zoom', zoomed);
@@ -570,6 +577,7 @@
 
     if (noradIdsChanged) {
       focusedNoradIds.clear();
+      dispatchFocusChange();
       lastNoradIds = noradIds.slice();
       cachedOrbitGeos = [];
 
@@ -684,6 +692,9 @@
   window.SatContactMapRender = {
     init: initD3Map,
     update: fastLoop,
-    destroy: destroyMapRender
+    destroy: destroyMapRender,
+    getFocusedNoradIds: function () {
+      return Array.from(focusedNoradIds);
+    }
   };
 })();

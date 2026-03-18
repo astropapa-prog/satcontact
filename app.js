@@ -12,10 +12,11 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
-  let header, main, mapView, mapBack, mapTitle, mapShowAll, mapCanvas, mapLoading, mapHud;
+  let header, main, mapView, mapBack, mapTitle, mapShowAll, mapCanvas, mapLoading, mapHud, mapFreqRibbon;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
+  let ribbonHideTimer = null;
 
   // Состояние фильтров по кнопкам (независимо от строки поиска)
   const selectedFilters = {
@@ -303,6 +304,66 @@
     return div.innerHTML;
   }
 
+  function createRibbonCardHtml(entry) {
+    const txText = entry.txFreq != null ? `${entry.txFreq.toFixed(3)}` : '—';
+    const rxText = formatFreq(entry.frequency).replace(' MHz', '');
+    const bwNum = parseInt(entry.filterBandwidth, 10) || 0;
+    const bwClass = bwNum >= 6000 && bwNum <= 8000 ? ' ribbon-card__bw--bright' : '';
+    const bwText = entry.bandwidthFormatted || '—';
+    const statusClass = entry.status?.class || 'status-unknown';
+
+    return `
+      <article class="ribbon-card ${escapeHtml(statusClass)}">
+        <div class="ribbon-card__content">
+          <span class="ribbon-card__tx">${escapeHtml(txText)}</span>
+          <span class="ribbon-card__bw${bwClass}">${escapeHtml(bwText)}</span>
+          <span class="ribbon-card__rx">${escapeHtml(rxText)}</span>
+        </div>
+      </article>
+    `;
+  }
+
+  function hideMapFreqRibbon() {
+    if (!mapFreqRibbon) return;
+    mapFreqRibbon.classList.remove('map-view__freq-ribbon--visible');
+    if (ribbonHideTimer) {
+      clearTimeout(ribbonHideTimer);
+      ribbonHideTimer = null;
+    }
+    ribbonHideTimer = setTimeout(() => {
+      mapFreqRibbon.innerHTML = '';
+      ribbonHideTimer = null;
+    }, 300);
+  }
+
+  function showMapFreqRibbonForNorad(focusedId) {
+    if (!mapFreqRibbon) return;
+    if (ribbonHideTimer) {
+      clearTimeout(ribbonHideTimer);
+      ribbonHideTimer = null;
+    }
+
+    const relatedEntries = allEntries.filter((entry) => (entry.noradIds || []).includes(focusedId));
+    if (!relatedEntries.length) {
+      hideMapFreqRibbon();
+      return;
+    }
+
+    mapFreqRibbon.innerHTML = `<div class="ribbon-scroll">${relatedEntries.map(createRibbonCardHtml).join('')}</div>`;
+    mapFreqRibbon.classList.add('map-view__freq-ribbon--visible');
+  }
+
+  function bindMapFocusRibbon() {
+    window.addEventListener('satcontact:map-focus', (e) => {
+      const focusedIds = Array.isArray(e?.detail?.focusedIds) ? e.detail.focusedIds : [];
+      if (focusedIds.length === 1) {
+        showMapFreqRibbonForNorad(String(focusedIds[0]));
+      } else {
+        hideMapFreqRibbon();
+      }
+    });
+  }
+
   /**
    * Отрисовка списка карточек
    * @param {Array} entries - отфильтрованные записи
@@ -339,6 +400,7 @@
 
     if (mapTitle) mapTitle.textContent = satelliteName || 'Карта';
     if (mapLoading) mapLoading.hidden = false;
+    hideMapFreqRibbon();
 
     if (typeof window.initMap === 'function') {
       window.initMap({ noradIds, satelliteName, noradIdToName });
@@ -363,6 +425,7 @@
     if (typeof window.cleanupMap === 'function') {
       window.cleanupMap();
     }
+    hideMapFreqRibbon();
   }
 
   /**
@@ -392,20 +455,6 @@
   function bindMapButtons() {
     if (mapBack) {
       mapBack.addEventListener('click', () => closeMapView());
-    }
-    if (mapShowAll) {
-      mapShowAll.addEventListener('click', () => {
-        const allNoradIds = [...new Set(filteredEntries.flatMap((e) => e.noradIds || []))].filter(Boolean);
-        const noradIdToName = {};
-        filteredEntries.forEach((e) => {
-          (e.noradIds || []).forEach((id) => {
-            if (!(id in noradIdToName)) noradIdToName[id] = e.cleanName || `NORAD ${id}`;
-          });
-        });
-        if (allNoradIds.length > 0) {
-          openMapView(allNoradIds, 'Все спутники', noradIdToName);
-        }
-      });
     }
   }
 
@@ -714,10 +763,20 @@
     mapCanvas = document.getElementById('mapCanvas');
     mapLoading = document.getElementById('mapLoading');
     mapHud = document.getElementById('mapHud');
+    mapFreqRibbon = document.getElementById('mapFreqRibbon');
 
     bindMapButtons();
+    bindMapFocusRibbon();
     loadData();
   }
+
+  window.getSatContactFilteredEntries = function () {
+    return filteredEntries.slice();
+  };
+
+  window.getSatContactAllEntries = function () {
+    return allEntries.slice();
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

@@ -15,13 +15,86 @@
   let hudTimerId = null;
   let currentObserver = null;
   let currentNoradIds = [];
+  let initialNoradIds = [];
   let currentNoradIdToName = {};
+  let isShowAllMode = false;
 
   // DOM
-  let mapLoading, mapGpsDenied, mapCoords, mapRefresh;
+  let mapLoading, mapGpsDenied, mapCoords, mapRefresh, mapShowAllBtn;
   let mapAzimuth, mapElevation, mapDistance;
   let loadingStatus1, loadingStatus2;
   let gpsRetryBtn, gpsContinueBtn;
+
+  function setMapShowAllButtonState(active) {
+    isShowAllMode = !!active;
+    if (!mapShowAllBtn) return;
+    mapShowAllBtn.classList.toggle('active', isShowAllMode);
+    mapShowAllBtn.setAttribute('aria-pressed', String(isShowAllMode));
+  }
+
+  function buildNoradNameMap(entries) {
+    const map = {};
+    (entries || []).forEach((entry) => {
+      const name = entry?.cleanName || '';
+      (entry?.noradIds || []).forEach((id) => {
+        const key = String(id);
+        if (!map[key]) map[key] = name || `NORAD ${key}`;
+      });
+    });
+    return map;
+  }
+
+  function applyNoradSelection(nextNoradIds, nextNameMap) {
+    const uniqueIds = [...new Set((nextNoradIds || []).map((id) => String(id)).filter(Boolean))];
+    if (!uniqueIds.length) return;
+    currentNoradIds = uniqueIds;
+
+    const mergedMap = {};
+    uniqueIds.forEach((id) => {
+      mergedMap[id] = (nextNameMap && nextNameMap[id]) || currentNoradIdToName[id] || `NORAD ${id}`;
+    });
+    currentNoradIdToName = mergedMap;
+
+    if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
+      window.SatContactMapRender.update();
+    }
+  }
+
+  function bindMapShowAllButton() {
+    if (!mapShowAllBtn) return;
+    mapShowAllBtn.replaceWith(mapShowAllBtn.cloneNode(true));
+    mapShowAllBtn = document.getElementById('mapShowAll');
+    if (!mapShowAllBtn) return;
+
+    setMapShowAllButtonState(false);
+    mapShowAllBtn.addEventListener('click', () => {
+      const nextState = !isShowAllMode;
+      setMapShowAllButtonState(nextState);
+
+      if (nextState) {
+        const filteredEntries = typeof window.getSatContactFilteredEntries === 'function'
+          ? window.getSatContactFilteredEntries()
+          : [];
+        const idsFromFiltered = [...new Set(filteredEntries.flatMap((entry) => entry?.noradIds || []).map((id) => String(id)).filter(Boolean))];
+        if (!idsFromFiltered.length) {
+          setMapShowAllButtonState(false);
+          return;
+        }
+        const namesFromFiltered = buildNoradNameMap(filteredEntries);
+        applyNoradSelection(idsFromFiltered, namesFromFiltered);
+        return;
+      }
+
+      const focusedIds = (window.SatContactMapRender && typeof window.SatContactMapRender.getFocusedNoradIds === 'function')
+        ? window.SatContactMapRender.getFocusedNoradIds()
+        : [];
+      if (focusedIds.length > 0) {
+        applyNoradSelection(focusedIds, currentNoradIdToName);
+      } else {
+        applyNoradSelection(initialNoradIds, currentNoradIdToName);
+      }
+    });
+  }
 
   /**
    * Сохранение координат в localStorage
@@ -288,16 +361,18 @@
    */
   window.initMap = function (options) {
     const { noradIds = [], satelliteName, noradIdToName = {} } = options || {};
-    currentNoradIds = noradIds;
+    initialNoradIds = [...new Set((noradIds || []).map((id) => String(id)).filter(Boolean))];
+    currentNoradIds = initialNoradIds.slice();
     currentNoradIdToName = (noradIdToName && Object.keys(noradIdToName).length > 0)
-      ? noradIdToName
-      : Object.fromEntries(noradIds.map((id) => [id, satelliteName || `NORAD ${id}`]));
+      ? Object.fromEntries(Object.entries(noradIdToName).map(([id, name]) => [String(id), name]))
+      : Object.fromEntries(initialNoradIds.map((id) => [id, satelliteName || `NORAD ${id}`]));
 
     const mapCanvas = document.getElementById('mapCanvas');
     mapLoading = document.getElementById('mapLoading');
     mapGpsDenied = document.getElementById('mapGpsDenied');
     mapCoords = document.getElementById('mapCoords');
     mapRefresh = document.getElementById('mapRefresh');
+    mapShowAllBtn = document.getElementById('mapShowAll');
     mapAzimuth = document.getElementById('mapAzimuth');
     mapElevation = document.getElementById('mapElevation');
     mapDistance = document.getElementById('mapDistance');
@@ -305,6 +380,7 @@
     loadingStatus2 = document.getElementById('mapLoadingStatus2');
     gpsRetryBtn = document.getElementById('mapGpsRetry');
     gpsContinueBtn = document.getElementById('mapGpsContinue');
+    bindMapShowAllButton();
 
     acquireObserver().then(async ({ denied }) => {
       setLoadingStatus('Загрузка орбит…', '');
@@ -357,6 +433,7 @@
   window.cleanupMap = function () {
     stopPolling();
     stopHudUpdate();
+    setMapShowAllButtonState(false);
     if (window.SatContactMapRender) window.SatContactMapRender.destroy();
   };
 
