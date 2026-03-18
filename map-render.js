@@ -99,9 +99,9 @@
   const COLORS = {
     dayOcean: '#6b9bc2',
     dayLand: '#c6dbe8',
-    dayBorder: 'rgba(0,0,0,0.1)',
+    dayBorder: 'rgba(0,0,0,0.25)',
     nightOverlay: 'rgba(28, 36, 45, 0.55)',
-    nightBorder: 'rgba(255,255,255,0.12)',
+    nightBorder: 'rgba(255,255,255,0.25)',
     terminatorLine: 'rgba(255,255,255,0.35)',
     orbit: 'rgba(82, 136, 193, 0.6)',
     footprint: 'rgba(154, 205, 50, 0.15)',
@@ -413,7 +413,7 @@
       ctx.fill(cachedLandPath2D);
 
       ctx.strokeStyle = COLORS.dayBorder;
-      ctx.lineWidth = 0.5 / k;
+      ctx.lineWidth = 1 / k;
       ctx.stroke(cachedLandPath2D);
     }
 
@@ -423,7 +423,7 @@
 
       if (cachedLandPath2D) {
         ctx.strokeStyle = COLORS.nightBorder;
-        ctx.lineWidth = 0.5 / k;
+        ctx.lineWidth = 1 / k;
         ctx.stroke(cachedLandPath2D);
       }
     }
