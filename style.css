@@ -810,6 +810,36 @@ body {
   align-items: center;
 }
 
+.map-view__coords-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.map-view__refresh-feedback {
+  display: block;
+  min-height: 1em;
+  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.map-view__refresh-feedback.is-visible {
+  opacity: 1;
+}
+
+.map-view__refresh-feedback--success {
+  color: #81c784;
+}
+
+.map-view__refresh-feedback--warning {
+  color: #ffd54f;
+}
+
 .map-view__refresh {
   padding: 6px 10px;
   font-size: 1rem;

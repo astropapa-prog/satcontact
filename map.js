@@ -24,6 +24,8 @@
   let mapAzimuth, mapElevation, mapDistance;
   let loadingStatus1, loadingStatus2;
   let gpsRetryBtn, gpsContinueBtn;
+  let mapRefreshFeedback;
+  let refreshFeedbackTimerId = null;
 
   function setMapShowAllButtonState(active) {
     isShowAllMode = !!active;
@@ -154,6 +156,41 @@
     if (loadingStatus2) loadingStatus2.textContent = line2 ?? 'Загрузка орбит…';
   }
 
+  function clearManualRefreshFeedback() {
+    if (!mapRefreshFeedback) return;
+    mapRefreshFeedback.textContent = '';
+    mapRefreshFeedback.classList.remove(
+      'is-visible',
+      'map-view__refresh-feedback--success',
+      'map-view__refresh-feedback--warning'
+    );
+  }
+
+  function showManualRefreshFeedback(text, type) {
+    if (!mapRefreshFeedback) return;
+    if (refreshFeedbackTimerId) {
+      clearTimeout(refreshFeedbackTimerId);
+      refreshFeedbackTimerId = null;
+    }
+    mapRefreshFeedback.textContent = text || '';
+    mapRefreshFeedback.classList.remove(
+      'map-view__refresh-feedback--success',
+      'map-view__refresh-feedback--warning'
+    );
+    if (type === 'success') {
+      mapRefreshFeedback.classList.add('map-view__refresh-feedback--success');
+    } else if (type === 'warning') {
+      mapRefreshFeedback.classList.add('map-view__refresh-feedback--warning');
+    }
+    mapRefreshFeedback.classList.toggle('is-visible', Boolean(text));
+    if (text) {
+      refreshFeedbackTimerId = setTimeout(() => {
+        clearManualRefreshFeedback();
+        refreshFeedbackTimerId = null;
+      }, 2500);
+    }
+  }
+
   /**
    * Показать плашку «GPS заблокирован»
    */
@@ -258,6 +295,7 @@
     if (!mapRefresh) return;
     mapRefresh.disabled = true;
     setLoadingStatus('Поиск GPS…', '');
+    showManualRefreshFeedback('Обновляем GPS…');
     if (mapGpsDenied) mapGpsDenied.hidden = true;
     if (mapLoading) mapLoading.hidden = true;
 
@@ -270,6 +308,9 @@
       if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
         window.SatContactMapRender.update();
       }
+      showManualRefreshFeedback('GPS обновлен', 'success');
+    } else {
+      showManualRefreshFeedback('GPS недоступен', 'warning');
     }
 
     setLoadingStatus('', '');
@@ -384,6 +425,8 @@
     loadingStatus2 = document.getElementById('mapLoadingStatus2');
     gpsRetryBtn = document.getElementById('mapGpsRetry');
     gpsContinueBtn = document.getElementById('mapGpsContinue');
+    mapRefreshFeedback = document.getElementById('mapRefreshFeedback');
+    clearManualRefreshFeedback();
     bindMapShowAllButton();
 
     acquireObserver().then(async ({ denied }) => {
@@ -437,6 +480,11 @@
   window.cleanupMap = function () {
     stopPolling();
     stopHudUpdate();
+    if (refreshFeedbackTimerId) {
+      clearTimeout(refreshFeedbackTimerId);
+      refreshFeedbackTimerId = null;
+    }
+    clearManualRefreshFeedback();
     setMapShowAllButtonState(false);
     if (window.SatContactMapRender) window.SatContactMapRender.destroy();
   };

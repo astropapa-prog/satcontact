@@ -86,7 +86,10 @@
           <span id="mapDistance">—</span>
         </div>
         <div class="map-view__hud-row map-view__hud-coords">
-          <span id="mapCoords">—</span>
+          <div class="map-view__coords-stack">
+            <span id="mapCoords">—</span>
+            <small id="mapRefreshFeedback" class="map-view__refresh-feedback" aria-live="polite"></small>
+          </div>
           <button type="button" class="map-view__refresh" id="mapRefresh" aria-label="Обновить GPS">↻</button>
         </div>
       </div>
