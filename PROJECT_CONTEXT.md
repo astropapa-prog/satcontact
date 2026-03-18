@@ -26,8 +26,9 @@ satcontact/
 ├── style.css            # Telegram Dark, mobile-first, стили карты
 ├── app.js               # Парсинг XML, фильтры, рендер, openMapView/closeMapView
 ├── map.js               # Модуль 2: GPS, localStorage, HUD, initMap/cleanupMap
-├── map-render.js        # D3-картография: карта день/ночь, терминатор, огни городов, орбиты, footprint, маркеры
-├── tle.js               # TLE парсер, satellite.js расчёты (азимут, элевация, дистанция)
+├── map-render.js        # Canvas-картография: карта день/ночь, терминатор, огни городов, орбиты, footprint, маркеры
+├── tle.js               # TLE парсер, satellite.js расчёты, requestTrajectories (Worker)
+├── tle-worker.js        # Web Worker: SGP4 в фоне (parseTle, getTrajectory24h)
 ├── lib/                 # Локальные библиотеки (PWA/офлайн)
 │   ├── README.md        # Инструкции: что скачать
 │   ├── satellite.min.js
@@ -48,6 +49,8 @@ satcontact/
 **Порядок скриптов в index.html:** satellite.min.js → d3.min.js → topojson.min.js → tle.js → map.js → map-render.js → app.js
 
 **lib/:** локальные копии (PWA/офлайн). См. lib/README.md. **data/countries-50m.json:** скачать из world-atlas.
+
+**GitHub Pages:** index.html содержит `<base href="/satcontact/">`. Для локальной разработки закомментировать или заменить на `<base href="./">`.
 
 ### 4.2 Парсинг данных (app.js)
 
@@ -152,40 +155,45 @@ satcontact/
 - **Кнопка [↻]:** ручной запрос GPS.
 - **API:** `window.getMapObserver()` — текущие координаты.
 
-### 5.4 Шаг 4: TLE парсер и математика (tle.js)
+### 5.4 Шаг 4: TLE парсер и математика (tle.js, tle-worker.js)
 
 - **satellite.js:** lib/satellite.min.js v6, `twoline2satrec`, `propagate`, `ecfToLookAngles`, `eciToGeodetic`.
-- **loadTle():** fetch data/tle.txt, parseTle() → Map<NoradId, { line1, line2, satrec }>. NORAD ID из строки 2, символы 3–7.
-- **computeSatellite():** (tleData, observer, date) → { azimuth, elevation, distance, lat, lon, height }.
-- **getTrajectory24h(noradId, baseDate):** суточная траектория, шаг 5 мин, GeoJSON coordinates [[lon,lat],...].
-- **map.js:** интеграция — loadTle после acquireObserver, HUD обновление каждую 1 с. Без GPS — «—» в HUD.
-- **API:** `window.getMapNoradIds()`, `window.getSatellitePosition(noradId, date)`.
+- **loadTle():** fetch data/tle.txt (абсолютный URL для GitHub Pages), parseTle() → Map<NoradId, { line1, line2, satrec }>. После парсинга — worker.postMessage({ type: 'INIT_TLE', text }).
+- **computeSatellite():** (tleData, observer, date) → { azimuth, elevation, distance, lat, lon, height }. Остаётся в основном потоке (HUD, footprint).
+- **requestTrajectories(noradIds):** Promise. Отправляет noradIds в Worker, получает TRAJECTORIES_READY с массивом траекторий. При ошибке Worker — fallback getTrajectory24hSync() в основном потоке.
+- **tle-worker.js:** importScripts('./lib/satellite.min.js'). INIT_TLE — парсинг, tleCache. CALCULATE_TRAJECTORIES — getTrajectory24h для каждого noradId, postMessage TRAJECTORIES_READY.
+- **API:** `window.getMapNoradIds()`, `window.getSatellitePosition(noradId, date)`, `window.SatContactTle.requestTrajectories(noradIds)`.
 
 ### 5.5 Кнопка «посмотреть на карте»
 
 - Активна. При клике: извлечение data-norad и data-clean-name из карточки, SPA-переход в mapView, вызов initMap.
 
-### 5.6 Шаг 5: D3-картография (map-render.js)
+### 5.6 Шаг 5: Canvas-картография (map-render.js)
 
-- **Библиотеки:** lib/d3.min.js, lib/topojson.min.js (topojson-client). data/countries-50m.json.
-- **Проекция:** d3.geoMercator.
-- **Иерархия слоёв (строгий порядок):** layerOcean → layerLand → layerLandBorders → layerShadow → layerBordersNight → layerTerminatorLine → layerLights → layerOrbits → layerFootprint → layerMarkers.
-- **Дневная карта:** океан #6b9bc2, суша #c6dbe8, границы rgba(0,0,0,0.1).
-- **Линия терминатора (день/ночь):** getSunPosition(date) — подсолнечная точка по UTC (без API, математика: вращение Земли + наклон оси 23.45°). drawTerminator(): ночная тень — один d3.geoCircle радиус 90° от антипода Солнца, заливка rgba(28,36,45,0.55) (полупрозрачная, чтобы синева океана и суша были различимы); линия границы — stroke rgba(255,255,255,0.35).
-- **Контуры в ночной зоне:** layerBordersNight — границы стран rgba(255,255,255,0.12) поверх тени.
-- **Огни городов:** MAJOR_CITIES (75 городов), radialGradient id="city-glow" в defs. initCityLights() — circle r=2.5, fill="url(#city-glow)". updateCityLights() — d3.geoDistance (или geoDistanceFallback) от города до Солнца; если > π/2 радиан — ночь, opacity 0.85, иначе 0. Без D3 transition.
-- **Циклы обновления (Battery Saver):** fastLoop (1 с) — наблюдатель, спутник, орбиты, footprint; slowLoop (60 с) — drawTerminator, updateCityLights. При init — оба вызываются сразу.
-- **Орбита:** getTrajectory24h(noradId) — 24 ч, шаг 5 мин, GeoJSON LineString.
-- **Footprint:** d3.geoCircle по высоте орбиты (arcsin(R/(R+h))).
-- **Маркеры:** зелёный — наблюдатель, синий — спутник. Режим «ВСЕ» — только маркеры без орбит/footprint.
-- **Интеграция:** SatContactMapRender.init(mapCanvas), update() = fastLoop (map.js вызывает каждую 1 с), destroy() в cleanupMap.
-- **topojson API:** поддержка window.topojson.feature и window.topojsonClient (функция или объект).
+**Рендер:** HTML5 Canvas (не SVG). D3 используется для проекции и geoPath, отрисовка — нативный Canvas API.
+
+**Архитектура:**
+- **Состояние (обновляется в циклах):** currentSunPos, terminatorShadowGeo, terminatorLineGeo, activeSatellites, cachedOrbitGeos, observerPos, observerBaseXY, focusedNoradIds.
+- **Кэш Path2D:** cachedLandPath2D, cachedTerminatorShadowPath2D, cachedTerminatorLinePath2D. Орбиты и footprints — Path2D. path = d3.geoPath().projection(projection) без context — возвращает SVG-строки для Path2D.
+- **Предрасчёт:** city.baseXY, city.isNight (slowLoop); sat.baseXY, observerBaseXY (fastLoop). В renderFrame() нет вызовов projection() и geoDist().
+- **Циклы:** fastLoop (1 с) — observerPos, activeSatellites, cachedOrbitGeos, footprints; slowLoop (60 с) — терминатор, city.isNight. Оба вызывают renderFrame().
+- **renderFrame():** Painter's algorithm. ctx.save/translate/scale в начале, ctx.restore в конце. lineWidth и радиусы делятся на currentTransform.k.
+
+**Зум и панорамирование:** d3.zoom(), scaleExtent [1, 8]. currentTransform. isDragging — только при изменении transform (не при tap). Клик: onCanvasClick, d3.pointer(event, canvas.node()).
+
+**Орбиты и footprint:**
+- Орбиты рисуются для ВСЕХ выбранных спутников (асинхронно через Worker).
+- Footprint по умолчанию скрыт. Показывается при клике по спутнику (focusedNoradIds). Повторный клик — скрыть. Клик в пустоту — сброс всех.
+- activeSatellites: noradId, pos, baseXY, footprintPath2D, markerRadius (5 или 6 при showFootprint).
+
+**Пути и GitHub Pages:** resolveUrl(relativePath), base в index.html. style.css: touch-action: none на .map-view__canvas.
+
+**Интеграция:** SatContactMapRender.init(mapCanvas), update() = fastLoop, destroy().
 
 ---
 
 ## 6. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
 
-- **Шаг 6:** Режим «ВСЕ» — уже работает (маркеры всех спутников), возможна полировка.
 - **Модуль 3:** AR-трекер (камера, DeviceOrientation, кнопка «НАВЕСТИСЬ»).
 - **PWA:** manifest.json, Service Worker, Cache Storage, IndexedDB.
 
@@ -210,3 +218,56 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 4. **Восстановлена линия терминатора без плавного перехода** — один путь ночной тени (d3.geoCircle 90° от антипода) + линия границы (stroke). layerBordersNight для контуров в тёмной зоне.
 
 5. **Осветление ночной стороны** — ночная тень была #1c242d (полностью чёрная). Заменено на rgba(28,36,45,0.55) — полупрозрачная заливка, чтобы синева океана и суша оставались различимы.
+
+### Сессия: Оптимизация карты, Canvas, Worker, интерактивность
+
+**Этап 1: Кэширование орбит (map-render.js)**
+- Устранено узкое место: getTrajectory24h вызывался каждую секунду для каждого спутника.
+- Добавлены cachedTrajectories (Map), lastNoradIds. noradIdsEqual() для сравнения.
+- Орбиты пересчитываются и перерисовываются только при noradIdsChanged. При неизменном списке layerOrbits не трогается.
+- onResize: обновление path орбит при смене проекции.
+
+**Этап 2: Миграция SVG → Canvas (map-render.js)**
+- Замена SVG на HTML5 Canvas. High-DPI: devicePixelRatio, ctx.scale(dpr, dpr).
+- path = d3.geoPath().projection(projection).context(ctx).
+- Разделение данных и рендера: fastLoop/slowLoop обновляют состояние, вызывают renderFrame().
+- renderFrame(): Painter's algorithm — океан, суша, границы, тень, терминатор, огни городов, орбиты, footprints, маркеры.
+
+**Этап 3: Path2D для производительности**
+- path без context — возвращает SVG-строки. Path2D(path(geo)) для кэша.
+- cachedLandPath2D, cachedTerminatorShadowPath2D, cachedTerminatorLinePath2D.
+- cachedOrbitGeos — массив Path2D. activeSatellites[].footprintPath2D.
+- В renderFrame() — только ctx.fill(p), ctx.stroke(p), без path() и beginPath().
+
+**Этап 4: Зум и панорамирование**
+- d3.zoom(), scaleExtent [1, 8]. currentTransform.
+- ctx.save/translate/scale в начале renderFrame, ctx.restore в конце.
+- lineWidth и радиусы arc делятся на currentTransform.k.
+- style.css: touch-action: none на .map-view__canvas.
+
+**Этап 5: Предрасчёт для renderFrame**
+- onResize: city.baseXY = projection([city.lon, city.lat]).
+- slowLoop: city.isNight = geoDist(...) > π/2.
+- fastLoop: observerBaseXY, sat.baseXY. В renderFrame() нет projection() и geoDist().
+
+**Этап 6: Web Worker (tle-worker.js, tle.js)**
+- tle-worker.js: importScripts('./lib/satellite.min.js'), parseTle, getTrajectory24h.
+- INIT_TLE — парсинг TLE, сохранение в tleCache.
+- CALCULATE_TRAJECTORIES — расчёт траекторий для noradIds, postMessage TRAJECTORIES_READY.
+- tle.js: worker = new Worker(url), loadTle → worker.postMessage(INIT_TLE).
+- requestTrajectories(noradIds) — Promise. При ошибке Worker — getTrajectory24hSync().
+- map-render: при noradIdsChanged — requestTrajectories().then() → Path2D → cachedOrbitGeos → renderFrame().
+
+**Этап 7: Интерактивность (орбиты для всех, клики по footprint)**
+- focusedNoradIds = new Set(). Убрано ограничение !isAllMode — орбиты для всех спутников.
+- Footprint по умолчанию скрыт. showFootprint = focusedNoradIds.has(noradId).
+- activeSatellites: noradId, baseXY, footprintPath2D (только при showFootprint), markerRadius (5 или 6).
+- onCanvasClick: hit-test 20px, currentTransform.apply(sat.baseXY). Toggle focusedNoradIds. Клик в пустоту — clear.
+- isDragging — только при изменении transform (zoom/pan), не при tap. d3.pointer(event, canvas.node()).
+
+**Этап 8: Исправления для GitHub Pages и мобильных**
+- resolveUrl(relativePath) — абсолютные URL для fetch. base = path.endsWith('/') ? path : path + '/'.
+- index.html: <base href="/satcontact/">. Для локальной разработки — закомментировать.
+- tle.js: абсолютные URL для fetch и Worker. try-catch при создании Worker.
+- Path2D: try-catch, проверка typeof Path2D !== 'undefined'.
+- Логирование ошибок загрузки карты.
