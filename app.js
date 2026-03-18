@@ -323,29 +323,31 @@
     `;
   }
 
-  function bindRibbonScrollLock(scrollEl) {
-    if (!scrollEl) return;
+  function bindRibbonHorizontalScroll() {
+    if (!mapFreqRibbon) return;
+    const ribbonScroll = mapFreqRibbon.querySelector('.ribbon-scroll');
+    if (!ribbonScroll) return;
 
-    scrollEl.addEventListener('wheel', (e) => {
-      if (e.deltaY !== 0 && scrollEl.scrollWidth > scrollEl.clientWidth) {
+    ribbonScroll.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0 && ribbonScroll.scrollWidth > ribbonScroll.clientWidth) {
         e.preventDefault();
-        scrollEl.scrollLeft += e.deltaY;
+        ribbonScroll.scrollLeft += e.deltaY;
       }
     }, { passive: false });
 
     let touchStartX = 0;
-
-    scrollEl.addEventListener('touchstart', (e) => {
+    ribbonScroll.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
     }, { passive: true });
 
-    scrollEl.addEventListener('touchmove', (e) => {
-      const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth;
+    ribbonScroll.addEventListener('touchmove', (e) => {
+      const maxScroll = ribbonScroll.scrollWidth - ribbonScroll.clientWidth;
       if (maxScroll <= 0) return;
 
       const deltaX = e.touches[0].clientX - touchStartX;
-      const atLeft = scrollEl.scrollLeft <= 2;
-      const atRight = scrollEl.scrollLeft >= maxScroll - 2;
+      const atLeft = ribbonScroll.scrollLeft <= 2;
+      const atRight = ribbonScroll.scrollLeft >= maxScroll - 2;
+
       if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
         e.preventDefault();
       }
@@ -380,7 +382,7 @@
     }
 
     mapFreqRibbon.innerHTML = `<div class="ribbon-scroll">${relatedEntries.map(createRibbonCardHtml).join('')}</div>`;
-    bindRibbonScrollLock(mapFreqRibbon.querySelector('.ribbon-scroll'));
+    bindRibbonHorizontalScroll();
     mapFreqRibbon.classList.add('map-view__freq-ribbon--visible');
   }
 
