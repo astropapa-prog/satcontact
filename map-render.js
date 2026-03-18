@@ -338,7 +338,8 @@
     const k = currentTransform.k;
 
     ctx.fillStyle = COLORS.dayOcean;
-    ctx.fillRect(0, 0, width, height);
+    // Океан покрывает ту же площадь, что и clipExtent проекции (-0.3 до 1.3 = высота 1.6)
+    ctx.fillRect(0, -height * 0.3, width, height * 1.6);
 
     if (cachedLandPath2D) {
       ctx.fillStyle = COLORS.dayLand;
