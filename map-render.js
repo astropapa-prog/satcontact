@@ -149,11 +149,13 @@
   }
 
   /**
-   * Радиус footprint в градусах
+   * Радиус footprint в градусах (угловое расстояние на поверхности Земли от надира до горизонта).
+   * β = arccos(R/(R+h)) — угол в центре Земли между подспутниковой точкой и точкой горизонта.
+   * Ранее ошибочно использовался arcsin (угол от спутника к горизонту θ = 90°−β), что давало ~2.7× завышенный радиус.
    */
   function footprintRadiusDeg(heightKm) {
     if (!heightKm || heightKm <= 0) return 0;
-    const halfAngle = Math.asin(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + heightKm));
+    const halfAngle = Math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + heightKm));
     return (halfAngle * 180) / Math.PI;
   }
 
