@@ -109,6 +109,20 @@
     observer: '#81c784'
   };
 
+  /** Палитра цветов орбит и маркеров для различения спутников */
+  const ORBIT_PALETTE = [
+    { orbit: 'rgba(82, 136, 193, 0.75)', marker: '#5288c1' },    // синий
+    { orbit: 'rgba(230, 126, 34, 0.75)', marker: '#e67e22' },    // оранжевый
+    { orbit: 'rgba(46, 204, 113, 0.75)', marker: '#2ecc71' },    // зелёный
+    { orbit: 'rgba(155, 89, 182, 0.75)', marker: '#9b59b6' },    // фиолетовый
+    { orbit: 'rgba(231, 76, 60, 0.75)', marker: '#e74c3c' },     // красный
+    { orbit: 'rgba(26, 188, 156, 0.75)', marker: '#1abc9c' },    // бирюзовый
+    { orbit: 'rgba(241, 196, 15, 0.75)', marker: '#f1c40f' },    // жёлтый
+    { orbit: 'rgba(192, 57, 43, 0.75)', marker: '#c0392b' },     // тёмно-красный
+    { orbit: 'rgba(52, 152, 219, 0.75)', marker: '#3498db' },   // голубой
+    { orbit: 'rgba(142, 68, 173, 0.75)', marker: '#8e44ad' }     // пурпурный
+  ];
+
   let canvas, ctx, projection, path;
   let resizeObserver = null;
   let topology = null;
@@ -386,17 +400,17 @@
       ctx.globalAlpha = 1;
     });
 
-    cachedOrbitGeos.forEach((p) => {
-      ctx.strokeStyle = COLORS.orbit;
+    cachedOrbitGeos.forEach((item) => {
+      ctx.strokeStyle = item.color.orbit;
       ctx.lineWidth = 1.5 / k;
-      ctx.stroke(p);
+      ctx.stroke(item.path);
     });
 
     activeSatellites.forEach((sat) => {
       if (sat.footprintPath2D) {
         ctx.fillStyle = COLORS.footprint;
         ctx.fill(sat.footprintPath2D);
-        ctx.strokeStyle = COLORS.orbit;
+        ctx.strokeStyle = sat.orbitColor?.orbit || COLORS.orbit;
         ctx.lineWidth = 0.5 / k;
         ctx.stroke(sat.footprintPath2D);
       }
@@ -405,7 +419,7 @@
     activeSatellites.forEach((sat) => {
       const xy = sat.baseXY;
       if (xy) {
-        ctx.fillStyle = COLORS.marker;
+        ctx.fillStyle = sat.orbitColor?.marker || COLORS.marker;
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = (sat.markerRadius === 6 ? 2 : 1) / k;
         ctx.beginPath();
@@ -413,11 +427,11 @@
         ctx.fill();
         ctx.stroke();
         if (sat.name) {
-          const fontSize = Math.max(9, 11 / k);
+          const fontSize = Math.max(3, 11 / 3 / k);
           ctx.font = `${fontSize}px sans-serif`;
           ctx.fillStyle = '#fff';
           ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-          ctx.lineWidth = 2 / k;
+          ctx.lineWidth = 1 / k;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           const labelY = xy[1] + sat.markerRadius / k + 4 / k;
@@ -497,12 +511,16 @@
       cachedOrbitGeos = [];
 
       if (window.SatContactTle && typeof window.SatContactTle.requestTrajectories === 'function' && noradIds.length > 0) {
-        const requestedNoradIds = noradIds.slice();
+          const requestedNoradIds = noradIds.slice();
         window.SatContactTle.requestTrajectories(requestedNoradIds).then((trajectories) => {
           if (!noradIdsEqual(lastNoradIds, requestedNoradIds)) return;
-          (trajectories || []).forEach((segments) => {
+          (trajectories || []).forEach((segments, i) => {
             if (segments && segments.length > 0) {
-              cachedOrbitGeos.push(new Path2D(path({ type: 'MultiLineString', coordinates: segments })));
+              const palette = ORBIT_PALETTE[i % ORBIT_PALETTE.length];
+              cachedOrbitGeos.push({
+                path: new Path2D(path({ type: 'MultiLineString', coordinates: segments })),
+                color: palette
+              });
             }
           });
           renderFrame();
@@ -518,7 +536,8 @@
     }
 
     const noradIdToName = typeof window.getMapNoradIdToName === 'function' ? window.getMapNoradIdToName() : {};
-    noradIds.forEach((noradId) => {
+    noradIds.forEach((noradId, idx) => {
+      const orbitColor = ORBIT_PALETTE[idx % ORBIT_PALETTE.length];
       const pos = typeof window.getSatellitePosition === 'function'
         ? window.getSatellitePosition(noradId)
         : null;
@@ -553,7 +572,8 @@
         baseXY: pos ? projection([pos.lon, pos.lat]) : null,
         footprintPath2D: footprintPath2D,
         markerRadius: showFootprint ? 6 : 5,
-        name: name
+        name: name,
+        orbitColor: orbitColor
       });
     });
 
