@@ -313,7 +313,7 @@
         }
       },
       {
-        url: 'https://freeipapi.com/api/json',
+        url: 'https://geolocation-db.com/json/',
         validate: (data) => Number.isFinite(Number(data?.latitude)) && Number.isFinite(Number(data?.longitude))
       }
     ];
