@@ -13,6 +13,37 @@
   const PRECISE_GPS_MAX_ACCURACY_M = 100;
   const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 час
   const HUD_UPDATE_MS = 1000; // обновление телеметрии каждую секунду
+  const TELEMETRY_EMPTY_PLACEHOLDER = '—';
+  const TELEMETRY_MULTI_AZ_EL_PLACEHOLDER = '---';
+  const TELEMETRY_MULTI_DISTANCE_PLACEHOLDER = '----';
+  const GPS_SOURCE_BADGE_LABELS = Object.freeze({
+    manual: 'РУЧН',
+    gps: 'GPS',
+    network: 'СЕТЬ',
+    none: 'НЕТ GPS'
+  });
+  const HUD_LOADING_TEXT = Object.freeze({
+    searchingGps: 'Поиск GPS…',
+    loadingOrbits: 'Загрузка орбит…',
+    ipWhenGpsDenied: 'Координаты по IP (GPS запрещен)',
+    deniedApiUnavailableCache: 'GPS запрещен, API недоступно, загружен кэш',
+    ipOrNetworkCoarse: 'Координаты по IP/сети (неточно)',
+    ipCoarse: 'Координаты по IP (неточно)',
+    apiUnavailableCache: 'API недоступно, загружен кэш'
+  });
+  const HUD_REFRESH_FEEDBACK_TEXT = Object.freeze({
+    invalidManualCoords: 'Неверный формат координат',
+    manualCoordsApplied: 'Применены ручные координаты',
+    manualCoordsDisabled: 'Ручные координаты отключены',
+    updatingGps: 'Обновляем GPS…',
+    deniedUsingIp: 'GPS запрещен, позиция по IP',
+    deniedUsingCache: 'GPS запрещен, API недоступно, загружен кэш',
+    deniedInBrowser: 'Доступ к GPS запрещен в браузере',
+    gpsUpdated: 'GPS обновлен',
+    noPreciseGpsUsingIp: 'Точный GPS не найден, позиция по IP',
+    apiUnavailableUsingCache: 'API недоступно, загружен кэш',
+    gpsUnavailableOnDevice: 'GPS недоступен на устройстве'
+  });
 
   let pollTimerId = null;
   let hudTimerId = null;
@@ -84,14 +115,14 @@
   function setHudTelemetryPlaceholder(isMultiFocus) {
     if (!mapAzimuth || !mapElevation || !mapDistance) return;
     if (isMultiFocus) {
-      mapAzimuth.textContent = '---';
-      mapElevation.textContent = '---';
-      mapDistance.textContent = '----';
+      mapAzimuth.textContent = TELEMETRY_MULTI_AZ_EL_PLACEHOLDER;
+      mapElevation.textContent = TELEMETRY_MULTI_AZ_EL_PLACEHOLDER;
+      mapDistance.textContent = TELEMETRY_MULTI_DISTANCE_PLACEHOLDER;
       return;
     }
-    mapAzimuth.textContent = '—';
-    mapElevation.textContent = '—';
-    mapDistance.textContent = '—';
+    mapAzimuth.textContent = TELEMETRY_EMPTY_PLACEHOLDER;
+    mapElevation.textContent = TELEMETRY_EMPTY_PLACEHOLDER;
+    mapDistance.textContent = TELEMETRY_EMPTY_PLACEHOLDER;
   }
 
   function getDefaultTelemetryNoradId() {
@@ -304,21 +335,21 @@
       'map-view__gps-badge--none'
     );
     if (source === 'manual') {
-      mapGpsSourceBadge.textContent = 'РУЧН';
+      mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.manual;
       mapGpsSourceBadge.classList.add('map-view__gps-badge--manual');
       return;
     }
     if (source === 'gps') {
-      mapGpsSourceBadge.textContent = 'GPS';
+      mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.gps;
       mapGpsSourceBadge.classList.add('map-view__gps-badge--gps');
       return;
     }
     if (source === 'network' || source === 'cached') {
-      mapGpsSourceBadge.textContent = 'СЕТЬ';
+      mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.network;
       mapGpsSourceBadge.classList.add('map-view__gps-badge--network');
       return;
     }
-    mapGpsSourceBadge.textContent = 'НЕТ GPS';
+    mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.none;
     mapGpsSourceBadge.classList.add('map-view__gps-badge--none');
   }
 
@@ -326,8 +357,8 @@
    * Обновление статуса загрузки
    */
   function setLoadingStatus(line1, line2) {
-    if (loadingStatus1) loadingStatus1.textContent = line1 ?? 'Поиск GPS…';
-    if (loadingStatus2) loadingStatus2.textContent = line2 ?? 'Загрузка орбит…';
+    if (loadingStatus1) loadingStatus1.textContent = line1 ?? HUD_LOADING_TEXT.searchingGps;
+    if (loadingStatus2) loadingStatus2.textContent = line2 ?? HUD_LOADING_TEXT.loadingOrbits;
   }
 
   function clearManualRefreshFeedback() {
@@ -411,17 +442,17 @@
         const parsed = parseManualCoordsInput(mapManualCoordsInput.value);
         if (!parsed) {
           mapManualCoordsToggle.checked = false;
-          showManualRefreshFeedback('Неверный формат координат', 'warning');
+          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.invalidManualCoords, 'warning');
           return;
         }
         manualObserver = parsed;
         setManualOverrideEnabled(true);
-        showManualRefreshFeedback('Применены ручные координаты', 'success');
+        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.manualCoordsApplied, 'success');
         return;
       }
 
       setManualOverrideEnabled(false);
-      showManualRefreshFeedback('Ручные координаты отключены', 'warning');
+      showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.manualCoordsDisabled, 'warning');
     });
 
     mapManualCoordsInput.addEventListener('change', () => {
@@ -578,7 +609,7 @@
    * @returns {Promise<{coords: object|null, denied: boolean}>}
    */
   async function acquireObserver() {
-    setLoadingStatus('Поиск GPS…', 'Загрузка орбит…');
+    setLoadingStatus(HUD_LOADING_TEXT.searchingGps, HUD_LOADING_TEXT.loadingOrbits);
     hideGpsDenied();
 
     const perm = checkPermission();
@@ -591,13 +622,13 @@
           if (ipCoords) {
             saveObserver(ipCoords);
             setAutoObserver(ipCoords);
-            setLoadingStatus('Координаты по IP (GPS запрещен)', '');
+            setLoadingStatus(HUD_LOADING_TEXT.ipWhenGpsDenied, '');
             return { coords: ipCoords, denied: true };
           }
 
           const cachedObserver = loadObserver();
           setAutoObserver(cachedObserver);
-          setLoadingStatus('GPS запрещен, API недоступно, загружен кэш', '');
+          setLoadingStatus(HUD_LOADING_TEXT.deniedApiUnavailableCache, '');
           return { coords: cachedObserver, denied: true };
         }
       } catch (e) {
@@ -612,13 +643,13 @@
       if (ipCoords) {
         saveObserver(ipCoords);
         setAutoObserver(ipCoords);
-        setLoadingStatus('Координаты по IP (GPS запрещен)', '');
+        setLoadingStatus(HUD_LOADING_TEXT.ipWhenGpsDenied, '');
         return { coords: ipCoords, denied: true };
       }
 
       const cachedObserver = loadObserver();
       setAutoObserver(cachedObserver);
-      setLoadingStatus('GPS запрещен, API недоступно, загружен кэш', '');
+      setLoadingStatus(HUD_LOADING_TEXT.deniedApiUnavailableCache, '');
       return { coords: cachedObserver, denied: true };
     }
 
@@ -630,7 +661,7 @@
       }
       saveObserver(resolvedCoords);
       setAutoObserver(resolvedCoords);
-      setLoadingStatus(gpsResult.isPrecise ? 'Загрузка орбит…' : 'Координаты по IP/сети (неточно)', '');
+      setLoadingStatus(gpsResult.isPrecise ? HUD_LOADING_TEXT.loadingOrbits : HUD_LOADING_TEXT.ipOrNetworkCoarse, '');
       return { coords: resolvedCoords, denied: false };
     }
 
@@ -640,13 +671,13 @@
     if (ipCoords) {
       saveObserver(ipCoords);
       setAutoObserver(ipCoords);
-      setLoadingStatus('Координаты по IP (неточно)', '');
+      setLoadingStatus(HUD_LOADING_TEXT.ipCoarse, '');
       return { coords: ipCoords, denied: false };
     }
 
     const cachedObserver = loadObserver();
     setAutoObserver(cachedObserver);
-    setLoadingStatus('API недоступно, загружен кэш', '');
+    setLoadingStatus(HUD_LOADING_TEXT.apiUnavailableCache, '');
     return { coords: cachedObserver, denied: false };
   }
 
@@ -656,8 +687,8 @@
   async function onManualRefresh() {
     if (!mapRefresh) return;
     mapRefresh.disabled = true;
-    setLoadingStatus('Поиск GPS…', '');
-    showManualRefreshFeedback('Обновляем GPS…');
+    setLoadingStatus(HUD_LOADING_TEXT.searchingGps, '');
+    showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.updatingGps);
     if (mapGpsDenied) mapGpsDenied.hidden = true;
     if (mapLoading) mapLoading.hidden = true;
 
@@ -672,7 +703,7 @@
         if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
           window.SatContactMapRender.update();
         }
-        showManualRefreshFeedback('GPS запрещен, позиция по IP', 'warning');
+        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.deniedUsingIp, 'warning');
       } else {
         const cached = loadObserver();
         if (cached) {
@@ -680,10 +711,10 @@
           if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
             window.SatContactMapRender.update();
           }
-          showManualRefreshFeedback('GPS запрещен, API недоступно, загружен кэш', 'warning');
+          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.deniedUsingCache, 'warning');
         } else {
           updateGpsSourceBadge(null);
-          showManualRefreshFeedback('Доступ к GPS запрещен в браузере', 'warning');
+          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.deniedInBrowser, 'warning');
         }
       }
       setLoadingStatus('', '');
@@ -703,9 +734,9 @@
         window.SatContactMapRender.update();
       }
       if (resolvedCoords.source === 'gps') {
-        showManualRefreshFeedback('GPS обновлен', 'success');
+        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.gpsUpdated, 'success');
       } else {
-        showManualRefreshFeedback('Точный GPS не найден, позиция по IP', 'warning');
+        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.noPreciseGpsUsingIp, 'warning');
       }
     } else {
       const ipCoords = await requestIpLocation();
@@ -715,7 +746,7 @@
         if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
           window.SatContactMapRender.update();
         }
-        showManualRefreshFeedback('Точный GPS не найден, позиция по IP', 'warning');
+        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.noPreciseGpsUsingIp, 'warning');
       } else {
         const cached = loadObserver();
         if (cached) {
@@ -723,10 +754,10 @@
           if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
             window.SatContactMapRender.update();
           }
-          showManualRefreshFeedback('API недоступно, загружен кэш', 'warning');
+          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.apiUnavailableUsingCache, 'warning');
         } else {
           updateGpsSourceBadge(null);
-          showManualRefreshFeedback('GPS недоступен на устройстве', 'warning');
+          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.gpsUnavailableOnDevice, 'warning');
         }
       }
     }
@@ -804,7 +835,9 @@
 
     mapAzimuth.textContent = window.SatContactTle.formatAzimuth(result.azimuth);
     mapElevation.textContent = window.SatContactTle.formatElevation(result.elevation);
-    mapDistance.textContent = result.distance != null ? `${Math.round(result.distance)} км` : '—';
+    mapDistance.textContent = result.distance != null
+      ? `${Math.round(result.distance)} км`
+      : TELEMETRY_EMPTY_PLACEHOLDER;
   }
 
   function startHudUpdate() {
@@ -861,7 +894,7 @@
     bindMapFocusTelemetry();
 
     acquireObserver().then(async ({ denied }) => {
-      setLoadingStatus('Загрузка орбит…', '');
+      setLoadingStatus(HUD_LOADING_TEXT.loadingOrbits, '');
       try {
         if (window.SatContactTle) {
           await window.SatContactTle.loadTle();
