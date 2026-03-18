@@ -24,6 +24,10 @@
   let initialNoradIds = [];
   let currentNoradIdToName = {};
   let isShowAllMode = false;
+  let focusedNoradIds = [];
+  let hudTelemetryNoradId = null;
+  let lastSingleFocusedNoradId = null;
+  let mapFocusListener = null;
 
   // DOM
   let mapLoading, mapGpsDenied, mapCoords, mapRefresh, mapShowAllBtn;
@@ -58,6 +62,13 @@
     const uniqueIds = [...new Set((nextNoradIds || []).map((id) => String(id)).filter(Boolean))];
     if (!uniqueIds.length) return;
     currentNoradIds = uniqueIds;
+    focusedNoradIds = focusedNoradIds.filter((id) => currentNoradIds.includes(id));
+    if (hudTelemetryNoradId && !currentNoradIds.includes(hudTelemetryNoradId)) {
+      hudTelemetryNoradId = null;
+    }
+    if (lastSingleFocusedNoradId && !currentNoradIds.includes(lastSingleFocusedNoradId)) {
+      lastSingleFocusedNoradId = null;
+    }
 
     const mergedMap = {};
     uniqueIds.forEach((id) => {
@@ -68,6 +79,70 @@
     if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
       window.SatContactMapRender.update();
     }
+  }
+
+  function setHudTelemetryPlaceholder(isMultiFocus) {
+    if (!mapAzimuth || !mapElevation || !mapDistance) return;
+    if (isMultiFocus) {
+      mapAzimuth.textContent = '---';
+      mapElevation.textContent = '---';
+      mapDistance.textContent = '----';
+      return;
+    }
+    mapAzimuth.textContent = '—';
+    mapElevation.textContent = '—';
+    mapDistance.textContent = '—';
+  }
+
+  function getDefaultTelemetryNoradId() {
+    if (lastSingleFocusedNoradId && currentNoradIds.includes(lastSingleFocusedNoradId)) {
+      return lastSingleFocusedNoradId;
+    }
+    return currentNoradIds[0] || null;
+  }
+
+  function resolveTelemetryNoradId() {
+    if (focusedNoradIds.length > 1) {
+      return null;
+    }
+    if (focusedNoradIds.length === 1) {
+      return focusedNoradIds[0];
+    }
+    if (hudTelemetryNoradId && currentNoradIds.includes(hudTelemetryNoradId)) {
+      return hudTelemetryNoradId;
+    }
+    return getDefaultTelemetryNoradId();
+  }
+
+  function onMapFocusChange(evt) {
+    const nextFocusedIds = Array.isArray(evt?.detail?.focusedIds)
+      ? [...new Set(evt.detail.focusedIds.map((id) => String(id)).filter(Boolean))]
+      : [];
+
+    focusedNoradIds = nextFocusedIds.filter((id) => currentNoradIds.includes(id));
+
+    if (focusedNoradIds.length === 1) {
+      hudTelemetryNoradId = focusedNoradIds[0];
+      lastSingleFocusedNoradId = focusedNoradIds[0];
+    } else if (focusedNoradIds.length === 0) {
+      hudTelemetryNoradId = getDefaultTelemetryNoradId();
+    } else {
+      hudTelemetryNoradId = null;
+    }
+
+    updateHudTelem();
+  }
+
+  function bindMapFocusTelemetry() {
+    unbindMapFocusTelemetry();
+    mapFocusListener = (evt) => onMapFocusChange(evt);
+    window.addEventListener('satcontact:map-focus', mapFocusListener);
+  }
+
+  function unbindMapFocusTelemetry() {
+    if (!mapFocusListener) return;
+    window.removeEventListener('satcontact:map-focus', mapFocusListener);
+    mapFocusListener = null;
   }
 
   function bindMapShowAllButton() {
@@ -700,11 +775,10 @@
     if (!mapAzimuth || !mapElevation || !mapDistance) return;
     if (!window.SatContactTle) return;
 
-    const noradId = currentNoradIds[0];
+    const isMultiFocus = focusedNoradIds.length > 1;
+    const noradId = resolveTelemetryNoradId();
     if (!noradId) {
-      mapAzimuth.textContent = '—';
-      mapElevation.textContent = '—';
-      mapDistance.textContent = '—';
+      setHudTelemetryPlaceholder(isMultiFocus);
       return;
     }
 
@@ -713,24 +787,18 @@
 
     const tleData = tleMap.get(noradId);
     if (!tleData) {
-      mapAzimuth.textContent = '—';
-      mapElevation.textContent = '—';
-      mapDistance.textContent = '—';
+      setHudTelemetryPlaceholder(isMultiFocus);
       return;
     }
 
     if (!currentObserver) {
-      mapAzimuth.textContent = '—';
-      mapElevation.textContent = '—';
-      mapDistance.textContent = '—';
+      setHudTelemetryPlaceholder(isMultiFocus);
       return;
     }
 
     const result = window.SatContactTle.computeSatellite(tleData, currentObserver, new Date());
     if (!result) {
-      mapAzimuth.textContent = '—';
-      mapElevation.textContent = '—';
-      mapDistance.textContent = '—';
+      setHudTelemetryPlaceholder(isMultiFocus);
       return;
     }
 
@@ -762,6 +830,9 @@
     const { noradIds = [], satelliteName, noradIdToName = {} } = options || {};
     initialNoradIds = [...new Set((noradIds || []).map((id) => String(id)).filter(Boolean))];
     currentNoradIds = initialNoradIds.slice();
+    focusedNoradIds = [];
+    lastSingleFocusedNoradId = currentNoradIds[0] || null;
+    hudTelemetryNoradId = currentNoradIds[0] || null;
     currentNoradIdToName = (noradIdToName && Object.keys(noradIdToName).length > 0)
       ? Object.fromEntries(Object.entries(noradIdToName).map(([id, name]) => [String(id), name]))
       : Object.fromEntries(initialNoradIds.map((id) => [id, satelliteName || `NORAD ${id}`]));
@@ -787,6 +858,7 @@
     clearManualRefreshFeedback();
     bindManualOverrideControls();
     bindMapShowAllButton();
+    bindMapFocusTelemetry();
 
     acquireObserver().then(async ({ denied }) => {
       setLoadingStatus('Загрузка орбит…', '');
@@ -839,12 +911,16 @@
   window.cleanupMap = function () {
     stopPolling();
     stopHudUpdate();
+    unbindMapFocusTelemetry();
     if (refreshFeedbackTimerId) {
       clearTimeout(refreshFeedbackTimerId);
       refreshFeedbackTimerId = null;
     }
     clearManualRefreshFeedback();
     setMapShowAllButtonState(false);
+    focusedNoradIds = [];
+    hudTelemetryNoradId = null;
+    lastSingleFocusedNoradId = null;
     if (window.SatContactMapRender) window.SatContactMapRender.destroy();
   };
 
