@@ -481,11 +481,11 @@
           '#fff'
         );
         if (sat.name && sat.footprintPath2D) {
-          const fontSize = Math.max(6, 22 / 3 / k);
+          const fontSize = 12 / k;
           ctx.font = `${fontSize}px sans-serif`;
           ctx.fillStyle = '#fff';
           ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-          ctx.lineWidth = 1 / k;
+          ctx.lineWidth = 1.5 / k;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           const labelY = xy[1] + iconSize / 2 + 4 / k;
