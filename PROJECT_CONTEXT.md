@@ -143,7 +143,7 @@ satcontact/
 ### 5.2 Шаг 2: Базовый UI карты и SPA-маршрутизация
 
 - **index.html:** `<div id="mapView" class="map-view" hidden>` — шапка (Назад, Название, ВСЕ), #mapCanvas, оверлей загрузки, плашка GPS denied, HUD (азимут, элевация, дистанция, координаты, кнопка ↻).
-- **app.js:** `openMapView(noradIds, satelliteName)` — скрывает .header/.main, показывает mapView, вызывает `window.initMap()`. `closeMapView()` — возврат, вызывает `window.cleanupMap()`. Кнопка «посмотреть на карте» — data-norad, data-clean-name. Кнопка «ВСЕ» на карте — все NORAD IDs из filteredEntries.
+- **app.js:** `openMapView(noradIds, satelliteName, noradIdToName?)` — скрывает .header/.main, показывает mapView, вызывает `window.initMap({ noradIds, satelliteName, noradIdToName })`. `closeMapView()` — возврат, вызывает `window.cleanupMap()`. Кнопка «посмотреть на карте» — data-norad, data-clean-name. Кнопка «ВСЕ» на карте — все NORAD IDs из filteredEntries + noradIdToName из filteredEntries.
 - **style.css:** .map-view (fixed, fullscreen), .map-view__header, .map-view__hud (#212d3b), .map-view__gps-denied.
 
 ### 5.3 Шаг 3: Сервис геолокации (map.js)
@@ -162,7 +162,7 @@ satcontact/
 - **computeSatellite():** (tleData, observer, date) → { azimuth, elevation, distance, lat, lon, height }. Остаётся в основном потоке (HUD, footprint).
 - **requestTrajectories(noradIds):** Promise. Отправляет noradIds в Worker, получает TRAJECTORIES_READY с массивом траекторий. При ошибке Worker — fallback getTrajectory24hSync() в основном потоке.
 - **tle-worker.js:** importScripts('./lib/satellite.min.js'). INIT_TLE — парсинг, tleCache. CALCULATE_TRAJECTORIES — getTrajectory24h для каждого noradId, postMessage TRAJECTORIES_READY.
-- **API:** `window.getMapNoradIds()`, `window.getSatellitePosition(noradId, date)`, `window.SatContactTle.requestTrajectories(noradIds)`.
+- **API:** `window.getMapNoradIds()`, `window.getMapNoradIdToName()`, `window.getSatellitePosition(noradId, date)`, `window.SatContactTle.requestTrajectories(noradIds)`.
 
 ### 5.5 Кнопка «посмотреть на карте»
 
@@ -182,9 +182,10 @@ satcontact/
 **Зум и панорамирование:** d3.zoom(), scaleExtent [1, 8]. currentTransform. isDragging — только при изменении transform (не при tap). Клик: onCanvasClick, d3.pointer(event, canvas.node()).
 
 **Орбиты и footprint:**
-- Орбиты рисуются для ВСЕХ выбранных спутников (асинхронно через Worker).
-- Footprint по умолчанию скрыт. Показывается при клике по спутнику (focusedNoradIds). Повторный клик — скрыть. Клик в пустоту — сброс всех.
-- activeSatellites: noradId, pos, baseXY, footprintPath2D, markerRadius (5 или 6 при showFootprint).
+- Орбиты рисуются для ВСЕХ выбранных спутников (асинхронно через Worker). Каждая орбита — свой цвет из ORBIT_PALETTE.
+- Footprint по умолчанию скрыт. Показывается при клике по спутнику (focusedNoradIds). Повторный клик — скрыть. Клик в пустоту — сброс всех. Вместе с footprint показывается название спутника.
+- activeSatellites: noradId, pos, baseXY, footprintPath2D, markerRadius, name, orbitColor.
+- Маркеры — иконки спутников (drawSatelliteIcon: корпус, панели, антенна, сопло). Названия — в экранных координатах, 12px, фиксированный размер при зуме.
 
 **Пути и GitHub Pages:** resolveUrl(relativePath), base в index.html. style.css: touch-action: none на .map-view__canvas.
 
@@ -313,3 +314,46 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 - Клик по спутнику стабильно включает/выключает footprint.
 - Орбиты не «простреливают» через всю карту при переходе через 180°.
 - При проблемах с Worker модуль карты остаётся рабочим за счёт sync-fallback.
+
+### Сессия: Footprint, иконки спутников, названия, орбиты, контуры (март 2026)
+
+**1. Исправление формулы зоны покрытия (footprint)**
+- **Проблема:** зона покрытия отображалась ~2.7× больше реальной.
+- **Причина:** использовался `arcsin(R/(R+h))` — угол θ от спутника к горизонту. Для d3.geoCircle нужен угол β на поверхности Земли (от надира до горизонта).
+- **Формула:** β = arccos(R/(R+h)). Связь: θ + β = 90°.
+- **Файл:** map-render.js, `footprintRadiusDeg()` — заменён Math.asin на Math.acos.
+
+**2. Цвет зоны покрытия**
+- Было: rgba(82, 136, 193, 0.15) (синий).
+- Стало: rgba(154, 205, 50, 0.15) (жёлто-зелёный).
+
+**3. Разные цвета орбит и маркеров**
+- ORBIT_PALETTE — 10 цветов (синий, оранжевый, зелёный, фиолетовый, красный, бирюзовый, жёлтый, тёмно-красный, голубой, пурпурный).
+- cachedOrbitGeos: массив { path, color } где color = { orbit, marker }.
+- Каждый спутник получает цвет по индексу. Маркер и обводка footprint — того же цвета, что орбита.
+
+**4. Названия спутников**
+- **map.js:** currentNoradIdToName, getMapNoradIdToName(). initMap({ noradIds, satelliteName, noradIdToName }).
+- **app.js:** openMapView(noradIds, satelliteName, noradIdToName). При «ВСЕ» — noradIdToName из filteredEntries.
+- **Отображение:** только при клике по спутнику, вместе с footprint (одно событие — toggle обоих).
+
+**5. Иконка спутника вместо кружков**
+- `drawSatelliteIcon(ctx, x, y, size, fillColor, strokeColor)` — рисует в коде:
+  - Корпус (прямоугольник)
+  - Солнечные панели (крылья, слева и справа)
+  - Параболическая антенна (вниз, к Земле)
+  - Сопло Лаваля (вверх, от Земли)
+- Размер: 21px (в фокусе) / 18px (обычно), масштабируется с зумом (/k).
+- Hit area: 24px.
+
+**6. Название — фиксированный размер, экранные координаты**
+- Название рисуется **после** ctx.restore(), вне zoom-трансформации.
+- labelsToDraw: массив { text, x, y }. Позиция: currentTransform.apply([x, y]) для экранных координат.
+- Шрифт: 12px sans-serif — постоянный размер на экране при любом зуме.
+
+**7. Контуры стран — чётче**
+- dayBorder: rgba(0,0,0,0.1) → 0.25, lineWidth 0.5 → 1.
+- nightBorder: rgba(255,255,255,0.12) → 0.25, lineWidth 0.5 → 1.
+
+**Актуальная структура activeSatellites:**
+- noradId, pos, baseXY, footprintPath2D, markerRadius, name, orbitColor.
