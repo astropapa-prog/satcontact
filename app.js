@@ -12,7 +12,7 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
-  let header, main, mapView, mapBack, mapTitle, mapLoading, mapFreqRibbon;
+  let header, main, mapView, mapBack, mapTitle, mapLoading, mapHud, mapFreqRibbon;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -329,11 +329,52 @@
     if (!ribbonScroll) return;
 
     ribbonScroll.addEventListener('wheel', (e) => {
-      if (e.deltaY !== 0 && ribbonScroll.scrollWidth > ribbonScroll.clientWidth) {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta !== 0 && ribbonScroll.scrollWidth > ribbonScroll.clientWidth) {
         e.preventDefault();
-        ribbonScroll.scrollLeft += e.deltaY;
+        ribbonScroll.scrollLeft += delta;
       }
     }, { passive: false });
+
+    let isDragging = false;
+    let hasDragged = false;
+    let dragStartX = 0;
+    let dragStartScrollLeft = 0;
+
+    ribbonScroll.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      isDragging = true;
+      hasDragged = false;
+      dragStartX = e.clientX;
+      dragStartScrollLeft = ribbonScroll.scrollLeft;
+      ribbonScroll.classList.add('ribbon-scroll--dragging');
+      e.preventDefault();
+    });
+
+    ribbonScroll.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartX;
+      if (Math.abs(dx) > 3) hasDragged = true;
+      ribbonScroll.scrollLeft = dragStartScrollLeft - dx;
+      e.preventDefault();
+    });
+
+    const stopMouseDrag = () => {
+      isDragging = false;
+      ribbonScroll.classList.remove('ribbon-scroll--dragging');
+    };
+    ribbonScroll.addEventListener('mouseup', stopMouseDrag);
+    ribbonScroll.addEventListener('mouseleave', stopMouseDrag);
+
+    ribbonScroll.querySelectorAll('.ribbon-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        if (hasDragged) {
+          hasDragged = false;
+          return;
+        }
+        card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      });
+    });
 
     let touchStartX = 0;
     ribbonScroll.addEventListener('touchstart', (e) => {
@@ -353,6 +394,15 @@
       }
       touchStartX = e.touches[0].clientX;
     }, { passive: false });
+  }
+
+  function updateRibbonBottomOffset() {
+    if (!mapView || !mapHud || !mapFreqRibbon) return;
+    const viewRect = mapView.getBoundingClientRect();
+    const hudRect = mapHud.getBoundingClientRect();
+    if (!viewRect.height || !hudRect.height) return;
+    const bottomOffset = Math.max(0, Math.round(viewRect.bottom - hudRect.top + 8));
+    mapFreqRibbon.style.bottom = `${bottomOffset}px`;
   }
 
   function hideMapFreqRibbon() {
@@ -381,6 +431,7 @@
       return;
     }
 
+    updateRibbonBottomOffset();
     mapFreqRibbon.innerHTML = `<div class="ribbon-scroll">${relatedEntries.map(createRibbonCardHtml).join('')}</div>`;
     bindRibbonHorizontalScroll();
     mapFreqRibbon.classList.add('map-view__freq-ribbon--visible');
@@ -793,10 +844,12 @@
     mapBack = document.getElementById('mapBack');
     mapTitle = document.getElementById('mapTitle');
     mapLoading = document.getElementById('mapLoading');
+    mapHud = document.getElementById('mapHud');
     mapFreqRibbon = document.getElementById('mapFreqRibbon');
 
     bindMapButtons();
     bindMapFocusRibbon();
+    window.addEventListener('resize', updateRibbonBottomOffset);
     loadData();
   }
 

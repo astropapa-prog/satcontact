@@ -624,6 +624,7 @@ body {
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
+  cursor: grab;
 }
 
 .ribbon-scroll::-webkit-scrollbar {
@@ -633,6 +634,11 @@ body {
 .ribbon-scroll {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.ribbon-scroll.ribbon-scroll--dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .ribbon-card {
