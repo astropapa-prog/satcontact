@@ -685,24 +685,25 @@ body {
 .ribbon-card__tx,
 .ribbon-card__rx {
   font-family: var(--font-mono);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.08);
 }
 
 .ribbon-card__tx {
-  color: var(--text-secondary);
+  color: #d5e0ea;
 }
 
 .ribbon-card.status-sens .ribbon-card__tx {
-  color: #81c784;
+  color: #a5d6a7;
 }
 
 .ribbon-card.status-med .ribbon-card__tx {
-  color: #ffd54f;
+  color: #ffe082;
 }
 
 .ribbon-card.status-dull .ribbon-card__tx {
-  color: #e57373;
+  color: #ef9a9a;
 }
 
 .ribbon-card__bw {
@@ -719,7 +720,7 @@ body {
 }
 
 .ribbon-card__rx {
-  color: var(--accent);
+  color: #8ab8ea;
 }
 
 /* Загрузочный оверлей */
