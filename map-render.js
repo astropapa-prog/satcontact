@@ -256,8 +256,10 @@
 
       fastLoop();
     }
-    zoomBehavior = d3.zoom().scaleExtent([1, 8]).on('zoom', zoomed).on('click', onCanvasClick);
-    d3.select(canvas.node()).call(zoomBehavior);
+    zoomBehavior = d3.zoom().scaleExtent([1, 8]).on('zoom', zoomed);
+    d3.select(canvas.node())
+      .call(zoomBehavior)
+      .on('click', onCanvasClick); // Клик на canvas, а не на zoom (d3.zoom не имеет события click)
 
     try {
       const res = await fetch(resolveUrl(WORLD_URL));
@@ -334,17 +336,14 @@
     ctx.fillStyle = COLORS.dayOcean;
     ctx.fillRect(0, 0, width, height);
 
-    if (!cachedLandPath2D) {
-      ctx.restore();
-      return;
+    if (cachedLandPath2D) {
+      ctx.fillStyle = COLORS.dayLand;
+      ctx.fill(cachedLandPath2D);
+
+      ctx.strokeStyle = COLORS.dayBorder;
+      ctx.lineWidth = 0.5 / k;
+      ctx.stroke(cachedLandPath2D);
     }
-
-    ctx.fillStyle = COLORS.dayLand;
-    ctx.fill(cachedLandPath2D);
-
-    ctx.strokeStyle = COLORS.dayBorder;
-    ctx.lineWidth = 0.5 / k;
-    ctx.stroke(cachedLandPath2D);
 
     if (cachedTerminatorShadowPath2D) {
       ctx.fillStyle = COLORS.nightOverlay;
@@ -481,9 +480,9 @@
         const requestedNoradIds = noradIds.slice();
         window.SatContactTle.requestTrajectories(requestedNoradIds).then((trajectories) => {
           if (!noradIdsEqual(lastNoradIds, requestedNoradIds)) return;
-          (trajectories || []).forEach((trajectory) => {
-            if (trajectory && trajectory.length > 0) {
-              cachedOrbitGeos.push(new Path2D(path({ type: 'LineString', coordinates: trajectory })));
+          (trajectories || []).forEach((segments) => {
+            if (segments && segments.length > 0) {
+              cachedOrbitGeos.push(new Path2D(path({ type: 'MultiLineString', coordinates: segments })));
             }
           });
           renderFrame();

@@ -68,7 +68,8 @@ function computeSatellite(tleData, observer, date) {
 }
 
 /**
- * Суточная траектория (24 ч, шаг 5 мин)
+ * Суточная траектория (24 ч, шаг 5 мин).
+ * Разбивает на сегменты при пересечении 180° меридиана (MultiLineString).
  */
 function getTrajectory24h(noradId, baseDate) {
   if (!tleCache) return [];
@@ -77,15 +78,27 @@ function getTrajectory24h(noradId, baseDate) {
 
   const date = baseDate || new Date();
   const observer = { latitude: 0, longitude: 0, altitude: 0 };
-  const points = [];
+  const segments = [];
+  let currentSegment = [];
+  let lastLon = null;
 
   for (let t = 0; t < 24 * 60; t += 5) {
     const d = new Date(date.getTime() + t * 60 * 1000);
     const r = computeSatellite(tleData, observer, d);
-    if (r) points.push([r.lon, r.lat]);
+    if (r) {
+      if (lastLon !== null && Math.abs(r.lon - lastLon) > 180) {
+        segments.push(currentSegment);
+        currentSegment = [];
+      }
+      currentSegment.push([r.lon, r.lat]);
+      lastLon = r.lon;
+    }
+  }
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
   }
 
-  return points;
+  return segments;
 }
 
 self.onmessage = function (e) {

@@ -14,6 +14,10 @@
     const baseEl = document.querySelector('base');
     const base = baseEl ? (baseEl.href.replace(/\/?$/, '/') || './') : './';
     worker = new Worker(base + 'tle-worker.js');
+    worker.onerror = function (err) {
+      console.error('TLE Worker error, falling back to sync mode:', err);
+      worker = null;
+    };
   } catch (e) {
     console.warn('tle.js: Worker недоступен, орбиты будут считаться в основном потоке', e);
   }
@@ -102,7 +106,8 @@
   }
 
   /**
-   * Расчёт траектории 24ч в основном потоке (fallback при отсутствии Worker)
+   * Расчёт траектории 24ч в основном потоке (fallback при отсутствии Worker).
+   * Разбивает на сегменты при пересечении 180° меридиана (MultiLineString).
    */
   function getTrajectory24hSync(noradId, baseDate) {
     if (!tleCache) return [];
@@ -110,13 +115,24 @@
     if (!tleData) return [];
     const date = baseDate || new Date();
     const observer = { latitude: 0, longitude: 0, altitude: 0 };
-    const points = [];
+    const segments = [];
+    let currentSegment = [];
+    let lastLon = null;
+
     for (let t = 0; t < 24 * 60; t += 5) {
       const d = new Date(date.getTime() + t * 60 * 1000);
       const r = computeSatellite(tleData, observer, d);
-      if (r) points.push([r.lon, r.lat]);
+      if (r) {
+        if (lastLon !== null && Math.abs(r.lon - lastLon) > 180) {
+          segments.push(currentSegment);
+          currentSegment = [];
+        }
+        currentSegment.push([r.lon, r.lat]);
+        lastLon = r.lon;
+      }
     }
-    return points;
+    if (currentSegment.length > 0) segments.push(currentSegment);
+    return segments;
   }
 
   /**
