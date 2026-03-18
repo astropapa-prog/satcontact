@@ -471,7 +471,7 @@
     activeSatellites.forEach((sat) => {
       const xy = sat.baseXY;
       if (xy) {
-        const iconSize = (sat.markerRadius === 6 ? 14 : 12) / k;
+        const iconSize = (sat.markerRadius === 6 ? 21 : 18) / k;
         drawSatelliteIcon(
           ctx,
           xy[0],
@@ -481,7 +481,7 @@
           '#fff'
         );
         if (sat.name && sat.footprintPath2D) {
-          const fontSize = Math.max(3, 11 / 3 / k);
+          const fontSize = Math.max(6, 22 / 3 / k);
           ctx.font = `${fontSize}px sans-serif`;
           ctx.fillStyle = '#fff';
           ctx.strokeStyle = 'rgba(0,0,0,0.6)';
