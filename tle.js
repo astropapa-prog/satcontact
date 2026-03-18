@@ -8,6 +8,7 @@
 
   const TLE_URL = 'data/tle.txt';
   let tleCache = null; // Map<noradId, { line1, line2, satrec }>
+  const worker = new Worker('tle-worker.js');
 
   /**
    * Парсинг TLE: текст → Map<NoradId, { line1, line2, satrec }>
@@ -48,6 +49,7 @@
     if (!res.ok) throw new Error(`TLE: HTTP ${res.status}`);
     const text = await res.text();
     tleCache = parseTle(text);
+    worker.postMessage({ type: 'INIT_TLE', text });
     return tleCache;
   }
 
@@ -89,25 +91,21 @@
   }
 
   /**
-   * Суточная траектория (24 ч, шаг 5 мин) для отрисовки орбиты
-   * @param {string} noradId
-   * @param {Date} [baseDate]
-   * @returns {Array<{lon: number, lat: number}>}
+   * Запрос траекторий в воркере (асинхронно)
+   * @param {string[]} noradIds
+   * @returns {Promise<Array<Array<[number,number]>>>} trajectories[i] соответствует noradIds[i]
    */
-  function getTrajectory24h(noradId, baseDate) {
-    const tleMap = tleCache;
-    if (!tleMap) return [];
-    const tleData = tleMap.get(noradId);
-    if (!tleData) return [];
-    const date = baseDate || new Date();
-    const observer = { latitude: 0, longitude: 0, altitude: 0 };
-    const points = [];
-    for (let t = 0; t < 24 * 60; t += 5) {
-      const d = new Date(date.getTime() + t * 60 * 1000);
-      const r = computeSatellite(tleData, observer, d);
-      if (r) points.push([r.lon, r.lat]);
-    }
-    return points;
+  function requestTrajectories(noradIds) {
+    return new Promise((resolve) => {
+      const handler = (e) => {
+        if (e.data && e.data.type === 'TRAJECTORIES_READY') {
+          worker.removeEventListener('message', handler);
+          resolve(e.data.trajectories || []);
+        }
+      };
+      worker.addEventListener('message', handler);
+      worker.postMessage({ type: 'CALCULATE_TRAJECTORIES', noradIds: noradIds || [] });
+    });
   }
 
   /**
@@ -133,7 +131,7 @@
     loadTle,
     parseTle,
     computeSatellite,
-    getTrajectory24h,
+    requestTrajectories,
     formatAzimuth,
     formatElevation,
     getCache: () => tleCache

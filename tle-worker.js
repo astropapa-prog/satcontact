@@ -1,0 +1,110 @@
+/**
+ * SatContact — TLE Worker: тяжёлая математика SGP4 в фоне
+ * Парсинг TLE и расчёт 24-часовых траекторий без блокировки UI
+ */
+
+importScripts('./lib/satellite.min.js');
+
+let tleCache = null; // Map<noradId, { line1, line2, satrec }>
+
+/**
+ * Парсинг TLE: текст → Map<NoradId, { line1, line2, satrec }>
+ */
+function parseTle(text) {
+  const map = new Map();
+  const lines = (text || '').trim().split(/\r?\n/).filter(Boolean);
+
+  for (let i = 0; i + 1 < lines.length; i += 2) {
+    const line1 = lines[i].trim();
+    const line2 = lines[i + 1].trim();
+
+    if (line1.charAt(0) !== '1' || line2.charAt(0) !== '2') continue;
+
+    const noradId = line2.substring(2, 7).trim();
+    if (!noradId) continue;
+
+    try {
+      const satrec = satellite.twoline2satrec(line1, line2);
+      map.set(noradId, { line1, line2, satrec });
+    } catch (e) {
+      console.warn('tle-worker: не удалось распарсить TLE для NORAD', noradId, e);
+    }
+  }
+
+  return map;
+}
+
+/**
+ * Расчёт позиции спутника (внутри воркера)
+ */
+function computeSatellite(tleData, observer, date) {
+  if (!tleData || !observer) return null;
+
+  const { satrec } = tleData;
+  const positionAndVelocity = satellite.propagate(satrec, date);
+  if (!positionAndVelocity) return null;
+
+  const positionEci = positionAndVelocity.position;
+  const gmst = satellite.gstime(date);
+
+  const observerGd = {
+    longitude: satellite.degreesToRadians(observer.longitude),
+    latitude: satellite.degreesToRadians(observer.latitude),
+    height: (observer.altitude != null ? observer.altitude : 0) / 1000
+  };
+
+  const positionEcf = satellite.eciToEcf(positionEci, gmst);
+  const lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf);
+  const positionGd = satellite.eciToGeodetic(positionEci, gmst);
+
+  return {
+    azimuth: satellite.radiansToDegrees(lookAngles.azimuth),
+    elevation: satellite.radiansToDegrees(lookAngles.elevation),
+    distance: lookAngles.rangeSat,
+    lat: satellite.degreesLat(positionGd.latitude),
+    lon: satellite.degreesLong(positionGd.longitude),
+    height: positionGd.height
+  };
+}
+
+/**
+ * Суточная траектория (24 ч, шаг 5 мин)
+ */
+function getTrajectory24h(noradId, baseDate) {
+  if (!tleCache) return [];
+  const tleData = tleCache.get(noradId);
+  if (!tleData) return [];
+
+  const date = baseDate || new Date();
+  const observer = { latitude: 0, longitude: 0, altitude: 0 };
+  const points = [];
+
+  for (let t = 0; t < 24 * 60; t += 5) {
+    const d = new Date(date.getTime() + t * 60 * 1000);
+    const r = computeSatellite(tleData, observer, d);
+    if (r) points.push([r.lon, r.lat]);
+  }
+
+  return points;
+}
+
+self.onmessage = function (e) {
+  const { type, text, noradIds } = e.data;
+
+  if (type === 'INIT_TLE') {
+    tleCache = parseTle(text || '');
+    self.postMessage({ type: 'TLE_INITIALIZED' });
+    return;
+  }
+
+  if (type === 'CALCULATE_TRAJECTORIES') {
+    const trajectories = [];
+    const ids = noradIds || [];
+
+    for (let i = 0; i < ids.length; i++) {
+      trajectories.push(getTrajectory24h(ids[i]));
+    }
+
+    self.postMessage({ type: 'TRAJECTORIES_READY', trajectories });
+  }
+};

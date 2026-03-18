@@ -115,7 +115,6 @@
   let countriesGeo = null;
   let fastLoopId = null;
   let slowLoopId = null;
-  let cachedTrajectories = new Map();
   let lastNoradIds = [];
   let width = 0;
   let height = 0;
@@ -438,25 +437,19 @@
     observerPos = observer ? { lon: observer.longitude, lat: observer.latitude } : null;
 
     if (noradIdsChanged) {
-      const noradSet = new Set(noradIds);
-      for (const id of cachedTrajectories.keys()) {
-        if (!noradSet.has(id)) cachedTrajectories.delete(id);
-      }
       lastNoradIds = noradIds.slice();
       cachedOrbitGeos = [];
 
-      if (window.SatContactTle && !isAllMode && noradIds.length > 0) {
-        noradIds.forEach((noradId) => {
-          let trajectory = cachedTrajectories.get(noradId);
-          if (!trajectory) {
-            trajectory = window.SatContactTle.getTrajectory24h(noradId);
+      if (window.SatContactTle && typeof window.SatContactTle.requestTrajectories === 'function' && !isAllMode && noradIds.length > 0) {
+        const requestedNoradIds = noradIds.slice();
+        window.SatContactTle.requestTrajectories(requestedNoradIds).then((trajectories) => {
+          if (!noradIdsEqual(lastNoradIds, requestedNoradIds)) return;
+          (trajectories || []).forEach((trajectory) => {
             if (trajectory && trajectory.length > 0) {
-              cachedTrajectories.set(noradId, trajectory);
+              cachedOrbitGeos.push(new Path2D(path({ type: 'LineString', coordinates: trajectory })));
             }
-          }
-          if (trajectory && trajectory.length > 0) {
-            cachedOrbitGeos.push(new Path2D(path({ type: 'LineString', coordinates: trajectory })));
-          }
+          });
+          renderFrame();
         });
       }
     }
@@ -533,8 +526,6 @@
     path = null;
     topology = null;
     countriesGeo = null;
-    cachedTrajectories.clear();
-    cachedTrajectories = new Map();
     lastNoradIds = [];
     currentSunPos = null;
     terminatorShadowGeo = null;
