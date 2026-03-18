@@ -877,6 +877,9 @@ body {
 
 .map-view__manual-toggle input {
   accent-color: var(--accent);
+  color-scheme: dark;
+  filter: brightness(0.88);
+  opacity: 0.95;
 }
 
 .map-view__coords-stack {
