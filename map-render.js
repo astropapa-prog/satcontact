@@ -191,6 +191,58 @@
     return featureFn(topology, obj);
   }
 
+  /**
+   * Рисует иконку спутника: корпус, солнечные панели (крылья), параболическая антенна (к Земле), сопло Лаваля (от Земли).
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} x - центр по X
+   * @param {number} y - центр по Y
+   * @param {number} size - масштаб иконки
+   * @param {string} fillColor - цвет заливки
+   * @param {string} strokeColor - цвет обводки
+   */
+  function drawSatelliteIcon(ctx, x, y, size, fillColor, strokeColor) {
+    const s = size / 8;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+
+    // Корпус (прямоугольник по центру)
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 0.4;
+    ctx.fillRect(-1.2, -0.8, 2.4, 1.6);
+    ctx.strokeRect(-1.2, -0.8, 2.4, 1.6);
+
+    // Солнечные панели (крылья)
+    ctx.fillRect(-3.5, -1, 1.2, 2);
+    ctx.strokeRect(-3.5, -1, 1.2, 2);
+    ctx.fillRect(2.3, -1, 1.2, 2);
+    ctx.strokeRect(2.3, -1, 1.2, 2);
+
+    // Параболическая антенна (вниз, к Земле)
+    ctx.beginPath();
+    ctx.moveTo(-1.5, 0.9);
+    ctx.quadraticCurveTo(0, 2.2, 1.5, 0.9);
+    ctx.lineTo(1.2, 0.8);
+    ctx.quadraticCurveTo(0, 2, -1.2, 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Сопло Лаваля (вверх, от Земли): сужение к горлу, расширение на срезе)
+    ctx.beginPath();
+    ctx.moveTo(-0.8, -0.9);
+    ctx.lineTo(-0.3, -1.8);
+    ctx.lineTo(0, -2.4);
+    ctx.lineTo(0.3, -1.8);
+    ctx.lineTo(0.8, -0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   /** Сравнение массивов noradIds (состав и порядок) */
   function noradIdsEqual(a, b) {
     if (a.length !== b.length) return false;
@@ -254,7 +306,7 @@
         const [screenX, screenY] = currentTransform.apply(sat.baseXY);
         const dist = Math.hypot(mouseX - screenX, mouseY - screenY);
 
-        if (dist < 20) {
+        if (dist < 24) {
           clickedSatId = sat.noradId;
           break;
         }
@@ -419,14 +471,16 @@
     activeSatellites.forEach((sat) => {
       const xy = sat.baseXY;
       if (xy) {
-        ctx.fillStyle = sat.orbitColor?.marker || COLORS.marker;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = (sat.markerRadius === 6 ? 2 : 1) / k;
-        ctx.beginPath();
-        ctx.arc(xy[0], xy[1], sat.markerRadius / k, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        if (sat.name) {
+        const iconSize = (sat.markerRadius === 6 ? 14 : 12) / k;
+        drawSatelliteIcon(
+          ctx,
+          xy[0],
+          xy[1],
+          iconSize,
+          sat.orbitColor?.marker || COLORS.marker,
+          '#fff'
+        );
+        if (sat.name && sat.footprintPath2D) {
           const fontSize = Math.max(3, 11 / 3 / k);
           ctx.font = `${fontSize}px sans-serif`;
           ctx.fillStyle = '#fff';
@@ -434,7 +488,7 @@
           ctx.lineWidth = 1 / k;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          const labelY = xy[1] + sat.markerRadius / k + 4 / k;
+          const labelY = xy[1] + iconSize / 2 + 4 / k;
           ctx.strokeText(sat.name, xy[0], labelY);
           ctx.fillText(sat.name, xy[0], labelY);
         }
