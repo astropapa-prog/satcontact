@@ -399,12 +399,17 @@
     }
 
     if (gpsResult.coords) {
-      saveObserver(gpsResult.coords);
-      currentObserver = gpsResult.coords;
+      let resolvedCoords = gpsResult.coords;
+      if (!gpsResult.isPrecise) {
+        const ipCoords = await requestIpLocation();
+        if (ipCoords) resolvedCoords = ipCoords;
+      }
+      saveObserver(resolvedCoords);
+      currentObserver = resolvedCoords;
       updateCoordsDisplay(currentObserver);
       updateGpsSourceBadge(currentObserver.source);
-      setLoadingStatus(gpsResult.isPrecise ? 'Загрузка орбит…' : 'Координаты по сети (неточно)', '');
-      return { coords: gpsResult.coords, denied: false };
+      setLoadingStatus(gpsResult.isPrecise ? 'Загрузка орбит…' : 'Координаты по IP/сети (неточно)', '');
+      return { coords: resolvedCoords, denied: false };
     }
 
     // Таймаут/ошибка/нет чипа: сначала фоллбэк по IP, затем localStorage.
@@ -472,17 +477,22 @@
     }
 
     if (gpsResult.coords) {
-      saveObserver(gpsResult.coords);
-      currentObserver = gpsResult.coords;
+      let resolvedCoords = gpsResult.coords;
+      if (!gpsResult.isPrecise) {
+        const ipCoords = await requestIpLocation();
+        if (ipCoords) resolvedCoords = ipCoords;
+      }
+      saveObserver(resolvedCoords);
+      currentObserver = resolvedCoords;
       updateCoordsDisplay(currentObserver);
       updateGpsSourceBadge(currentObserver.source);
       if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
         window.SatContactMapRender.update();
       }
-      if (gpsResult.isPrecise) {
+      if (currentObserver.source === 'gps') {
         showManualRefreshFeedback('GPS обновлен', 'success');
       } else {
-        showManualRefreshFeedback('Точный GPS не найден, координаты по сети', 'warning');
+        showManualRefreshFeedback('Точный GPS не найден, позиция по IP', 'warning');
       }
     } else {
       const ipCoords = await requestIpLocation();
@@ -524,10 +534,15 @@
     pollTimerId = setInterval(async () => {
       const gpsResult = await requestGps();
       if (gpsResult.coords) {
-        saveObserver(gpsResult.coords);
-        currentObserver = gpsResult.coords;
-        updateCoordsDisplay(gpsResult.coords);
-        updateGpsSourceBadge(gpsResult.coords.source);
+        let resolvedCoords = gpsResult.coords;
+        if (!gpsResult.isPrecise) {
+          const ipCoordsFromCoarse = await requestIpLocation();
+          if (ipCoordsFromCoarse) resolvedCoords = ipCoordsFromCoarse;
+        }
+        saveObserver(resolvedCoords);
+        currentObserver = resolvedCoords;
+        updateCoordsDisplay(resolvedCoords);
+        updateGpsSourceBadge(resolvedCoords.source);
         return;
       }
 
