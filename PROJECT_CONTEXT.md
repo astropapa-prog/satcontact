@@ -357,3 +357,77 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 
 **Актуальная структура activeSatellites:**
 - noradId, pos, baseXY, footprintPath2D, markerRadius, name, orbitColor.
+
+### Сессия: Умная кнопка «ВСЕ» + Лента частот на карте + desktop-fixes (март 2026)
+
+**Цель сессии:**
+- Связать Canvas-модуль карты (`map-render.js`) с UI (`app.js`) через событие фокуса.
+- Добавить выезжающую снизу ленту частот для режима карты.
+- Переделать логику `#mapShowAll` в «умный» тумблер, завязанный на текущее состояние карты.
+
+**1. Умная кнопка `ВСЕ` (перенос управления в `map.js`)**
+- В `map.js:initMap(options)` добавлено сохранение `initialNoradIds` (массив ID, с которыми карта открыта изначально).
+- В `map.js` управление `#mapShowAll` перенесено из `app.js`:
+  - Кнопка переключает класс `.active` и `aria-pressed`.
+  - При **включении**:
+    - берутся `filteredEntries` из `app.js` через `window.getSatContactFilteredEntries()`,
+    - собираются уникальные `noradIds`,
+    - обновляются `currentNoradIds` и `currentNoradIdToName`,
+    - вызывается `window.SatContactMapRender.update()`.
+  - При **выключении**:
+    - берётся выделение через `window.SatContactMapRender.getFocusedNoradIds()`,
+    - если есть фокус: карта остаётся на этих ID,
+    - если фокуса нет: откат к `initialNoradIds`.
+- В `cleanupMap()` состояние тумблера сбрасывается.
+
+**2. Событие фокуса карты (`map-render.js`)**
+- Добавлено `window.SatContactMapRender.getFocusedNoradIds()` (возвращает `Array.from(focusedNoradIds)`).
+- В `onCanvasClick` после изменения `focusedNoradIds` отправляется:
+  - `window.dispatchEvent(new CustomEvent('satcontact:map-focus', { detail: { focusedIds } }))`.
+- Дополнительно событие отправляется при смене набора `noradIds` (когда фокус очищается), чтобы UI ленты синхронно скрывался.
+
+**3. Разметка и стили ленты (`index.html`, `style.css`)**
+- В `index.html` добавлен контейнер:
+  - `<div id="mapFreqRibbon" class="map-view__freq-ribbon"></div>` перед `#mapHud`.
+- В `style.css` добавлены блоки:
+  - `.map-view__freq-ribbon` + `.map-view__freq-ribbon--visible` (анимация выезда через `transform`),
+  - `.ribbon-scroll` (горизонтальный scroll + `scroll-snap-type: x mandatory`, скрытый scrollbar),
+  - `.ribbon-card` (`flex: 0 0 85%`, card-style),
+  - `.ribbon-card__content` (layout `RX | BW | TX`),
+  - Цвета TX по статусам (`status-sens`, `status-med`, `status-dull`), RX всегда `var(--accent)`.
+
+**4. Рендер ленты в `app.js`**
+- Добавлен слушатель `window.addEventListener('satcontact:map-focus', ...)`.
+- Логика:
+  - `focusedIds.length === 1`: рендер карточек по всем `allEntries`, где `noradIds` содержит выбранный ID.
+  - `focusedIds.length === 0` или `> 1`: скрытие ленты с анимацией, очистка HTML через 300ms.
+- При `openMapView()`/`closeMapView()` лента принудительно скрывается.
+
+**5. Дополнительные правки после теста**
+- Поменян порядок цифр в карточке ленты:
+  - теперь `Downlink (RX)` слева, `Bandwidth` по центру, `Uplink (TX)` справа.
+- Добавлена защита от edge-swipe Android в ленте карты:
+  - `touchstart/touchmove` + `preventDefault()` на краях горизонтального скролла (аналог решения для чип-лент на главной).
+- Для десктопа добавлен рабочий скролл ленты:
+  - `wheel` (поддержка `deltaX`/`deltaY`),
+  - drag-scroll ЛКМ (`mousedown/mousemove/mouseup/mouseleave`),
+  - клик по карточке центрирует её (`scrollIntoView(... inline: 'center')`),
+  - курсор `grab/grabbing`.
+- Исправлено налезание ленты на строку координат HUD на десктопе:
+  - в `app.js` добавлен `updateRibbonBottomOffset()`,
+  - `bottom` ленты вычисляется динамически относительно позиции `#mapHud`,
+  - пересчёт выполняется при показе ленты и при `window.resize`.
+
+**6. Рефакторинг/очистка**
+- Удалён старый обработчик `#mapShowAll` из `app.js` (источник истины теперь `map.js`).
+- Удалены неиспользуемые хвосты в `app.js`:
+  - неиспользуемые DOM-переменные (`mapShowAll`, `mapCanvas`, `mapHud` — оставлен только реально используемый набор),
+  - неиспользуемый экспорт `window.getSatContactAllEntries`.
+- Оставлен и используется экспорт `window.getSatContactFilteredEntries`.
+
+**Итог поведения после сессии:**
+- Карта и UI связаны событием `satcontact:map-focus`.
+- При одиночном выборе спутника показывается выезжающая лента частот с snap-прокруткой.
+- Кнопка `ВСЕ` работает как тумблер контекста (все из фильтра / фокус / исходный набор).
+- На мобильном блокируется опасный edge-swipe при скролле ленты.
+- На десктопе лента прокручивается колёсиком и перетаскиванием мышью; карточки центрируются кликом.
