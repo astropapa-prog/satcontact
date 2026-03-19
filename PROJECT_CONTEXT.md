@@ -620,6 +620,334 @@ satcontact/
 | Рендер | 2D Canvas поверх `<video>`, без Three.js/WebGL |
 | Десктоп | Заглушка: «AR доступен только на мобильных» |
 
+### 6.20 ЗАДАЧА: Оптимизация AR-рендера — Единый Real 3D + WebGL (30 спутников)
+
+#### 6.20.1 Мотивация
+
+Анализ производительности текущей двухрежимной архитектуры (Псевдо-3D для обзора + Реальное 3D для фокуса) выявил три узких места, блокирующих работу с 30 спутниками на бюджетных устройствах:
+
+1. **SGP4 в main thread** — `computeOverviewTrajectories()` и `computeHighDensityTrajectory()` выполняются в основном потоке. При 30 спутниках x 300 точек = 9000 вызовов SGP4/тик, что на Helio G95 занимает ~1620 мс/сек — поток заблокирован на 162% времени, рендер встаёт.
+2. **Canvas2D `shadowBlur`** — `drawOrbitLine()` и `drawMarker()` используют `ctx.shadowBlur` для свечения. Это CPU Gaussian blur. 30 линий + 30 маркеров + 30 подписей = ~2700 blur-операций/сек.
+3. **JS-проекция каждой точки** — `projectPseudo3D()` / `projectReal3D()` возвращают `{ x, y, visible }` на каждую точку. При 9000 точек/кадр x 30 FPS = 270 000 мусорных объектов/сек, давление на GC.
+
+**Решение:** полный отказ от режима Псевдо-3D. Переход на единую проекцию Real 3D через WebGL vertex shader. Растеризация линий и эффект свечения — на GPU через fragment shader. SGP4-вычисления траекторий переносятся в Web Worker. Код упрощается (одна проекция вместо двух, один рендер-пайплайн).
+
+**Целевое устройство (нижняя граница):** Poco M5s (MediaTek Helio G95: 2x Cortex-A76 @ 2.05 ГГц + 6x Cortex-A55 @ 2.0 ГГц; GPU Mali-G76 MC4 ~250 GFLOPS; 4/6 ГБ RAM).
+
+**Целевая нагрузка:** ~50% Worker-ядра CPU, GPU используется по полной. Максимальное качество отображения в рамках бюджета.
+
+#### 6.20.2 Целевая конфигурация
+
+| Параметр | Значение | Обоснование |
+|----------|----------|-------------|
+| Спутников | до 30 | Макс. от кнопки ВСЕ |
+| Отсечение по элевации | 2 градуса | Сохраняет видимость полной дуги у горизонта |
+| Точек на траекторию | 120 | 1.5 градуса сегменты при 180 градусов дуге — визуально гладко |
+| Позиции спутников (main thread) | 1 Гц | 30 вызовов SGP4 x 180 мкс = 5.4 мс/с |
+| Интерполяция позиций | Линейная, в renderLoop (30 FPS) | Плавное движение LEO; ~6 арифм. оп./спутник |
+| Пересчёт траекторий (Worker) | каждые ~1.3 с (авто из бюджета) | 30 x 120 = 3600 SGP4; 648 мс на A76; 49.8% Worker |
+| Проекция | Только Real 3D | WebGL vertex shader; JS-fallback для старых браузеров |
+| Растеризация линий | WebGL GL_LINE_STRIP + glow fragment shader | GPU |
+| Маркеры спутников | Canvas2D overlay (drawSatelliteIcon) | Переиспользует существующий код |
+| Текст и HUD | Canvas2D overlay (тонкий слой) | ~1 мс/кадр |
+| FPS цель | 30 | Достаточно для AR; экономия батареи |
+| Псевдо-3D | УДАЛЕН | Упрощение кодовой базы |
+
+#### 6.20.3 Бюджет ресурсов (Poco M5s)
+
+**CPU (Helio G95, один Cortex-A76 @ 2.05 ГГц, SGP4 ~180 мкс/вызов):**
+
+| Компонент | SGP4/сек | мс/сек | Где | % ядра |
+|-----------|---------|--------|-----|--------|
+| Позиции 30 спутн., 1 Гц | 30 | 5.4 | Main thread | 0.5% |
+| Траектории 30 x 120 / 1.3 с | ~2770 | ~498 | Worker | 49.8% |
+| Интерполяция 30 x 30 FPS | — | ~0.3 | Main thread | <0.1% |
+| UI + сенсоры + аудио | — | ~5 | Main thread | 0.5% |
+| **Итого Worker** | **~2770** | **~498** | | **49.8%** |
+| **Итого Main thread** | **30** | **~11** | | **~1.1%** |
+
+**GPU (Mali-G76 MC4 ~250 GFLOPS, ~6-8 Gpix/s fill rate):**
+
+| Компонент | За кадр | 30 FPS | % GPU |
+|-----------|---------|--------|-------|
+| Vertex shader (3600 вершин) | 72K FP ops | 2.16M/с | <0.01% |
+| Fragment shader (glow) | 2M FP ops | 60M/с | <0.03% |
+| Fill rate (экран + overdraw) | — | ~234M пикс/с | ~3% |
+| **Итого GPU** | | | **<5%** |
+
+**Термальный режим:** ~2-2.5 Вт суммарно. Ниже порога устойчивого троттлинга Helio G95 (12 нм, ~3.5-4 Вт).
+
+#### 6.20.4 Трёхтактная архитектура обновления данных
+
+```
+ТАКТ 1: Проекция + рендер                                     30 FPS (GPU)
+  Вход: az/el (интерполированные) + матрица ориентации устройства
+  Что делает: WebGL vertex shader проецирует az/el в экранные px;
+              fragment shader рисует линии с glow; viewport clipping
+  Canvas2D overlay: маркеры (drawSatelliteIcon) + подписи + HUD
+  Нагрузка: <0.1 мс/кадр (GPU) + ~1 мс/кадр (Canvas2D text)
+  Данные ВСЕГДА в памяти для ВСЕХ спутников (culling только в GPU)
+
+ТАКТ 2: Позиции спутников на небе                          1 Гц (CPU main)
+  Вход: TLE + координаты наблюдателя + Date.now()
+  Что делает: computeSatellite() x 30 -> { noradId, az, el, dist, h }
+  После: сохраняет prevPositions / currentPositions для интерполяции
+  Нагрузка: 5.4 мс/тик
+
+ТАКТ 3: Линии орбит (траектории)                        ~1.3 с (Web Worker)
+  Вход: TLE x 120 точек x 30 спутников
+  Что делает: SGP4 propagation -> az/el относительно наблюдателя
+              -> postMessage AR_TRAJECTORIES_READY
+  После: main thread обновляет Float32Array буферы WebGL
+  Нагрузка: 648 мс/батч, 49.8% Worker-ядра
+```
+
+**Интерполяция позиций (в renderLoop, 30 FPS):**
+
+Между тиками slowLoop (1 Гц) позиции спутников интерполируются линейно:
+```
+az_render = prev.az + (curr.az - prev.az) * fraction
+el_render = prev.el + (curr.el - prev.el) * fraction
+fraction  = min((Date.now() - curr.timestamp) / 1000, 1)
+```
+Макс. ошибка для ISS (~2 градуса/с в зените): ~0.01 градуса = 0.2 px на 1080p. Неразличимо.
+
+**Данные всегда в памяти для всех спутников.** Culling только на уровне GPU (viewport clipping). Все 30 траекторий (~960 байт каждая) хранятся постоянно. При резком повороте камеры данные подхватываются в ближайшем же кадре (33 мс) без задержек и артефактов.
+
+#### 6.20.5 WebGL рендер-пайплайн
+
+**Стек элементов (три наложенных слоя):**
+```
+  <canvas 2d>    — текст, маркеры, HUD      z-index: 3 (верх)
+  <canvas webgl> — орбитные линии            z-index: 2
+  <video>        — камера                    z-index: 1 (низ)
+```
+
+**WebGL Canvas — орбитные линии с glow:**
+
+Vertex Shader:
+- Uniforms: mat3 u_orientation (матрица ориентации), vec2 u_focal (фокальные длины из FOV, кэшируются), vec2 u_resolution
+- Attribute: vec2 a_azEl (азимут/элевация в градусах)
+- Логика: az/el -> единичный вектор (cos/sin) -> умножение на матрицу ориентации -> перспективное деление -> NDC
+- Точки за камерой (cz <= 0) выносятся за clip-пространство (gl_Position.w = 0)
+
+Fragment Shader (glow):
+- Двухпроходная отрисовка: 1-й проход — широкая полупрозрачная линия (glow), 2-й — тонкая яркая (core)
+- Или: единый проход с exp(-dist*dist/sigma*sigma) для Gaussian falloff
+- Цвет из ORBIT_PALETTE передаётся как uniform для каждого draw call
+
+Буферы:
+- Один VBO на все траектории: Float32Array, layout [az0, el0, az1, el1, ...]
+- Обновление через gl.bufferSubData() при получении данных из Worker (~1.3 с)
+- Каждая орбита — отдельный gl.drawArrays(gl.LINE_STRIP, offset, count)
+
+**Canvas2D overlay — маркеры + текст:**
+- drawSatelliteIcon() — переиспользуется без изменений
+- Подписи: ctx.fillText() с shadowBlur = 4 (только для текста, 30 подписей — дёшево)
+- Hit-тестинг: lastMarkerPositions -> distance check
+- Crosshair в режиме фокуса
+
+**Fallback (десктоп / старые браузеры без WebGL):**
+- canvas.getContext('webgl') === null -> откат на Canvas2D с projectReal3D() (JS-версия сохраняется)
+
+#### 6.20.6 Перенос траекторий AR в Web Worker
+
+**Текущее состояние:** ar.js вычисляет траектории в main thread (computeOverviewTrajectories, computeHighDensityTrajectory).
+
+**Целевое состояние — новый тип сообщения в tle-worker.js:**
+
+```
+Main -> Worker:
+{
+  type: 'CALCULATE_AR_TRAJECTORIES',
+  noradIds: ['28654', '25338', ...],
+  observer: { latitude, longitude, altitude },
+  pointsPerSat: 120,
+  elevationCutoff: 2
+}
+
+Worker -> Main:
+{
+  type: 'AR_TRAJECTORIES_READY',
+  trajectories: {
+    '28654': [{ az: 145.2, el: 32.1 }, ...],
+    '25338': [{ az: 210.0, el: 5.3 }, ...],
+    ...
+  }
+}
+```
+
+Worker: для каждого noradId берёт TLE из tleCache, вычисляет период (2*PI / satrec.no), проходит +/- полупериод с шагом period/pointsPerSat, computeSatellite() -> az/el, отсекает el < elevationCutoff.
+
+**tle.js — новый API:**
+- SatContactTle.requestArTrajectories(noradIds, observer, pointsPerSat) -> Promise
+- Fallback при ошибке Worker: синхронный расчёт, сниженная частота (5-10 сек)
+
+#### 6.20.7 Что удалить (хвосты Псевдо-3D)
+
+**ar-render.js — ПОЛНАЯ ПЕРЕРАБОТКА:**
+
+| Функция | Действие | Причина |
+|---------|----------|---------|
+| projectPseudo3D() | Удалить | Заменяется WebGL vertex shader |
+| projectReal3D() | Сохранить (JS-fallback) | Для Canvas2D маркеров и WebGL-fallback |
+| drawOverview() | Удалить | Обзор через WebGL-пайплайн |
+| drawFocusMode() | Удалить | Фокус через тот же пайплайн |
+| drawOrbitLine() | Удалить | Линии через WebGL |
+| ctx.shadowBlur для линий | Удалить | Glow через fragment shader |
+| drawSatelliteIcon() | Сохранить | Canvas2D overlay маркеров |
+| drawMarker() | Рефакторинг | Убрать shadowBlur glow, оставить text shadow |
+| hitTest() | Сохранить | Hit-test на Canvas2D overlay |
+| drawDriftWarning() | Сохранить | Canvas2D overlay |
+
+**ar.js — РЕФАКТОРИНГ:**
+
+| Функция | Действие | Причина |
+|---------|----------|---------|
+| computeOverviewTrajectories() | Удалить | Переносится в Worker |
+| computeHighDensityTrajectory() | Удалить | Единая плотность 120 точек |
+| computeFocusedTrajectoryNow() | Удалить | Worker считает все траектории |
+| getOrbitalPeriodMin() | Удалить (перенос в Worker) | Нужен только Worker-у |
+| overviewTrajectories / focusedTrajectory | Заменить на allTrajectories | Единое хранилище |
+| slowLoop() позиции | Сохранить | 30 computeSatellite, 1 Гц |
+| State machine overview/focus | Сохранить | UI-поведение (перекрестие, звук, HUD) |
+| — | Добавить prevPositions / currentPositions | Для интерполяции |
+| — | Добавить вызов Worker requestArTrajectories | Каждые ~1.3 с |
+| — | Добавить обновление WebGL-буферов | При получении данных Worker |
+| renderLoop() | Рефакторинг | Интерполяция + WebGL + Canvas2D overlay |
+
+#### 6.20.8 Обновлённая таблица решений (изменения относительно 6.19)
+
+| Аспект | Было (6.19) | Стало |
+|--------|-------------|-------|
+| Режим обзора | Псевдо-3D: упрощённые траектории | Real 3D (WebGL): 120 точек/спутник, glow на GPU |
+| Режим слежения | Реальное 3D: один спутник, 300 точек | Real 3D (WebGL): один спутник, 120 точек |
+| Рендер | Canvas2D, без WebGL | WebGL (линии) + Canvas2D overlay (маркеры, текст) |
+| Траектории | Main thread (JS циклы) | Web Worker (CALCULATE_AR_TRAJECTORIES) |
+| Проекция | JS projectPseudo3D / projectReal3D | WebGL vertex shader (единый Real 3D) |
+| Свечение линий | ctx.shadowBlur (CPU Gaussian blur) | Fragment shader glow (GPU) |
+| Плотность точек | 120 (overview) / 300 (focus) | 120 для всех (единая) |
+| Интерполяция | Нет | Линейная в renderLoop (30 FPS) |
+| Данные в памяти | По текущему режиму | Все 30 спутников всегда; culling на GPU |
+| projectPseudo3D() | Основная проекция обзора | Удалена |
+| drawOverview() / drawFocusMode() | Два рендер-пайплайна | Один WebGL пайплайн |
+
+---
+
+### 6.21 ПРОМПТ ДЛЯ ПЛАНИРОВЩИКА ВНЕДРЕНИЯ
+
+Ниже — подробная инструкция для Агента-планировщика, который будет декомпозировать и реализовывать задачу из раздела 6.20.
+
+```
+ЗАДАЧА: Оптимизация AR-рендера SatContact — Единый Real 3D + WebGL
+
+КОНТЕКСТ:
+Ты — агент-планировщик для проекта SatContact (PWA, Vanilla JS, GitHub Pages).
+Проект описан в PROJECT_CONTEXT.md (разделы 1-6).
+Задача описана в разделе 6.20 PROJECT_CONTEXT.md.
+
+ЦЕЛЬ:
+Полностью отказаться от режима Псевдо-3D в AR-модуле (Модуль 3).
+Перевести рендер орбитных линий на WebGL (GPU).
+Перенести вычисление AR-траекторий в Web Worker.
+Добавить линейную интерполяцию позиций в renderLoop.
+Упростить кодовую базу: одна проекция, один рендер-пайплайн.
+
+ЦЕЛЕВАЯ КОНФИГУРАЦИЯ (из 6.20.2):
+- 30 спутников, 120 точек/траекторию, позиции 1 Гц, траектории ~1.3 с (Worker)
+- Проекция: только Real 3D (WebGL vertex shader)
+- Свечение: fragment shader glow (вместо Canvas2D shadowBlur)
+- Интерполяция: линейная в renderLoop (30 FPS)
+- Маркеры + текст: Canvas2D overlay (drawSatelliteIcon сохраняется)
+- Данные всех спутников всегда в памяти; culling — только GPU viewport clipping
+
+АРХИТЕКТУРА (из 6.20.4):
+- ТАКТ 1: GPU рендер, 30 FPS (WebGL vertex/fragment shader + Canvas2D overlay)
+- ТАКТ 2: Позиции, 1 Гц, main thread (computeSatellite x 30)
+- ТАКТ 3: Траектории, ~1.3 с, Web Worker (CALCULATE_AR_TRAJECTORIES)
+
+ФАЙЛЫ ДЛЯ ИЗМЕНЕНИЯ:
+
+1. ar-render.js — ПОЛНАЯ ПЕРЕРАБОТКА:
+   - Удалить: projectPseudo3D(), drawOverview(), drawFocusMode(), drawOrbitLine(),
+     все ctx.shadowBlur для линий
+   - Сохранить: projectReal3D() (JS-fallback), drawSatelliteIcon(), drawMarker()
+     (рефакторинг — убрать shadowBlur glow, оставить только text shadow),
+     hitTest(), drawDriftWarning()
+   - Добавить: WebGL-рендерер для орбитных линий:
+     * init(canvasGL, canvas2D) — WebGL контекст, компиляция шейдеров, VBO
+     * updateTrajectoryBuffers(trajectories) — обновление Float32Array VBO
+     * drawFrame(orientationMatrix, fovH, fovV, satellites, focusedId, palette)
+       — gl.drawArrays для линий + Canvas2D для маркеров/текста
+     * destroy() — очистка GL-ресурсов
+   - Vertex shader: az/el -> единичный вектор -> u_orientation * вектор -> перспектива -> NDC
+   - Fragment shader: цвет орбиты + glow (exp falloff или двухпроходный)
+   - Три DOM-элемента: <video> + <canvas webgl> + <canvas 2d>
+
+2. ar.js — РЕФАКТОРИНГ:
+   - Удалить: computeOverviewTrajectories(), computeHighDensityTrajectory(),
+     computeFocusedTrajectoryNow(), getOrbitalPeriodMin(),
+     разветвление overview/focus для траекторий в slowLoop,
+     два хранилища overviewTrajectories / focusedTrajectory
+   - Сохранить: state machine overview/focus (для UI), slowLoop (позиции 1 Гц),
+     renderLoop (RAF), логика камеры/GPS/сенсоров/калибровки/аудио/дрейфа
+   - Добавить:
+     * allTrajectories = {} — единое хранилище
+     * prevPositions / currentPositions — для интерполяции
+     * Вызов SatContactTle.requestArTrajectories() по таймеру (~1.3 с)
+     * Обработка результата Worker -> обновление WebGL-буферов
+     * Линейная интерполяция в renderLoop:
+       fraction = min((now - currentPositions[id].time) / 1000, 1)
+       az = prev.az + (curr.az - prev.az) * fraction
+       el = prev.el + (curr.el - prev.el) * fraction
+     * Фокус-режим: скрыть линии/маркеры других спутников (UI-поведение)
+
+3. tle-worker.js — ДОБАВИТЬ обработку CALCULATE_AR_TRAJECTORIES:
+   - Новый case в onmessage: { type: 'CALCULATE_AR_TRAJECTORIES',
+     noradIds, observer, pointsPerSat: 120, elevationCutoff: 2 }
+   - Для каждого noradId: период из satrec.no,
+     +/- полупериод с шагом period/pointsPerSat,
+     computeSatellite() -> az/el, отсечь el < elevationCutoff
+   - Ответ: { type: 'AR_TRAJECTORIES_READY',
+     trajectories: { [noradId]: [{az, el}, ...] } }
+
+4. tle.js — ДОБАВИТЬ API:
+   - SatContactTle.requestArTrajectories(noradIds, observer, pointsPerSat)
+     -> Promise, аналогично requestTrajectories()
+   - Fallback при ошибке Worker: синхронный расчёт, сниженная частота
+
+5. index.html — ДОБАВИТЬ <canvas id="arCanvasGL"> в #arView:
+   - Между <video id="arVideo"> и <canvas id="arCanvas">
+   - CSS: position:absolute, 100% x 100%, pointer-events: none
+
+6. style.css — стили для #arCanvasGL:
+   - position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+   - pointer-events: none;
+
+ОГРАНИЧЕНИЯ:
+- Vanilla JS. Никаких npm, фреймворков, Three.js, сборщиков.
+- Библиотеки — локальные копии в lib/ (PWA/офлайн).
+- WebGL шейдеры — inline строками в JS (не отдельные .glsl файлы).
+- Порядок скриптов в index.html:
+  utils.js -> satellite.min.js -> d3.min.js -> topojson.min.js -> tle.js ->
+  map.js -> map-render.js -> ar-render.js -> ar.js -> app.js
+- Десктоп-заглушка сохраняется.
+- State machine overview/focus СОХРАНЯЕТСЯ для UI-поведения
+  (перекрестие, звуковой прицел, скрытие других спутников в фокусе,
+  HUD телеметрия). Это поведенческое, не рендер-разделение.
+- Модули 1 и 2 не затрагиваются.
+
+ПОРЯДОК ВНЕДРЕНИЯ (рекомендация):
+Этап 1: tle-worker.js + tle.js — новый тип сообщения Worker для AR-траекторий.
+Этап 2: index.html + style.css — добавить WebGL canvas в #arView.
+Этап 3: ar-render.js — WebGL-рендерер линий + Canvas2D overlay.
+Этап 4: ar.js — интерполяция, вызов Worker, обновление буферов, чистка Псевдо-3D.
+Этап 5: Тестирование + fallback для браузеров без WebGL.
+Этап 6: PROJECT_CONTEXT.md — обновление документации.
+
+После каждого этапа — проверка синтаксиса (node -e "new Function(code)") и линтер.
+```
+
 ---
 
 ## 7. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
@@ -980,3 +1308,37 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 - Только аппаратный GPS (без IP fallback / кэша / ручного ввода).
 - Два режима рендеринга: Псевдо-3D (все видимые спутники) и Реальное 3D (один в фокусе + точная траектория + звуковой прицел).
 - Десктоп-заглушка при отсутствии камеры/гироскопа.
+
+### Сессия: Анализ производительности AR + спецификация WebGL-оптимизации (март 2026)
+
+**Цель сессии:** Анализ возможности отображения 30 спутников одновременно в AR-режиме. Подбор оптимальной конфигурации для бюджетных устройств. Проектирование перехода на WebGL.
+
+**1. Анализ узких мест текущей архитектуры**
+- Выявлено три блокера для 30 спутников: SGP4 в main thread (162% CPU), Canvas2D shadowBlur (2700 blur/сек), JS-аллокация объектов проекции (270K/сек GC pressure).
+- Samsung Galaxy S23 (Snapdragon 8 Gen 2): не тянет в текущей архитектуре из-за SGP4 в main thread.
+- Poco M5s (Helio G95): целевое устройство нижней границы.
+
+**2. Решение: отказ от Псевдо-3D, переход на WebGL**
+- Единая проекция Real 3D для всех спутников (и обзор, и фокус).
+- Орбитные линии — WebGL (vertex shader для проекции, fragment shader для glow).
+- Маркеры и текст — Canvas2D overlay (переиспользует drawSatelliteIcon).
+- SGP4 траекторий — в Web Worker (новое сообщение CALCULATE_AR_TRAJECTORIES).
+- Линейная интерполяция позиций в renderLoop для плавности LEO.
+
+**3. Целевая конфигурация (50% Worker CPU на Poco M5s)**
+- 30 спутников, 120 точек/траекторию, пересчёт ~1.3 с (Worker 49.8%).
+- Позиции 1 Гц (main thread, 5.4 мс/с) + интерполяция 30 FPS.
+- GPU загрузка <5% (Mali-G76 MC4).
+- Термал ~2-2.5 Вт — ниже порога троттлинга.
+
+**4. Трёхтактная архитектура**
+- ТАКТ 1 (30 FPS, GPU): WebGL проекция + рендер + Canvas2D overlay.
+- ТАКТ 2 (1 Гц, main thread): computeSatellite x 30, интерполяция.
+- ТАКТ 3 (~1.3 с, Worker): 3600 SGP4 вызовов, обновление WebGL-буферов.
+- Все данные всегда в памяти; culling только GPU viewport clipping.
+
+**5. Документация**
+- Добавлен раздел 6.20 в PROJECT_CONTEXT.md: полная спецификация задачи, бюджеты CPU/GPU, архитектура, WebGL пайплайн, таблица удаления/рефакторинга кода.
+- Добавлен раздел 6.21: промпт для планировщика внедрения с пошаговым порядком (6 этапов).
+
+**Итог:** задача полностью специфицирована и готова к реализации по промпту 6.21.
