@@ -101,6 +101,32 @@ function getTrajectory24h(noradId, baseDate) {
   return segments;
 }
 
+/**
+ * AR-траектории в небесных координатах (az/el) для наблюдателя.
+ * Сканирует +/- полупериод орбиты, возвращает точки выше elevationCutoff.
+ */
+function getArTrajectory(noradId, observer, pointsPerSat, elevationCutoff) {
+  if (!tleCache) return [];
+  const tleData = tleCache.get(noradId);
+  if (!tleData) return [];
+
+  const now = new Date();
+  const no = tleData.satrec.no;
+  const periodMin = (no > 0) ? (2 * Math.PI) / no : 90;
+  const halfWindowSec = Math.round(periodMin / 2) * 60;
+  const step = Math.max(1, Math.round((2 * halfWindowSec) / pointsPerSat));
+
+  const points = [];
+  for (let t = -halfWindowSec; t <= halfWindowSec; t += step) {
+    const d = new Date(now.getTime() + t * 1000);
+    const p = computeSatellite(tleData, observer, d);
+    if (p && p.elevation >= elevationCutoff) {
+      points.push({ az: p.azimuth, el: p.elevation });
+    }
+  }
+  return points;
+}
+
 self.onmessage = function (e) {
   const { type, text, noradIds } = e.data;
 
@@ -119,5 +145,20 @@ self.onmessage = function (e) {
     }
 
     self.postMessage({ type: 'TRAJECTORIES_READY', trajectories });
+    return;
+  }
+
+  if (type === 'CALCULATE_AR_TRAJECTORIES') {
+    const ids = noradIds || [];
+    const observer = e.data.observer || { latitude: 0, longitude: 0, altitude: 0 };
+    const pointsPerSat = e.data.pointsPerSat || 120;
+    const elevationCutoff = e.data.elevationCutoff != null ? e.data.elevationCutoff : 2;
+
+    const trajectories = {};
+    for (let i = 0; i < ids.length; i++) {
+      trajectories[ids[i]] = getArTrajectory(ids[i], observer, pointsPerSat, elevationCutoff);
+    }
+
+    self.postMessage({ type: 'AR_TRAJECTORIES_READY', trajectories: trajectories });
   }
 };

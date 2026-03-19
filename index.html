@@ -115,6 +115,7 @@
     <!-- Модуль 3: AR-трекер (SPA-переход) -->
     <div id="arView" class="ar-view" hidden>
       <video id="arVideo" class="ar-view__video" autoplay playsinline muted></video>
+      <canvas id="arCanvasGL" class="ar-view__canvas-gl"></canvas>
       <canvas id="arCanvas" class="ar-view__canvas"></canvas>
 
       <header class="ar-view__header">
@@ -172,8 +173,8 @@
   <script src="tle.js"></script>
   <script src="map.js"></script>
   <script src="map-render.js"></script>
-  <script src="ar.js"></script>
   <script src="ar-render.js"></script>
+  <script src="ar.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

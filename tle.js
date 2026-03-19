@@ -155,6 +155,67 @@
   }
 
   /**
+   * Sync fallback: AR-траектория в az/el для одного спутника (main thread).
+   */
+  function getArTrajectorySync(noradId, observer, pointsPerSat, elevationCutoff) {
+    if (!tleCache) return [];
+    const tleData = tleCache.get(noradId);
+    if (!tleData) return [];
+
+    const now = new Date();
+    const no = tleData.satrec.no;
+    const periodMin = (no > 0) ? (2 * Math.PI) / no : 90;
+    const halfWindowSec = Math.round(periodMin / 2) * 60;
+    const step = Math.max(1, Math.round((2 * halfWindowSec) / pointsPerSat));
+
+    const points = [];
+    for (let t = -halfWindowSec; t <= halfWindowSec; t += step) {
+      const d = new Date(now.getTime() + t * 1000);
+      const p = computeSatellite(tleData, observer, d);
+      if (p && p.elevation >= elevationCutoff) {
+        points.push({ az: p.azimuth, el: p.elevation });
+      }
+    }
+    return points;
+  }
+
+  /**
+   * Запрос AR-траекторий (az/el) в Worker или sync fallback.
+   * @param {string[]} noradIds
+   * @param {{ latitude, longitude, altitude }} observer
+   * @param {number} [pointsPerSat=120]
+   * @returns {Promise<Object<string, Array<{az,el}>>>}
+   */
+  function requestArTrajectories(noradIds, observer, pointsPerSat) {
+    const ids = noradIds || [];
+    const pts = pointsPerSat || 120;
+    const obs = observer || { latitude: 0, longitude: 0, altitude: 0 };
+    if (worker) {
+      return new Promise((resolve) => {
+        const handler = (e) => {
+          if (e.data && e.data.type === 'AR_TRAJECTORIES_READY') {
+            worker.removeEventListener('message', handler);
+            resolve(e.data.trajectories || {});
+          }
+        };
+        worker.addEventListener('message', handler);
+        worker.postMessage({
+          type: 'CALCULATE_AR_TRAJECTORIES',
+          noradIds: ids,
+          observer: obs,
+          pointsPerSat: pts,
+          elevationCutoff: 2
+        });
+      });
+    }
+    const result = {};
+    for (let i = 0; i < ids.length; i++) {
+      result[ids[i]] = getArTrajectorySync(ids[i], obs, pts, 2);
+    }
+    return Promise.resolve(result);
+  }
+
+  /**
    * Форматирование азимута: 145.2° ЮВ
    */
   function formatAzimuth(deg) {
@@ -178,6 +239,7 @@
     parseTle,
     computeSatellite,
     requestTrajectories,
+    requestArTrajectories,
     formatAzimuth,
     formatElevation,
     getCache: () => tleCache

@@ -1,50 +1,141 @@
 /**
- * SatContact — Модуль 3: AR Canvas-рендерер
- * Pseudo-3D (overview) и Real-3D (focus) проекция, маркеры, орбитные линии, HUD-оверлей.
+ * SatContact — Модуль 3: AR-рендерер (WebGL orbit lines + Canvas2D overlay)
+ * Единый Real 3D пайплайн для до 30 спутников.
  */
 (function () {
   'use strict';
 
   var DEG = Math.PI / 180;
-  var RAD = 180 / Math.PI;
 
-  var canvas, ctx;
+  /* ====== DOM / контексты ====== */
+  var canvasGL, gl;
+  var canvas2D, ctx;
   var width = 0, height = 0, dpr = 1;
+  var webglAvailable = false;
 
+  /* ====== Палитра ====== */
   var PALETTE = [];
+
+  /* ====== Константы отрисовки ====== */
   var MARKER_SIZE = 26;
   var HIT_RADIUS = 34;
-  var ORBIT_LINE_WIDTH_OVERVIEW = 1.5;
-  var ORBIT_LINE_WIDTH_FOCUS = 2.5;
   var LABEL_FONT = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  var HUD_FONT = '11px "Courier New", Consolas, monospace';
-  var GLOW_RADIUS = 18;
 
+  /* ====== Состояние маркеров для hit-test ====== */
   var lastMarkerPositions = [];
 
+  /* ====== WebGL: шейдеры, программа, буферы ====== */
+  var glProgram = null;
+  var glVBO = null;
+  var uOrientation, uFocal, uResolution, uColor, uAlpha;
+  var aAzEl;
+  var MAX_POINTS = 30 * 130;
+  var orbitSegments = [];
+
   /* ==========================================================================
-     Проекция AZ/EL → экранные координаты
+     WebGL Шейдеры (inline)
      ========================================================================== */
+  var VERT_SRC = [
+    'attribute vec2 a_azEl;',
+    'uniform mat3 u_orientation;',
+    'uniform vec2 u_focal;',
+    'uniform vec2 u_resolution;',
+    'varying float v_behind;',
+    'void main() {',
+    '  float az = a_azEl.x * 0.017453292519943295;',
+    '  float el = a_azEl.y * 0.017453292519943295;',
+    '  float cosEl = cos(el);',
+    '  vec3 world = vec3(cosEl * sin(az), cosEl * cos(az), sin(el));',
+    '  vec3 cam = u_orientation * world;',
+    '  float cz = -cam.z;',
+    '  v_behind = step(cz, 0.01);',
+    '  if (cz <= 0.01) {',
+    '    gl_Position = vec4(2.0, 2.0, 0.0, 1.0);',
+    '    return;',
+    '  }',
+    '  float ndcX = (cam.x / cz) * u_focal.x / (u_resolution.x * 0.5);',
+    '  float ndcY = (cam.y / cz) * u_focal.y / (u_resolution.y * 0.5);',
+    '  gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);',
+    '}'
+  ].join('\n');
 
-  /**
-   * Pseudo-3D: простое линейное отображение дельты AZ/EL на экран.
-   * Допускает небольшие искажения по краям (by design).
-   */
-  function projectPseudo3D(satAz, satEl, camAz, camEl, fovH, fovV, w, h) {
-    var dAz = satAz - camAz;
-    if (dAz > 180) dAz -= 360;
-    if (dAz < -180) dAz += 360;
-    var dEl = satEl - camEl;
+  var FRAG_SRC = [
+    'precision mediump float;',
+    'uniform vec4 u_color;',
+    'uniform float u_alpha;',
+    'varying float v_behind;',
+    'void main() {',
+    '  if (v_behind > 0.5) discard;',
+    '  gl_FragColor = vec4(u_color.rgb, u_color.a * u_alpha);',
+    '}'
+  ].join('\n');
 
-    var x = w / 2 + (dAz / fovH) * w;
-    var y = h / 2 - (dEl / fovV) * h;
-    var visible = Math.abs(dAz) < fovH * 1.2 && Math.abs(dEl) < fovV * 1.2;
-    return { x: x, y: y, visible: visible };
+  /* ==========================================================================
+     WebGL: инициализация
+     ========================================================================== */
+  function compileShader(type, src) {
+    var shader = gl.createShader(type);
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.error('AR Shader error:', gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
   }
 
-  /**
-   * Real-3D: строгая трансформация через матрицу ориентации устройства + перспективная проекция.
-   */
+  function initGL(canvasElement) {
+    canvasGL = canvasElement;
+    if (!canvasGL) return false;
+    try {
+      gl = canvasGL.getContext('webgl', { alpha: true, premultipliedAlpha: false, antialias: true })
+        || canvasGL.getContext('experimental-webgl', { alpha: true, premultipliedAlpha: false, antialias: true });
+    } catch (_) { gl = null; }
+    if (!gl) return false;
+
+    var vs = compileShader(gl.VERTEX_SHADER, VERT_SRC);
+    var fs = compileShader(gl.FRAGMENT_SHADER, FRAG_SRC);
+    if (!vs || !fs) { gl = null; return false; }
+
+    glProgram = gl.createProgram();
+    gl.attachShader(glProgram, vs);
+    gl.attachShader(glProgram, fs);
+    gl.linkProgram(glProgram);
+    if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
+      console.error('AR Program link error:', gl.getProgramInfoLog(glProgram));
+      gl = null;
+      return false;
+    }
+
+    aAzEl = gl.getAttribLocation(glProgram, 'a_azEl');
+    uOrientation = gl.getUniformLocation(glProgram, 'u_orientation');
+    uFocal = gl.getUniformLocation(glProgram, 'u_focal');
+    uResolution = gl.getUniformLocation(glProgram, 'u_resolution');
+    uColor = gl.getUniformLocation(glProgram, 'u_color');
+    uAlpha = gl.getUniformLocation(glProgram, 'u_alpha');
+
+    glVBO = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, glVBO);
+    gl.bufferData(gl.ARRAY_BUFFER, MAX_POINTS * 2 * 4, gl.DYNAMIC_DRAW);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    return true;
+  }
+
+  function destroyGL() {
+    if (gl && glVBO) gl.deleteBuffer(glVBO);
+    if (gl && glProgram) gl.deleteProgram(glProgram);
+    glVBO = null;
+    glProgram = null;
+    gl = null;
+  }
+
+  /* ==========================================================================
+     Проекция Real 3D (JS — для Canvas2D маркеров + WebGL fallback)
+     ========================================================================== */
   function projectReal3D(satAz, satEl, orientationMatrix, fovH, fovV, w, h) {
     var azR = satAz * DEG;
     var elR = satEl * DEG;
@@ -70,8 +161,48 @@
     return { x: x, y: y, visible: visible };
   }
 
+  function isOrientationMatrixValid(m) {
+    if (!m || m.length < 9) return false;
+    var sum = 0;
+    for (var i = 0; i < 9; i++) sum += Math.abs(m[i]);
+    return sum > 0.01;
+  }
+
   /* ==========================================================================
-     Рисование: иконка спутника (адаптация drawSatelliteIcon из map-render.js)
+     Обновление VBO из данных траекторий Worker
+     ========================================================================== */
+  function updateTrajectories(allTrajectories) {
+    orbitSegments = [];
+    if (!allTrajectories) return;
+
+    var floats = [];
+    var offset = 0;
+    var ids = Object.keys(allTrajectories);
+
+    for (var i = 0; i < ids.length; i++) {
+      var pts = allTrajectories[ids[i]];
+      if (!pts || pts.length < 2) continue;
+      var count = Math.min(pts.length, 130);
+      for (var j = 0; j < count; j++) {
+        floats.push(pts[j].az, pts[j].el);
+      }
+      orbitSegments.push({ noradId: ids[i], offset: offset, count: count, colorIdx: i });
+      offset += count;
+    }
+
+    if (webglAvailable && gl && glVBO) {
+      var data = new Float32Array(floats);
+      gl.bindBuffer(gl.ARRAY_BUFFER, glVBO);
+      if (data.length <= MAX_POINTS * 2) {
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
+      } else {
+        gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+      }
+    }
+  }
+
+  /* ==========================================================================
+     Рисование: иконка спутника (из map-render.js)
      ========================================================================== */
   function drawSatelliteIcon(cx, cy, size, fillColor, strokeColor) {
     var half = size / 2;
@@ -105,17 +236,13 @@
   }
 
   /* ==========================================================================
-     Рисование: маркер + подпись
+     Рисование Canvas2D: маркер + подпись (без shadowBlur для glow)
      ========================================================================== */
   function drawMarker(x, y, sat, colorIdx, isFocused, freqMhz) {
     var pal = PALETTE[colorIdx % PALETTE.length] || PALETTE[0];
     var sz = isFocused ? MARKER_SIZE + 4 : MARKER_SIZE;
 
-    ctx.save();
-    ctx.shadowColor = pal.marker;
-    ctx.shadowBlur = GLOW_RADIUS;
     drawSatelliteIcon(x, y, sz, pal.marker, 'rgba(255,255,255,0.7)');
-    ctx.restore();
 
     var label = sat.name || sat.noradId;
     var dist = sat.distance ? Math.round(sat.distance) + ' \u043A\u043C' : '';
@@ -141,164 +268,150 @@
   }
 
   /* ==========================================================================
-     Рисование: орбитная линия
+     Canvas2D fallback: orbit lines (when WebGL unavailable)
      ========================================================================== */
-  function drawOrbitLine(points, projFn, color, lineWidth) {
+  function drawOrbitLineFallback(points, orientationMatrix, fovH, fovV, color) {
     if (!points || points.length < 2) return;
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 3;
+    ctx.globalAlpha = 0.75;
 
     ctx.beginPath();
     var started = false;
     for (var i = 0; i < points.length; i++) {
-      var p = projFn(points[i].az, points[i].el);
+      var p = projectReal3D(points[i].az, points[i].el, orientationMatrix, fovH, fovV, width, height);
       if (!p.visible) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
   /* ==========================================================================
-     Главные функции отрисовки
+     WebGL: отрисовка орбитных линий
      ========================================================================== */
+  function drawGLOrbits(params) {
+    if (!gl || !glProgram) return;
 
-  function drawOverview(params) {
-    var sats = params.satellites;
-    var trajs = params.overviewTrajectories;
-    var camAz = params.cameraAz;
-    var camEl = params.cameraEl;
-    var fw = params.fovH;
-    var fv = params.fovV;
-
-    function proj(az, el) {
-      return projectPseudo3D(az, el, camAz, camEl, fw, fv, width, height);
-    }
-
-    lastMarkerPositions = [];
-
-    for (var i = 0; i < sats.length; i++) {
-      var sat = sats[i];
-      var traj = trajs[sat.noradId];
-      if (traj) {
-        var pal = PALETTE[i % PALETTE.length] || PALETTE[0];
-        drawOrbitLine(traj, proj, pal.orbit, ORBIT_LINE_WIDTH_OVERVIEW);
-      }
-    }
-
-    for (var j = 0; j < sats.length; j++) {
-      var s = sats[j];
-      var sp = proj(s.azimuth, s.elevation);
-      if (sp.visible) {
-        drawMarker(sp.x, sp.y, s, j, false);
-        lastMarkerPositions.push({ noradId: s.noradId, x: sp.x, y: sp.y });
-      }
-    }
-  }
-
-  function drawFocusMode(params) {
-    var sats = params.satellites;
-    var traj = params.focusedTrajectory;
-    var fid = params.focusedId;
     var om = params.orientationMatrix;
-    var fw = params.fovH;
-    var fv = params.fovV;
-    var camAz = params.cameraAz;
-    var camEl = params.cameraEl;
-    var freqMap = params.noradIdToFreq || {};
+    if (!isOrientationMatrixValid(om)) return;
 
-    lastMarkerPositions = [];
+    gl.viewport(0, 0, canvasGL.width, canvasGL.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-    function proj(az, el) {
-      return projectReal3D(az, el, om, fw, fv, width, height);
+    gl.useProgram(glProgram);
+
+    gl.uniformMatrix3fv(uOrientation, false, new Float32Array([
+      om[0], om[1], om[2],
+      om[3], om[4], om[5],
+      om[6], om[7], om[8]
+    ]));
+
+    var focalX = (width / 2) / Math.tan((params.fovH / 2) * DEG);
+    var focalY = (height / 2) / Math.tan((params.fovV / 2) * DEG);
+    gl.uniform2f(uFocal, focalX, focalY);
+    gl.uniform2f(uResolution, width, height);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, glVBO);
+    gl.enableVertexAttribArray(aAzEl);
+    gl.vertexAttribPointer(aAzEl, 2, gl.FLOAT, false, 0, 0);
+
+    var focusedId = params.focusedId;
+    var isFocusMode = params.mode === 'focus' && focusedId;
+
+    for (var i = 0; i < orbitSegments.length; i++) {
+      var seg = orbitSegments[i];
+      if (isFocusMode && seg.noradId !== focusedId) continue;
+
+      var pal = PALETTE[seg.colorIdx % PALETTE.length] || PALETTE[0];
+      var rgb = parseColor(pal.orbit);
+
+      // Pass 1: wide glow line
+      gl.lineWidth(1);
+      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 0.3);
+      gl.uniform1f(uAlpha, 1.0);
+      gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
+
+      // Pass 2: bright core
+      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 0.85);
+      gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
     }
 
-    function projFallback(az, el) {
-      return projectPseudo3D(az, el, camAz, camEl, fw, fv, width, height);
-    }
-
-    var usedProj = isOrientationMatrixValid(om) ? proj : projFallback;
-
-    var focSat = null;
-    var focIdx = 0;
-    for (var i = 0; i < sats.length; i++) {
-      if (sats[i].noradId === fid) { focSat = sats[i]; focIdx = i; break; }
-    }
-
-    if (traj && traj.length > 1) {
-      var pal = PALETTE[focIdx % PALETTE.length] || PALETTE[0];
-      drawOrbitLine(traj, usedProj, pal.orbit, ORBIT_LINE_WIDTH_FOCUS);
-    }
-
-    if (focSat) {
-      var sp = usedProj(focSat.azimuth, focSat.elevation);
-      if (sp.visible) {
-        drawMarker(sp.x, sp.y, focSat, focIdx, true, freqMap[focSat.noradId]);
-        lastMarkerPositions.push({ noradId: focSat.noradId, x: sp.x, y: sp.y });
-      }
-    }
+    gl.disableVertexAttribArray(aAzEl);
   }
 
-  function isOrientationMatrixValid(m) {
-    if (!m || m.length < 9) return false;
-    var sum = 0;
-    for (var i = 0; i < 9; i++) sum += Math.abs(m[i]);
-    return sum > 0.01;
+  var colorCache = {};
+  function parseColor(rgbaStr) {
+    if (colorCache[rgbaStr]) return colorCache[rgbaStr];
+    var m = rgbaStr.match(/[\d.]+/g);
+    if (!m || m.length < 3) return [1, 1, 1];
+    var result = [parseFloat(m[0]) / 255, parseFloat(m[1]) / 255, parseFloat(m[2]) / 255];
+    colorCache[rgbaStr] = result;
+    return result;
   }
 
   /* ==========================================================================
-     Public API
+     Canvas2D overlay: маркеры + подписи
      ========================================================================== */
-
-  function init(canvasEl) {
-    canvas = canvasEl;
-    if (!canvas) return;
-    ctx = canvas.getContext('2d');
-    PALETTE = window.SatContactOrbitPalette || [
-      { orbit: 'rgba(82, 136, 193, 0.75)', marker: '#5288c1' }
-    ];
-    onResize();
-    window.addEventListener('resize', onResize);
-  }
-
-  function destroy() {
-    window.removeEventListener('resize', onResize);
-    lastMarkerPositions = [];
-    canvas = null;
-    ctx = null;
-  }
-
-  function onResize() {
-    if (!canvas) return;
-    var rect = canvas.getBoundingClientRect();
-    dpr = window.devicePixelRatio || 1;
-    width = rect.width;
-    height = rect.height;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function draw(params) {
+  function drawOverlay(params) {
     if (!ctx) return;
     ctx.clearRect(0, 0, width, height);
 
-    if (params.mode === 'overview') {
-      drawOverview(params);
-    } else if (params.mode === 'focus') {
-      drawFocusMode(params);
+    var sats = params.satellites || [];
+    var om = params.orientationMatrix;
+    var fw = params.fovH;
+    var fv = params.fovV;
+    var focusedId = params.focusedId;
+    var isFocusMode = params.mode === 'focus' && focusedId;
+    var freqMap = params.noradIdToFreq || {};
+    var hasMatrix = isOrientationMatrixValid(om);
+
+    if (!hasMatrix) return;
+
+    lastMarkerPositions = [];
+
+    // In fallback mode (no WebGL), draw orbit lines on Canvas2D
+    if (!webglAvailable) {
+      var allTrajs = params.allTrajectories || {};
+      var ids = Object.keys(allTrajs);
+      for (var t = 0; t < ids.length; t++) {
+        if (isFocusMode && ids[t] !== focusedId) continue;
+        var pal = PALETTE[t % PALETTE.length] || PALETTE[0];
+        drawOrbitLineFallback(allTrajs[ids[t]], om, fw, fv, pal.orbit);
+      }
+    }
+
+    for (var i = 0; i < sats.length; i++) {
+      var sat = sats[i];
+      if (isFocusMode && sat.noradId !== focusedId) continue;
+
+      var sp = projectReal3D(sat.azimuth, sat.elevation, om, fw, fv, width, height);
+      if (sp.visible) {
+        var isFocused = (sat.noradId === focusedId);
+        drawMarker(sp.x, sp.y, sat, i, isFocused, freqMap[sat.noradId]);
+        lastMarkerPositions.push({ noradId: sat.noradId, x: sp.x, y: sp.y });
+      }
     }
   }
 
+  /* ==========================================================================
+     Drift Warning overlay
+     ========================================================================== */
   function drawDriftWarning() {
     if (!ctx) return;
     ctx.clearRect(0, 0, width, height);
+    if (webglAvailable && gl) {
+      gl.viewport(0, 0, canvasGL.width, canvasGL.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, width, height);
@@ -317,6 +430,9 @@
     ctx.restore();
   }
 
+  /* ==========================================================================
+     Hit-test
+     ========================================================================== */
   function hitTest(x, y) {
     for (var i = 0; i < lastMarkerPositions.length; i++) {
       var m = lastMarkerPositions[i];
@@ -329,11 +445,80 @@
     return null;
   }
 
+  /* ==========================================================================
+     Resize
+     ========================================================================== */
+  function onResize() {
+    dpr = window.devicePixelRatio || 1;
+
+    if (canvas2D) {
+      var rect2d = canvas2D.getBoundingClientRect();
+      width = rect2d.width;
+      height = rect2d.height;
+      canvas2D.width = width * dpr;
+      canvas2D.height = height * dpr;
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    if (canvasGL) {
+      var rectGL = canvasGL.getBoundingClientRect();
+      canvasGL.width = rectGL.width * dpr;
+      canvasGL.height = rectGL.height * dpr;
+    }
+  }
+
+  /* ==========================================================================
+     Public API
+     ========================================================================== */
+  function init(canvasGLEl, canvas2DEl) {
+    canvas2D = canvas2DEl;
+    if (canvas2D) {
+      ctx = canvas2D.getContext('2d');
+    }
+
+    PALETTE = window.SatContactOrbitPalette || [
+      { orbit: 'rgba(82, 136, 193, 0.75)', marker: '#5288c1' }
+    ];
+
+    webglAvailable = initGL(canvasGLEl);
+    if (!webglAvailable) {
+      console.warn('ar-render: WebGL unavailable, using Canvas2D fallback for orbit lines');
+    }
+
+    onResize();
+    window.addEventListener('resize', onResize);
+  }
+
+  function destroy() {
+    window.removeEventListener('resize', onResize);
+    lastMarkerPositions = [];
+    orbitSegments = [];
+    destroyGL();
+    canvas2D = null;
+    ctx = null;
+    canvasGL = null;
+  }
+
+  function draw(params) {
+    if (!params) return;
+
+    if (params.driftPaused) {
+      drawDriftWarning();
+      return;
+    }
+
+    if (webglAvailable) {
+      drawGLOrbits(params);
+    }
+    drawOverlay(params);
+  }
+
   window.SatContactArRender = {
     init: init,
     destroy: destroy,
     draw: draw,
     drawDriftWarning: drawDriftWarning,
-    hitTest: hitTest
+    hitTest: hitTest,
+    updateTrajectories: updateTrajectories
   };
 })();

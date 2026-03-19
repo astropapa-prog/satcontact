@@ -1010,12 +1010,21 @@ body {
   z-index: 0;
 }
 
-.ar-view__canvas {
+.ar-view__canvas-gl {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
+  pointer-events: none;
+}
+
+.ar-view__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
   pointer-events: auto;
   touch-action: none;
 }

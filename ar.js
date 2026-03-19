@@ -19,7 +19,7 @@
   const DEFAULT_FOV_V = 45;
 
   /* ====== DOM ====== */
-  let elVideo, elCanvas, elBack, elShowAll, elCalibSource, elCalibBtn;
+  let elVideo, elCanvas, elCanvasGL, elBack, elShowAll, elCalibSource, elCalibBtn;
   let elSoundToggle, elDrift, elHud, elGpsStatus, elCoords;
   let elTelemetryRow, elTelAz, elTelEl, elTelDist;
   let elFallback, elFallbackBack, elCrosshair, elCompassToggle;
@@ -67,10 +67,13 @@
   let rafId = null;
   let renderingStarted = false;
 
-  /* ====== Данные из slowLoop ====== */
+  /* ====== Данные ====== */
   let visibleSatellites = [];       // [{ noradId, azimuth, elevation, distance, height }]
-  let focusedTrajectory = [];       // [{ az, el }] for focus mode orbit line
-  let overviewTrajectories = {};    // noradId → [{ az, el }]
+  let allTrajectories = {};         // noradId → [{ az, el }] from Worker
+  let prevPositions = {};           // noradId → { az, el, time }
+  let currentPositions = {};        // noradId → { az, el, time }
+  let trajectoryTimerId = null;     // ~1.3s Worker request timer
+  const TRAJECTORY_INTERVAL_MS = 1300;
 
   /* ==========================================================================
      WMM-2025 (упрощённая модель, сферические гармоники до степени 5)
@@ -545,30 +548,14 @@
     if (noradId) {
       state = 'focus';
       focusedNoradId = noradId;
-      computeFocusedTrajectoryNow();
     } else {
       state = 'overview';
       focusedNoradId = null;
-      focusedTrajectory = [];
     }
     if (elCrosshair) elCrosshair.classList.toggle('visible', state === 'focus');
     document.dispatchEvent(new CustomEvent('satcontact:ar-focus', {
       detail: { focusedIds: noradId ? [noradId] : [] }
     }));
-  }
-
-  function computeFocusedTrajectoryNow() {
-    if (!focusedNoradId || !gpsCoords) return;
-    var tleCache = window.SatContactTle ? window.SatContactTle.getCache() : null;
-    if (!tleCache) return;
-    var tleData = tleCache.get(focusedNoradId);
-    if (!tleData) return;
-    var observer = {
-      latitude: gpsCoords.latitude,
-      longitude: gpsCoords.longitude,
-      altitude: gpsCoords.altitude || 0
-    };
-    focusedTrajectory = computeHighDensityTrajectory(tleData, observer, new Date());
   }
 
   function onCanvasClick(evt) {
@@ -592,7 +579,7 @@
   }
 
   /* ==========================================================================
-     Медленный цикл (1 Hz): пересчёт позиций спутников
+     Медленный цикл (1 Hz): пересчёт позиций спутников (ТАКТ 2)
      ========================================================================== */
   function slowLoop() {
     if (!active) return;
@@ -609,6 +596,7 @@
     if (!tleCache) return;
 
     var now = new Date();
+    var nowMs = now.getTime();
     var observer = {
       latitude: gpsCoords.latitude,
       longitude: gpsCoords.longitude,
@@ -630,93 +618,111 @@
           distance: pos.distance,
           height: pos.height
         });
+
+        if (currentPositions[nid]) {
+          prevPositions[nid] = currentPositions[nid];
+        }
+        currentPositions[nid] = { az: pos.azimuth, el: pos.elevation, time: nowMs };
       }
     }
     visibleSatellites = newVisible;
-
-    if (state === 'overview') {
-      computeOverviewTrajectories(tleCache, observer, now);
-    }
-
-    if (state === 'focus' && focusedNoradId) {
-      var ftleData = tleCache.get(focusedNoradId);
-      if (ftleData) {
-        focusedTrajectory = computeHighDensityTrajectory(ftleData, observer, now);
-      }
-    }
-  }
-
-  function getOrbitalPeriodMin(tleData) {
-    if (tleData && tleData.satrec && tleData.satrec.no > 0) {
-      return (2 * Math.PI) / tleData.satrec.no;
-    }
-    return 90;
-  }
-
-  function computeOverviewTrajectories(tleCache, observer, now) {
-    var newTrajs = {};
-    for (var i = 0; i < visibleSatellites.length; i++) {
-      var sat = visibleSatellites[i];
-      var tleData = tleCache.get(sat.noradId);
-      if (!tleData) continue;
-
-      var periodMin = getOrbitalPeriodMin(tleData);
-      var halfWindowMin = Math.min(Math.round(periodMin / 2), 720);
-      var stepMin = Math.max(1, Math.round((2 * halfWindowMin) / 120));
-
-      var points = [];
-      for (var t = -halfWindowMin; t <= halfWindowMin; t += stepMin) {
-        var d = new Date(now.getTime() + t * 60000);
-        var p = window.SatContactTle.computeSatellite(tleData, observer, d);
-        if (p && p.elevation > -5) {
-          points.push({ az: p.azimuth, el: p.elevation });
-        }
-      }
-      newTrajs[sat.noradId] = points;
-    }
-    overviewTrajectories = newTrajs;
-  }
-
-  function computeHighDensityTrajectory(tleData, observer, now) {
-    var periodMin = getOrbitalPeriodMin(tleData);
-    var halfWindowSec = Math.min(Math.round(periodMin / 2) * 60, 12 * 3600);
-    var step = Math.max(10, Math.round((2 * halfWindowSec) / 300));
-
-    var points = [];
-    for (var t = -halfWindowSec; t <= halfWindowSec; t += step) {
-      var d = new Date(now.getTime() + t * 1000);
-      var p = window.SatContactTle.computeSatellite(tleData, observer, d);
-      if (p && p.elevation > -5) {
-        points.push({ az: p.azimuth, el: p.elevation });
-      }
-    }
-    return points;
   }
 
   /* ==========================================================================
-     Быстрый цикл (RAF ~60 Hz): рендеринг
+     Worker trajectory requests (ТАКТ 3, ~1.3s)
      ========================================================================== */
+  function requestWorkerTrajectories() {
+    if (!active || !gpsCoords || gpsQuality === 'searching') return;
+    if (!window.SatContactTle || !window.SatContactTle.requestArTrajectories) return;
+
+    var observer = {
+      latitude: gpsCoords.latitude,
+      longitude: gpsCoords.longitude,
+      altitude: gpsCoords.altitude || 0
+    };
+
+    window.SatContactTle.requestArTrajectories(currentNoradIds, observer, 120)
+      .then(function (trajectories) {
+        if (!active) return;
+        allTrajectories = trajectories || {};
+        var renderer = window.SatContactArRender;
+        if (renderer && renderer.updateTrajectories) {
+          renderer.updateTrajectories(allTrajectories);
+        }
+      })
+      .catch(function (err) {
+        console.warn('ar.js: Worker trajectory error', err);
+      });
+  }
+
+  function startTrajectoryTimer() {
+    if (trajectoryTimerId) return;
+    requestWorkerTrajectories();
+    trajectoryTimerId = setInterval(requestWorkerTrajectories, TRAJECTORY_INTERVAL_MS);
+  }
+
+  function stopTrajectoryTimer() {
+    if (trajectoryTimerId) {
+      clearInterval(trajectoryTimerId);
+      trajectoryTimerId = null;
+    }
+  }
+
+  /* ==========================================================================
+     Быстрый цикл (RAF, target ~30 FPS): рендеринг (ТАКТ 1)
+     ========================================================================== */
+  var lastRenderTime = 0;
+  var RENDER_INTERVAL_MS = 33; // ~30 FPS
+
+  function interpolateSatellites() {
+    var now = Date.now();
+    var interpolated = [];
+    for (var i = 0; i < visibleSatellites.length; i++) {
+      var sat = visibleSatellites[i];
+      var curr = currentPositions[sat.noradId];
+      var prev = prevPositions[sat.noradId];
+      if (curr && prev) {
+        var fraction = Math.min((now - curr.time) / 1000, 1);
+        var dAz = curr.az - prev.az;
+        if (dAz > 180) dAz -= 360;
+        if (dAz < -180) dAz += 360;
+        interpolated.push({
+          noradId: sat.noradId,
+          name: sat.name,
+          azimuth: prev.az + dAz * fraction,
+          elevation: prev.el + (curr.el - prev.el) * fraction,
+          distance: sat.distance,
+          height: sat.height
+        });
+      } else {
+        interpolated.push(sat);
+      }
+    }
+    return interpolated;
+  }
+
   function renderLoop() {
     if (!active) return;
+    rafId = requestAnimationFrame(renderLoop);
+
+    var now = Date.now();
+    if (now - lastRenderTime < RENDER_INTERVAL_MS) return;
+    lastRenderTime = now;
 
     var cam = getCameraAzEl();
     var renderer = window.SatContactArRender;
+    var interpSats = interpolateSatellites();
+
     if (renderer && !driftPaused) {
       renderer.draw({
-        satellites: visibleSatellites,
-        overviewTrajectories: overviewTrajectories,
-        focusedTrajectory: focusedTrajectory,
-        sensorState: sensorState,
+        satellites: interpSats,
+        allTrajectories: allTrajectories,
         orientationMatrix: orientationMatrix,
-        cameraAz: cam.azimuth,
-        cameraEl: cam.elevation,
         mode: state,
         focusedId: focusedNoradId,
         fovH: fovH,
         fovV: fovV,
-        noradIdToName: currentNoradIdToName,
         noradIdToFreq: currentNoradIdToFreq,
-        gpsQuality: gpsQuality,
         driftPaused: driftPaused
       });
     } else if (renderer && driftPaused) {
@@ -725,9 +731,9 @@
 
     if (state === 'focus' && focusedNoradId && !driftPaused) {
       var focSat = null;
-      for (var i = 0; i < visibleSatellites.length; i++) {
-        if (visibleSatellites[i].noradId === focusedNoradId) {
-          focSat = visibleSatellites[i]; break;
+      for (var i = 0; i < interpSats.length; i++) {
+        if (interpSats[i].noradId === focusedNoradId) {
+          focSat = interpSats[i]; break;
         }
       }
       if (focSat) {
@@ -741,8 +747,6 @@
     } else {
       updateAudioPitch(AUDIO_MAX_OFFSET_DEG);
     }
-
-    rafId = requestAnimationFrame(renderLoop);
   }
 
   /* ==========================================================================
@@ -839,6 +843,12 @@
     }
 
     setFocus(null);
+    allTrajectories = {};
+    prevPositions = {};
+    currentPositions = {};
+    if (renderingStarted) {
+      requestWorkerTrajectories();
+    }
     slowLoop();
   }
   function onSoundToggleClick() {
@@ -888,6 +898,7 @@
   function cacheDom() {
     elVideo = document.getElementById('arVideo');
     elCanvas = document.getElementById('arCanvas');
+    elCanvasGL = document.getElementById('arCanvasGL');
     elBack = document.getElementById('arBack');
     elShowAll = document.getElementById('arShowAll');
     elCalibSource = document.getElementById('arCalibSource');
@@ -916,10 +927,12 @@
     renderingStarted = true;
 
     if (window.SatContactArRender) {
-      window.SatContactArRender.init(elCanvas);
+      window.SatContactArRender.init(elCanvasGL, elCanvas);
     }
 
     slowLoop();
+    startTrajectoryTimer();
+    lastRenderTime = 0;
     rafId = requestAnimationFrame(renderLoop);
   }
 
@@ -937,8 +950,9 @@
     renderingStarted = false;
     soundEnabled = false;
     visibleSatellites = [];
-    focusedTrajectory = [];
-    overviewTrajectories = {};
+    allTrajectories = {};
+    prevPositions = {};
+    currentPositions = {};
 
     currentNoradIds = (options && options.noradIds) || [];
     currentNoradIdToName = (options && options.noradIdToName) || {};
@@ -991,6 +1005,7 @@
     active = false;
     if (slowLoopId) { clearInterval(slowLoopId); slowLoopId = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    stopTrajectoryTimer();
 
     stopCamera();
     stopSensors();
@@ -1009,8 +1024,9 @@
     compassDisabled = false;
     compassCalibrationDelta = 0;
     visibleSatellites = [];
-    focusedTrajectory = [];
-    overviewTrajectories = {};
+    allTrajectories = {};
+    prevPositions = {};
+    currentPositions = {};
     gpsCoords = null;
     gpsQuality = 'searching';
   }

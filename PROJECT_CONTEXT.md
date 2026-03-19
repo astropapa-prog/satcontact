@@ -1342,3 +1342,68 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 - Добавлен раздел 6.21: промпт для планировщика внедрения с пошаговым порядком (6 этапов).
 
 **Итог:** задача полностью специфицирована и готова к реализации по промпту 6.21.
+
+### Сессия: Реализация WebGL-оптимизации AR-рендера (март 2026)
+
+**Цель сессии:** Реализация задачи 6.20 — отказ от Псевдо-3D, переход на единый Real 3D + WebGL для 30 спутников.
+
+**1. tle-worker.js — новый тип сообщения CALCULATE_AR_TRAJECTORIES**
+- Добавлена функция `getArTrajectory(noradId, observer, pointsPerSat, elevationCutoff)`: вычисляет орбитальный период из `satrec.no`, сканирует +/- полупериод, возвращает массив `[{az, el}]` выше `elevationCutoff`.
+- Новый case в `onmessage`: принимает `{ noradIds, observer, pointsPerSat, elevationCutoff }`, отвечает `{ type: 'AR_TRAJECTORIES_READY', trajectories: { [noradId]: [{az,el}] } }`.
+
+**2. tle.js — новый API requestArTrajectories()**
+- `SatContactTle.requestArTrajectories(noradIds, observer, pointsPerSat)` → Promise.
+- Sync fallback `getArTrajectorySync()` при отсутствии Worker (аналогичная логика).
+- Добавлен в публичный экспорт `window.SatContactTle`.
+
+**3. index.html + style.css — WebGL canvas**
+- Добавлен `<canvas id="arCanvasGL" class="ar-view__canvas-gl">` между `<video>` и `<canvas id="arCanvas">`.
+- CSS: `.ar-view__canvas-gl` — `position:absolute, 100%x100%, z-index:1, pointer-events:none`.
+- Canvas2D overlay (`#arCanvas`) — `z-index:2` (было 1).
+- Исправлен порядок скриптов: `ar-render.js` перед `ar.js`.
+
+**4. ar-render.js — полная переработка (WebGL + Canvas2D overlay)**
+- **Удалено:** `projectPseudo3D()`, `drawOverview()`, `drawFocusMode()`, `drawOrbitLine()`, `shadowBlur` для маркеров.
+- **Сохранено:** `projectReal3D()` (JS, для маркеров + fallback), `drawSatelliteIcon()`, `hitTest()`, `drawDriftWarning()`.
+- **WebGL рендерер:**
+  - Vertex shader: `a_azEl` (vec2) → единичный вектор → `u_orientation * world` → перспективное деление → NDC. Точки за камерой (`cz <= 0.01`) выносятся за clip.
+  - Fragment shader: `u_color` + `u_alpha` для двухпроходной отрисовки (glow + core).
+  - VBO: единый `Float32Array` на все траектории (до 30×130 точек). Обновляется через `bufferSubData()`.
+  - `drawGLOrbits()`: для каждого сегмента — 2 прохода `gl.drawArrays(LINE_STRIP)` с разной alpha.
+  - В фокус-режиме рисуется только линия выбранного спутника.
+- **Canvas2D overlay:** `drawOverlay()` — маркеры через `drawSatelliteIcon()`, подписи с text-shadow (без shadowBlur glow), hit-тест.
+- **Fallback:** если `getContext('webgl')` === null → `drawOrbitLineFallback()` на Canvas2D через `projectReal3D()`.
+- **Новый API:** `init(canvasGL, canvas2D)`, `updateTrajectories(allTrajectories)`, `draw(params)`, `destroy()`.
+
+**5. ar.js — рефакторинг**
+- **Удалено:** `computeOverviewTrajectories()`, `computeHighDensityTrajectory()`, `computeFocusedTrajectoryNow()`, `getOrbitalPeriodMin()`, переменные `focusedTrajectory` и `overviewTrajectories`.
+- **Добавлено:**
+  - `allTrajectories = {}` — единое хранилище траекторий.
+  - `prevPositions = {}`, `currentPositions = {}` — для линейной интерполяции.
+  - `requestWorkerTrajectories()` — вызов `SatContactTle.requestArTrajectories()`, обновление `allTrajectories` и WebGL-буферов.
+  - `startTrajectoryTimer()` / `stopTrajectoryTimer()` — таймер ~1.3 с.
+  - `interpolateSatellites()` — линейная интерполяция az/el между тиками slowLoop (1 Гц) для плавного движения в renderLoop (30 FPS).
+  - Throttle в `renderLoop()`: `RENDER_INTERVAL_MS = 33` (~30 FPS) вместо 60 FPS.
+- **Рефакторинг:**
+  - `slowLoop()`: только `computeSatellite() × N` для позиций + сохранение prev/current. Никаких вычислений траекторий.
+  - `renderLoop()`: интерполяция → единый `renderer.draw()` с `allTrajectories` + `orientationMatrix`.
+  - `startRendering()`: `init(elCanvasGL, elCanvas)` — два canvas.
+  - `setFocus()`: убран вызов `computeFocusedTrajectoryNow()`.
+  - `onShowAllClick()`: сброс `allTrajectories`, `prevPositions`, `currentPositions` + принудительный запрос Worker.
+  - `cleanupAr()`: `stopTrajectoryTimer()` + сброс новых переменных.
+  - `cacheDom()`: добавлен `elCanvasGL`.
+
+**Трёхтактная архитектура (реализована):**
+- ТАКТ 1 (30 FPS): WebGL `drawGLOrbits()` + Canvas2D `drawOverlay()` с интерполированными позициями.
+- ТАКТ 2 (1 Гц): `slowLoop()` — `computeSatellite() × N`, prev/current для интерполяции.
+- ТАКТ 3 (~1.3 с): `requestWorkerTrajectories()` → Worker → `AR_TRAJECTORIES_READY` → `updateTrajectories()` → VBO.
+
+**Итог:**
+- Псевдо-3D полностью удалён.
+- Единая проекция Real 3D для всех спутников (обзор и фокус).
+- Орбитные линии рисуются на GPU через WebGL (vertex/fragment shader).
+- Маркеры и текст — Canvas2D overlay (переиспользуют `drawSatelliteIcon`).
+- Траектории вычисляются в Web Worker (CALCULATE_AR_TRAJECTORIES).
+- Линейная интерполяция обеспечивает плавное движение LEO между тиками.
+- State machine overview/focus сохранена для UI-поведения.
+- Fallback на Canvas2D при отсутствии WebGL.
