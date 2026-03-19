@@ -57,6 +57,7 @@
   /* ====== Циклы ====== */
   let slowLoopId = null;
   let rafId = null;
+  let renderingStarted = false;
 
   /* ====== Данные из slowLoop ====== */
   let visibleSatellites = [];       // [{ noradId, azimuth, elevation, distance, height }]
@@ -403,6 +404,23 @@
     }
   }
 
+  function waitForGps(timeoutMs) {
+    return new Promise(function (resolve) {
+      if (gpsCoords && gpsQuality !== 'searching') { resolve(true); return; }
+      var checkId = setInterval(function () {
+        if (gpsCoords && gpsQuality !== 'searching') {
+          clearInterval(checkId);
+          clearTimeout(failId);
+          resolve(true);
+        }
+      }, 200);
+      var failId = setTimeout(function () {
+        clearInterval(checkId);
+        resolve(false);
+      }, timeoutMs || 15000);
+    });
+  }
+
   /* ==========================================================================
      Аудио-прицел (Web Audio API)
      ========================================================================== */
@@ -488,6 +506,10 @@
 
     lastCalibrationTime = Date.now();
     driftPaused = false;
+
+    if (!renderingStarted) {
+      startRendering();
+    }
   }
 
   /* ==========================================================================
@@ -497,10 +519,26 @@
     if (noradId) {
       state = 'focus';
       focusedNoradId = noradId;
+      computeFocusedTrajectoryNow();
     } else {
       state = 'overview';
       focusedNoradId = null;
+      focusedTrajectory = [];
     }
+  }
+
+  function computeFocusedTrajectoryNow() {
+    if (!focusedNoradId || !gpsCoords) return;
+    var tleCache = window.SatContactTle ? window.SatContactTle.getCache() : null;
+    if (!tleCache) return;
+    var tleData = tleCache.get(focusedNoradId);
+    if (!tleData) return;
+    var observer = {
+      latitude: gpsCoords.latitude,
+      longitude: gpsCoords.longitude,
+      altitude: gpsCoords.altitude || 0
+    };
+    focusedTrajectory = computeHighDensityTrajectory(tleData, observer, new Date());
   }
 
   function onCanvasClick(evt) {
@@ -529,7 +567,9 @@
   function slowLoop() {
     if (!active) return;
 
-    updateDriftIndicator();
+    if (renderingStarted) {
+      updateDriftIndicator();
+    }
     updateHud();
 
     if (!gpsCoords || gpsQuality === 'searching') return;
@@ -758,6 +798,18 @@
     elFallbackBack = document.getElementById('arFallbackBack');
   }
 
+  function startRendering() {
+    if (renderingStarted) return;
+    renderingStarted = true;
+
+    if (window.SatContactArRender) {
+      window.SatContactArRender.init(elCanvas);
+    }
+
+    slowLoop();
+    rafId = requestAnimationFrame(renderLoop);
+  }
+
   async function initAr(options) {
     cacheDom();
     active = true;
@@ -766,7 +818,8 @@
     calibrationDelta = 0;
     magneticDeclination = 0;
     lastCalibrationTime = 0;
-    driftPaused = true;
+    driftPaused = false;
+    renderingStarted = false;
     soundEnabled = false;
     visibleSatellites = [];
     focusedTrajectory = [];
@@ -793,19 +846,26 @@
 
     bindUi();
 
-    await window.SatContactTle.loadTle();
+    // === ФАЗА 1: Параллельный запуск железа + загрузка TLE ===
     startGps();
-    await startCamera();
-    await startSensors();
+    await Promise.all([
+      window.SatContactTle.loadTle(),
+      startCamera(),
+      startSensors()
+    ]);
+
     initAudio();
 
-    if (window.SatContactArRender) {
-      window.SatContactArRender.init(elCanvas);
-    }
-
+    // === ФАЗА 2: Вычисление данных + ожидание калибровки ===
+    // slowLoop считает позиции спутников и обновляет HUD.
+    // Рендеринг НЕ запущен — пользователь видит камеру и калибрует.
     slowLoopId = setInterval(slowLoop, SLOW_LOOP_MS);
     slowLoop();
-    rafId = requestAnimationFrame(renderLoop);
+
+    await waitForGps(15000);
+    slowLoop();
+
+    // === ФАЗА 3 запускается из performCalibration() ===
   }
 
   function cleanupAr() {
@@ -825,6 +885,7 @@
 
     state = 'overview';
     focusedNoradId = null;
+    renderingStarted = false;
     visibleSatellites = [];
     focusedTrajectory = [];
     overviewTrajectories = {};

@@ -208,13 +208,6 @@
 
     lastMarkerPositions = [];
 
-    var focSat = null;
-    var focIdx = 0;
-    for (var i = 0; i < sats.length; i++) {
-      if (sats[i].noradId === fid) { focSat = sats[i]; focIdx = i; break; }
-    }
-    if (!focSat) return;
-
     function proj(az, el) {
       return projectReal3D(az, el, om, fw, fv, width, height);
     }
@@ -225,15 +218,23 @@
 
     var usedProj = isOrientationMatrixValid(om) ? proj : projFallback;
 
+    var focSat = null;
+    var focIdx = 0;
+    for (var i = 0; i < sats.length; i++) {
+      if (sats[i].noradId === fid) { focSat = sats[i]; focIdx = i; break; }
+    }
+
     if (traj && traj.length > 1) {
       var pal = PALETTE[focIdx % PALETTE.length] || PALETTE[0];
       drawOrbitLine(traj, usedProj, pal.orbit, ORBIT_LINE_WIDTH_FOCUS);
     }
 
-    var sp = usedProj(focSat.azimuth, focSat.elevation);
-    if (sp.visible) {
-      drawMarker(sp.x, sp.y, focSat, focIdx, true);
-      lastMarkerPositions.push({ noradId: focSat.noradId, x: sp.x, y: sp.y });
+    if (focSat) {
+      var sp = usedProj(focSat.azimuth, focSat.elevation);
+      if (sp.visible) {
+        drawMarker(sp.x, sp.y, focSat, focIdx, true);
+        lastMarkerPositions.push({ noradId: focSat.noradId, x: sp.x, y: sp.y });
+      }
     }
   }
 
