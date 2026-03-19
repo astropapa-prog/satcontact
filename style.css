@@ -1252,7 +1252,7 @@ body {
   padding-bottom: calc(10px + var(--safe-bottom));
   background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 1.03rem;
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;

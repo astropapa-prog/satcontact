@@ -527,7 +527,12 @@
      Медленный цикл (1 Hz): пересчёт позиций спутников
      ========================================================================== */
   function slowLoop() {
-    if (!active || !gpsCoords || gpsQuality === 'searching') return;
+    if (!active) return;
+
+    updateDriftIndicator();
+    updateHud();
+
+    if (!gpsCoords || gpsQuality === 'searching') return;
 
     var tleCache = window.SatContactTle ? window.SatContactTle.getCache() : null;
     if (!tleCache) return;
@@ -568,9 +573,6 @@
         focusedTrajectory = computeHighDensityTrajectory(ftleData, observer, now);
       }
     }
-
-    updateDriftIndicator();
-    updateHud();
   }
 
   function computeOverviewTrajectories(tleCache, observer, now) {
@@ -665,7 +667,7 @@
     if (gpsQuality === 'excellent') { statusIcon = '\uD83D\uDFE2'; statusText = 'ОТЛИЧНО'; }
     else if (gpsQuality === 'moderate') { statusIcon = '\uD83D\uDFE1'; statusText = 'СРЕДНЕ'; }
     else { statusIcon = '\uD83D\uDD34'; statusText = 'ПОИСК...'; }
-    elGpsStatus.textContent = statusIcon + ' ' + statusText;
+    elGpsStatus.textContent = 'GPS: ' + statusIcon + ' ' + statusText;
 
     var cam = getCameraAzEl();
     elCamAz.textContent = 'АЗ: ' + cam.azimuth.toFixed(0) + '\u00B0';
@@ -683,7 +685,31 @@
   }
 
   function onBackClick() { if (window.closeArView) window.closeArView(); }
-  function onShowAllClick() { if (state === 'focus') setFocus(null); }
+  function onShowAllClick() {
+    var filteredEntries = typeof window.getSatContactFilteredEntries === 'function'
+      ? window.getSatContactFilteredEntries()
+      : [];
+    var idSet = {};
+    var nameMap = {};
+    for (var i = 0; i < filteredEntries.length; i++) {
+      var entry = filteredEntries[i];
+      var name = (entry && entry.cleanName) || '';
+      var ids = (entry && entry.noradIds) || [];
+      for (var j = 0; j < ids.length; j++) {
+        var key = String(ids[j]);
+        if (key) {
+          idSet[key] = true;
+          if (!nameMap[key]) nameMap[key] = name || ('NORAD ' + key);
+        }
+      }
+    }
+    var allIds = Object.keys(idSet);
+    if (!allIds.length) return;
+    currentNoradIds = allIds;
+    currentNoradIdToName = nameMap;
+    setFocus(null);
+    slowLoop();
+  }
   function onSoundToggleClick() {
     soundEnabled = !soundEnabled;
     if (elSoundToggle) {
@@ -739,8 +765,8 @@
     focusedNoradId = null;
     calibrationDelta = 0;
     magneticDeclination = 0;
-    lastCalibrationTime = Date.now();
-    driftPaused = false;
+    lastCalibrationTime = 0;
+    driftPaused = true;
     soundEnabled = false;
     visibleSatellites = [];
     focusedTrajectory = [];
@@ -754,6 +780,7 @@
 
     if (currentNoradIds.length === 1) {
       setFocus(currentNoradIds[0]);
+      soundEnabled = true;
     }
 
     if (!checkArCapabilities()) {
