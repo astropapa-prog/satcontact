@@ -111,6 +111,46 @@
         </div>
       </div>
     </div>
+
+    <!-- Модуль 3: AR-трекер (SPA-переход) -->
+    <div id="arView" class="ar-view" hidden>
+      <video id="arVideo" class="ar-view__video" autoplay playsinline muted></video>
+      <canvas id="arCanvas" class="ar-view__canvas"></canvas>
+
+      <header class="ar-view__header">
+        <button type="button" id="arBack" class="ar-view__back" aria-label="Назад">&#x2B05; Назад</button>
+        <button type="button" id="arShowAll" class="ar-view__all">ВСЕ</button>
+      </header>
+
+      <div id="arCrosshair" class="ar-view__crosshair"></div>
+
+      <div class="ar-view__panel-left">
+        <select id="arCalibSource" class="ar-view__calib-select">
+          <option value="sun">&#9728;&#65039; Солнце</option>
+          <option value="moon">&#127769; Луна</option>
+          <option value="polaris">&#11088; Полярная</option>
+        </select>
+        <button type="button" id="arCalibBtn" class="ar-view__calib-btn">Калибровать</button>
+      </div>
+
+      <div class="ar-view__panel-right">
+        <button type="button" id="arSoundToggle" class="ar-view__sound-btn" aria-label="Звук">&#128264;</button>
+        <div id="arDriftIndicator" class="ar-view__drift" title="Дрейф гироскопа"></div>
+      </div>
+
+      <div id="arHud" class="ar-view__hud">
+        <span id="arGpsStatus">&#128308; ПОИСК...</span>
+        <span id="arCameraAz">АЗ: ---°</span>
+        <span id="arCameraEl">ЭЛ: ---°</span>
+        <span id="arCameraDlg">ДЛГ: ---°</span>
+      </div>
+
+      <div id="arDesktopFallback" class="ar-view__fallback" hidden>
+        <div class="ar-view__fallback-icon">&#128225;</div>
+        <p>AR-режим доступен только на мобильных устройствах с камерой и гироскопом</p>
+        <button type="button" id="arFallbackBack" class="ar-view__fallback-btn">Назад</button>
+      </div>
+    </div>
   </div>
 
   <script src="utils.js"></script>
@@ -120,6 +160,8 @@
   <script src="tle.js"></script>
   <script src="map.js"></script>
   <script src="map-render.js"></script>
+  <script src="ar.js"></script>
+  <script src="ar-render.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -206,14 +206,69 @@ satcontact/
 
 ---
 
-## 6. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
+## 6. МОДУЛЬ 3 — AR-трекер (реализовано)
 
-- **Модуль 3:** AR-трекер (камера, DeviceOrientation, кнопка «НАВЕСТИСЬ»).
+### 6.1 Файлы
+- **ar.js** — Оркестратор: камера, сенсоры (гироскоп + компас + WMM), GPS (только точный), состояние (overview/focus), калибровка (Солнце/Луна/Полярная), аудио-прицел (Web Audio API), таймер дрейфа.
+- **ar-render.js** — Canvas-рендерер: pseudo-3D проекция (overview), real-3D проекция (focus), маркеры спутников, орбитные линии, HUD-оверлей.
+
+### 6.2 Точка входа
+- Кнопка «НАВЕСТИСЬ» (`data-action="track"`) в карточке спутника → `openArView()` в `app.js` → `window.initAr(options)`.
+
+### 6.3 Гибридный рендеринг
+- **Разделение потоков:** slowLoop (1 Hz, setInterval) — математика SGP4; renderLoop (RAF ~60 Hz) — отрисовка синхронно с гироскопом.
+- **Режим обзора (Pseudo-3D):** все спутники с elevation > 0, линейная проекция дельты AZ/EL на экран, предрассчитанные траектории ±30 мин (шаг 2 мин).
+- **Режим фокуса (Real-3D):** один спутник, полная 3D-трансформация через матрицу ориентации устройства, высокоплотная траектория ±20 мин (шаг 10 сек).
+
+### 6.4 Сенсоры
+- **DeviceOrientation:** `deviceorientationabsolute` (предпочтительно) или `deviceorientation`. iOS: `requestPermission()`.
+- **WMM-2025:** встроенная упрощённая модель (сферические гармоники до степени 5, ~20 коэффициентов), `getMagneticDeclination(lat, lon, altKm)` → поправка к компасу.
+- **GPS:** только `enableHighAccuracy`, `watchPosition`. Индикация качества: excellent (<10м), moderate (10-50м), searching (>50м).
+
+### 6.5 Калибровка
+- По Солнцу, Луне или Полярной звезде (выпадающий список).
+- Астрономические формулы (Meeus): RA/Dec → AZ/EL через LST (Local Sidereal Time).
+- Результат: `calibrationDelta` = trueAz - sensorAz, применяется ко всем показаниям.
+
+### 6.6 Таймер дрейфа
+- Линейная модель: 2°/мин. Порог: 5° → пауза отображения траекторий, предупреждение «Требуется калибровка».
+- Визуальный индикатор: вертикальная полоска, цвет от зелёного (hsl 120) до красного (hsl 0).
+
+### 6.7 Аудио-прицел
+- Web Audio API: OscillatorNode (sine), 20 Hz (попадание) → 900 Hz (далеко).
+- Активен только в режиме фокуса. Кнопка вкл/выкл.
+
+### 6.8 UI (AR-view)
+- Видео камеры (getUserMedia, facingMode: environment) + Canvas overlay.
+- Верхняя панель: градиент, кнопки «Назад» и «ВСЕ».
+- Перекрестие: CSS-кружок 60px с крестом.
+- Левая панель: выбор источника калибровки + кнопка «Калибровать».
+- Правая панель: кнопка звука + индикатор дрейфа.
+- Нижний HUD: моноширинная строка `[GPS] АЗ: X° ЭЛ: Y° ДЛГ: Z°`.
+- Заглушка для десктопа: «AR-режим доступен только на мобильных устройствах».
+
+### 6.9 API
+- `window.initAr({ noradIds, satelliteName, noradIdToName })` — запуск AR.
+- `window.cleanupAr()` — полная очистка (камера, сенсоры, GPS, аудио, циклы).
+- `window.closeArView()` — SPA-переход обратно к списку (app.js).
+- `window.SatContactAr` — доступ к состоянию (getState, getFocusedId, getSensorState, getGpsQuality, getCameraAzEl, getFov).
+- `window.SatContactArRender` — рендерер (init, destroy, draw, drawDriftWarning, hitTest).
+- `window.SatContactOrbitPalette` — экспорт палитры из map-render.js.
+
+### 6.10 Порядок скриптов
+```
+utils.js → satellite.min.js → d3.min.js → topojson.min.js → tle.js → map.js → map-render.js → ar.js → ar-render.js → app.js
+```
+
+---
+
+## 7. ЧТО НЕ РЕАЛИЗОВАНО (следующие этапы)
+
 - **PWA:** manifest.json, Service Worker, Cache Storage, IndexedDB.
 
 ---
 
-## 7. ИСТОРИЯ СЕССИЙ (для контекста при продолжении)
+## 8. ИСТОРИЯ СЕССИЙ (для контекста при продолжении)
 
 ### Модуль 1
 Каркас → группы, фильтры, поиск по частоте → редизайн шапки (тумблеры, чипсы) → мобильные фиксы (overscroll, forceBlur, chip--blurred) → брендинг SatContact, карточка 4 зоны, множественные NORAD ID.

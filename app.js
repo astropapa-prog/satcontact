@@ -12,7 +12,7 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
-  let header, main, mapView, mapBack, mapTitle, mapLoading, mapHud, mapFreqRibbon;
+  let header, main, mapView, mapBack, mapTitle, mapLoading, mapHud, mapFreqRibbon, arView;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -495,8 +495,40 @@
     hideMapFreqRibbon();
   }
 
+  function openArView(noradIds, satelliteName) {
+    if (!arView || !header || !main) return;
+    if (noradIds.length === 0) return;
+
+    header.classList.add('hidden');
+    main.classList.add('hidden');
+    if (mapView) mapView.hidden = true;
+    arView.hidden = false;
+    hideMapFreqRibbon();
+
+    var noradIdToName = {};
+    filteredEntries.forEach(function (e) {
+      (e.noradIds || []).forEach(function (nid) {
+        if (!noradIdToName[nid]) noradIdToName[nid] = e.cleanName || e.name || nid;
+      });
+    });
+
+    if (typeof window.initAr === 'function') {
+      window.initAr({ noradIds: noradIds, satelliteName: satelliteName, noradIdToName: noradIdToName });
+    }
+  }
+
+  function closeArView() {
+    if (!arView || !header || !main) return;
+    arView.hidden = true;
+    header.classList.remove('hidden');
+    main.classList.remove('hidden');
+    if (typeof window.cleanupAr === 'function') {
+      window.cleanupAr();
+    }
+  }
+
   /**
-   * Привязка кнопок «посмотреть на карте» и «навестись» (заготовка для модулей 2–3)
+   * Привязка кнопок «посмотреть на карте» и «навестись»
    */
   function bindCardActionButtons() {
     if (!cardList) return;
@@ -510,7 +542,7 @@
         if (action === 'map') {
           openMapView(noradIds, satelliteName);
         } else if (action === 'track') {
-          console.log('Навестись:', noradIds);
+          openArView(noradIds, satelliteName);
         }
       });
     });
@@ -834,6 +866,7 @@
     mapLoading = document.getElementById('mapLoading');
     mapHud = document.getElementById('mapHud');
     mapFreqRibbon = document.getElementById('mapFreqRibbon');
+    arView = document.getElementById('arView');
 
     bindMapButtons();
     bindMapFocusRibbon();
@@ -844,6 +877,8 @@
   window.getSatContactFilteredEntries = function () {
     return filteredEntries.slice();
   };
+
+  window.closeArView = closeArView;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

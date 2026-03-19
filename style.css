@@ -985,3 +985,325 @@ body {
     flex-basis: 70%;
   }
 }
+
+/* ============================================
+   Модуль 3: AR-трекер
+   ============================================ */
+.ar-view {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: #000;
+  overflow: hidden;
+}
+
+.ar-view[hidden] {
+  display: none !important;
+}
+
+.ar-view__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.ar-view__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* ---------- Верхняя панель ---------- */
+.ar-view__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  padding-top: calc(10px + var(--safe-top));
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent);
+  pointer-events: none;
+}
+
+.ar-view__header > * {
+  pointer-events: auto;
+}
+
+.ar-view__back {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.ar-view__back:hover,
+.ar-view__back:focus {
+  background: rgba(0, 0, 0, 0.5);
+  outline: none;
+}
+
+.ar-view__all {
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(82, 136, 193, 0.6);
+  border: 1px solid rgba(82, 136, 193, 0.4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.ar-view__all:hover,
+.ar-view__all:focus {
+  background: rgba(82, 136, 193, 0.8);
+  outline: none;
+}
+
+.ar-view__all.active {
+  background: rgba(82, 136, 193, 0.35);
+  border-color: var(--accent);
+}
+
+/* ---------- Перекрестие ---------- */
+.ar-view__crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+.ar-view__crosshair::before,
+.ar-view__crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.ar-view__crosshair::before {
+  top: 50%;
+  left: -8px;
+  right: -8px;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.ar-view__crosshair::after {
+  left: 50%;
+  top: -8px;
+  bottom: -8px;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
+/* ---------- Левая панель: калибровка ---------- */
+.ar-view__panel-left {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.ar-view__calib-select {
+  padding: 6px 8px;
+  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  appearance: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 12 12'%3E%3Cpath fill='%23ccc' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 20px;
+}
+
+.ar-view__calib-btn {
+  padding: 6px 10px;
+  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.ar-view__calib-btn:hover,
+.ar-view__calib-btn:focus {
+  background: rgba(82, 136, 193, 0.4);
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* ---------- Правая панель: звук + дрейф ---------- */
+.ar-view__panel-right {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.ar-view__sound-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ar-view__sound-btn:hover,
+.ar-view__sound-btn:focus {
+  background: rgba(82, 136, 193, 0.4);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ar-view__sound-btn.muted {
+  opacity: 0.5;
+}
+
+.ar-view__drift {
+  width: 6px;
+  height: 80px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  position: relative;
+}
+
+.ar-view__drift::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--drift-fill, 100%);
+  background: hsl(var(--drift-hue, 120), 80%, 50%);
+  border-radius: 2px;
+  transition: height 0.3s ease, background 0.3s ease;
+}
+
+/* ---------- Нижний HUD ---------- */
+.ar-view__hud {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 12px;
+  padding-bottom: calc(10px + var(--safe-bottom));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------- Заглушка для десктопа ---------- */
+.ar-view__fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: rgba(28, 36, 45, 0.98);
+  text-align: center;
+  padding: 24px;
+}
+
+.ar-view__fallback[hidden] {
+  display: none !important;
+}
+
+.ar-view__fallback-icon {
+  font-size: 3rem;
+  opacity: 0.6;
+}
+
+.ar-view__fallback p {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.ar-view__fallback-btn {
+  padding: 12px 28px;
+  font-size: 0.9375rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ar-view__fallback-btn:hover,
+.ar-view__fallback-btn:focus {
+  background: var(--accent-hover);
+  outline: none;
+}

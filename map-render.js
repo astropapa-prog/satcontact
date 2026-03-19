@@ -123,6 +123,8 @@
     { orbit: 'rgba(142, 68, 173, 0.75)', marker: '#8e44ad' }     // пурпурный
   ];
 
+  window.SatContactOrbitPalette = ORBIT_PALETTE;
+
   let canvas, ctx, projection, path;
   let resizeObserver = null;
   let topology = null;
