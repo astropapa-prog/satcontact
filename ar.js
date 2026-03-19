@@ -615,14 +615,26 @@
     }
   }
 
+  function getOrbitalPeriodMin(tleData) {
+    if (tleData && tleData.satrec && tleData.satrec.no > 0) {
+      return (2 * Math.PI) / tleData.satrec.no;
+    }
+    return 90;
+  }
+
   function computeOverviewTrajectories(tleCache, observer, now) {
     var newTrajs = {};
     for (var i = 0; i < visibleSatellites.length; i++) {
       var sat = visibleSatellites[i];
       var tleData = tleCache.get(sat.noradId);
       if (!tleData) continue;
+
+      var periodMin = getOrbitalPeriodMin(tleData);
+      var halfWindowMin = Math.min(Math.round(periodMin / 2), 720);
+      var stepMin = Math.max(1, Math.round((2 * halfWindowMin) / 120));
+
       var points = [];
-      for (var t = -30; t <= 30; t += 2) {
+      for (var t = -halfWindowMin; t <= halfWindowMin; t += stepMin) {
         var d = new Date(now.getTime() + t * 60000);
         var p = window.SatContactTle.computeSatellite(tleData, observer, d);
         if (p && p.elevation > -5) {
@@ -635,8 +647,12 @@
   }
 
   function computeHighDensityTrajectory(tleData, observer, now) {
+    var periodMin = getOrbitalPeriodMin(tleData);
+    var halfWindowSec = Math.min(Math.round(periodMin / 2) * 60, 12 * 3600);
+    var step = Math.max(10, Math.round((2 * halfWindowSec) / 300));
+
     var points = [];
-    for (var t = -20 * 60; t <= 20 * 60; t += 10) {
+    for (var t = -halfWindowSec; t <= halfWindowSec; t += step) {
       var d = new Date(now.getTime() + t * 1000);
       var p = window.SatContactTle.computeSatellite(tleData, observer, d);
       if (p && p.elevation > -5) {
