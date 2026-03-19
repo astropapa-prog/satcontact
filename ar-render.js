@@ -49,21 +49,23 @@
     var azR = satAz * DEG;
     var elR = satEl * DEG;
     var cosEl = Math.cos(elR);
-    var vx = cosEl * Math.sin(azR);
-    var vy = Math.sin(elR);
-    var vz = cosEl * Math.cos(azR);
+
+    var ex = cosEl * Math.sin(azR);
+    var ey = cosEl * Math.cos(azR);
+    var ez = Math.sin(elR);
 
     var m = orientationMatrix;
-    var cx = m[0] * vx + m[1] * vy + m[2] * vz;
-    var cy = m[3] * vx + m[4] * vy + m[5] * vz;
-    var cz = m[6] * vx + m[7] * vy + m[8] * vz;
+    var dx = m[0] * ex + m[3] * ey + m[6] * ez;
+    var dy = m[1] * ex + m[4] * ey + m[7] * ez;
+    var dz = m[2] * ex + m[5] * ey + m[8] * ez;
 
+    var cz = -dz;
     if (cz <= 0.01) return { x: 0, y: 0, visible: false };
 
     var focalX = (w / 2) / Math.tan((fovH / 2) * DEG);
     var focalY = (h / 2) / Math.tan((fovV / 2) * DEG);
-    var x = w / 2 + (cx / cz) * focalX;
-    var y = h / 2 - (cy / cz) * focalY;
+    var x = w / 2 + (dx / cz) * focalX;
+    var y = h / 2 - (dy / cz) * focalY;
     var visible = x > -100 && x < w + 100 && y > -100 && y < h + 100;
     return { x: x, y: y, visible: visible };
   }

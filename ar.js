@@ -329,7 +329,7 @@
     sensorState.timestamp = Date.now();
 
     computeOrientationMatrix(
-      sensorState.alpha + calibrationDelta + magneticDeclination,
+      sensorState.alpha - calibrationDelta - magneticDeclination,
       sensorState.beta,
       sensorState.gamma
     );
