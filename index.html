@@ -119,12 +119,19 @@
 
       <header class="ar-view__header">
         <button type="button" id="arBack" class="ar-view__back" aria-label="Назад">&#x2B05; Назад</button>
+        <div id="arSensorPanel" class="ar-view__sensors">
+          <span id="arSensorGps" class="ar-view__sensor" title="GPS">&#128205;</span>
+          <span id="arSensorCamera" class="ar-view__sensor" title="Камера">&#128247;</span>
+          <span id="arSensorCompass" class="ar-view__sensor" title="Компас">&#129517;</span>
+          <span id="arSensorGyro" class="ar-view__sensor" title="Гироскоп">&#9878;&#65039;</span>
+        </div>
         <button type="button" id="arShowAll" class="ar-view__all">ВСЕ</button>
       </header>
 
       <div id="arCrosshair" class="ar-view__crosshair"></div>
 
       <div class="ar-view__panel-left">
+        <button type="button" id="arCompassToggle" class="ar-view__compass-toggle" title="Компас вкл/выкл">&#129517; Компас</button>
         <select id="arCalibSource" class="ar-view__calib-select">
           <option value="sun">&#9728;&#65039; Солнце</option>
           <option value="moon">&#127769; Луна</option>
@@ -139,10 +146,15 @@
       </div>
 
       <div id="arHud" class="ar-view__hud">
-        <span id="arGpsStatus">&#128308; ПОИСК...</span>
-        <span id="arCameraAz">АЗ: ---°</span>
-        <span id="arCameraEl">ЭЛ: ---°</span>
-        <span id="arCameraDlg">ДЛГ: ---°</span>
+        <div class="ar-view__hud-row">
+          <span id="arGpsStatus">&#128308; ПОИСК...</span>
+          <span id="arCoords">---</span>
+        </div>
+        <div id="arTelemetryRow" class="ar-view__hud-row ar-view__hud-telemetry" hidden>
+          <span id="arTelAz">АЗ: ---°</span>
+          <span id="arTelEl">ЭЛ: ---°</span>
+          <span id="arTelDist">ДИСТ: --- км</span>
+        </div>
       </div>
 
       <div id="arDesktopFallback" class="ar-view__fallback" hidden>

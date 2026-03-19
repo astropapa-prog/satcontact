@@ -1084,7 +1084,41 @@ body {
   border-color: var(--accent);
 }
 
-/* ---------- Перекрестие ---------- */
+/* ---------- Панель статуса сенсоров ---------- */
+.ar-view__sensors {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
+}
+
+.ar-view__sensor {
+  font-size: 0.8125rem;
+  line-height: 1;
+  opacity: 0.4;
+  filter: grayscale(1);
+  transition: opacity 0.3s, filter 0.3s;
+}
+
+.ar-view__sensor.ok {
+  opacity: 1;
+  filter: none;
+}
+
+.ar-view__sensor.warn {
+  opacity: 0.8;
+  filter: hue-rotate(40deg) saturate(2);
+}
+
+.ar-view__sensor.off {
+  opacity: 0.35;
+  filter: grayscale(1) brightness(0.6);
+}
+
+/* ---------- Перекрестие (только в режиме слежения) ---------- */
 .ar-view__crosshair {
   position: absolute;
   top: 50%;
@@ -1097,6 +1131,11 @@ body {
   z-index: 5;
   pointer-events: none;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+  display: none;
+}
+
+.ar-view__crosshair.visible {
+  display: block;
 }
 
 .ar-view__crosshair::before,
@@ -1133,6 +1172,33 @@ body {
   flex-direction: column;
   gap: 8px;
   pointer-events: auto;
+}
+
+.ar-view__compass-toggle {
+  padding: 6px 10px;
+  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(46, 204, 113, 0.35);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ar-view__compass-toggle:hover,
+.ar-view__compass-toggle:focus {
+  background: rgba(46, 204, 113, 0.5);
+  outline: none;
+}
+
+.ar-view__compass-toggle.disabled {
+  background: rgba(231, 76, 60, 0.35);
+  border-color: rgba(231, 76, 60, 0.4);
+  text-decoration: line-through;
+  opacity: 0.7;
 }
 
 .ar-view__calib-select {
@@ -1245,18 +1311,28 @@ body {
   right: 0;
   z-index: 10;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  gap: 4px;
   padding: 10px 12px;
   padding-bottom: calc(10px + var(--safe-bottom));
   background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
   font-family: var(--font-mono);
-  font-size: 1.03rem;
+  font-size: 0.9375rem;
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
   white-space: nowrap;
+}
+
+.ar-view__hud-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ar-view__hud-telemetry[hidden] {
+  display: none !important;
 }
 
 /* ---------- Заглушка для десктопа ---------- */

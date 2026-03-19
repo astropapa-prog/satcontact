@@ -107,7 +107,7 @@
   /* ==========================================================================
      Рисование: маркер + подпись
      ========================================================================== */
-  function drawMarker(x, y, sat, colorIdx, isFocused) {
+  function drawMarker(x, y, sat, colorIdx, isFocused, freqMhz) {
     var pal = PALETTE[colorIdx % PALETTE.length] || PALETTE[0];
     var sz = isFocused ? MARKER_SIZE + 4 : MARKER_SIZE;
 
@@ -118,8 +118,14 @@
     ctx.restore();
 
     var label = sat.name || sat.noradId;
-    var dist = sat.distance ? Math.round(sat.distance) + 'km' : '';
-    var text = label + (dist ? '  (' + dist + ')' : '');
+    var dist = sat.distance ? Math.round(sat.distance) + ' \u043A\u043C' : '';
+    var text;
+    if (isFocused) {
+      var freqStr = freqMhz ? freqMhz + ' MHz' : '';
+      text = '[' + label + ']' + (freqStr ? ' ' + freqStr : '') + (dist ? ' (' + dist + ')' : '');
+    } else {
+      text = label + (dist ? '  (' + dist + ')' : '');
+    }
 
     ctx.font = LABEL_FONT;
     ctx.textAlign = 'left';
@@ -205,6 +211,7 @@
     var fv = params.fovV;
     var camAz = params.cameraAz;
     var camEl = params.cameraEl;
+    var freqMap = params.noradIdToFreq || {};
 
     lastMarkerPositions = [];
 
@@ -232,7 +239,7 @@
     if (focSat) {
       var sp = usedProj(focSat.azimuth, focSat.elevation);
       if (sp.visible) {
-        drawMarker(sp.x, sp.y, focSat, focIdx, true);
+        drawMarker(sp.x, sp.y, focSat, focIdx, true, freqMap[focSat.noradId]);
         lastMarkerPositions.push({ noradId: focSat.noradId, x: sp.x, y: sp.y });
       }
     }

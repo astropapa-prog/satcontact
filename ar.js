@@ -20,8 +20,10 @@
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elBack, elShowAll, elCalibSource, elCalibBtn;
-  let elSoundToggle, elDrift, elHud, elGpsStatus, elCamAz, elCamEl, elCamDlg;
-  let elFallback, elFallbackBack;
+  let elSoundToggle, elDrift, elHud, elGpsStatus, elCoords;
+  let elTelemetryRow, elTelAz, elTelEl, elTelDist;
+  let elFallback, elFallbackBack, elCrosshair, elCompassToggle;
+  let elSensorGps, elSensorCamera, elSensorCompass, elSensorGyro;
 
   /* ====== Состояние ====== */
   let active = false;
@@ -29,6 +31,10 @@
   let focusedNoradId = null;
   let currentNoradIds = [];
   let currentNoradIdToName = {};
+  let initialNoradIds = [];
+  let initialNoradIdToName = {};
+  let currentNoradIdToFreq = {};
+  let showAllActive = false;
   let cameraStream = null;
   let fovH = DEFAULT_FOV_H;
   let fovV = DEFAULT_FOV_V;
@@ -42,7 +48,9 @@
   let sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };
   let orientationMatrix = new Float64Array(9); // 3x3 rotation matrix
   let calibrationDelta = 0;         // azimuth correction in degrees
+  let compassCalibrationDelta = 0;  // compass-specific correction
   let magneticDeclination = 0;
+  let compassDisabled = false;
 
   /* ====== Дрейф ====== */
   let lastCalibrationTime = 0;
@@ -270,8 +278,9 @@
   }
 
   function getCameraAzEl() {
-    const az = ((360 - sensorState.alpha + calibrationDelta + magneticDeclination) % 360 + 360) % 360;
-    const el = Math.max(-90, Math.min(90, sensorState.beta - 90));
+    var decl = compassDisabled ? 0 : magneticDeclination;
+    var az = ((360 - sensorState.alpha + calibrationDelta + decl + compassCalibrationDelta) % 360 + 360) % 360;
+    var el = Math.max(-90, Math.min(90, sensorState.beta - 90));
     return { azimuth: az, elevation: el };
   }
 
@@ -476,10 +485,19 @@
     elDrift.style.setProperty('--drift-hue', hue);
     elDrift.style.setProperty('--drift-fill', Math.round((1 - ratio) * 100) + '%');
 
-    if (error >= MAX_DRIFT_ERROR_DEG && !driftPaused) {
+    var compassAvailable = !compassDisabled && sensorState.absolute;
+    if (error >= MAX_DRIFT_ERROR_DEG && !compassAvailable && !driftPaused) {
       driftPaused = true;
-    } else if (error < MAX_DRIFT_ERROR_DEG && driftPaused) {
+    } else if ((error < MAX_DRIFT_ERROR_DEG || compassAvailable) && driftPaused) {
       driftPaused = false;
+    }
+
+    if (elDrift) {
+      if (error >= MAX_DRIFT_ERROR_DEG && compassAvailable) {
+        elDrift.title = '\u0420\u0435\u0436\u0438\u043C: \u043A\u043E\u043C\u043F\u0430\u0441';
+      } else {
+        elDrift.title = '\u0414\u0440\u0435\u0439\u0444 \u0433\u0438\u0440\u043E\u0441\u043A\u043E\u043F\u0430';
+      }
     }
   }
 
@@ -499,10 +517,18 @@
 
     if (!truePos) return;
 
-    var sensorAz = ((360 - sensorState.alpha + magneticDeclination) % 360 + 360) % 360;
+    var rawAlpha = sensorState.alpha;
+    var sensorAz = ((360 - rawAlpha + magneticDeclination) % 360 + 360) % 360;
     calibrationDelta = truePos.azimuth - sensorAz;
     if (calibrationDelta > 180) calibrationDelta -= 360;
     if (calibrationDelta < -180) calibrationDelta += 360;
+
+    if (!compassDisabled && sensorState.absolute) {
+      var rawCompassAz = ((360 - rawAlpha) % 360 + 360) % 360;
+      compassCalibrationDelta = truePos.azimuth - rawCompassAz - magneticDeclination;
+      if (compassCalibrationDelta > 180) compassCalibrationDelta -= 360;
+      if (compassCalibrationDelta < -180) compassCalibrationDelta += 360;
+    }
 
     lastCalibrationTime = Date.now();
     driftPaused = false;
@@ -525,6 +551,10 @@
       focusedNoradId = null;
       focusedTrajectory = [];
     }
+    if (elCrosshair) elCrosshair.classList.toggle('visible', state === 'focus');
+    document.dispatchEvent(new CustomEvent('satcontact:ar-focus', {
+      detail: { focusedIds: noradId ? [noradId] : [] }
+    }));
   }
 
   function computeFocusedTrajectoryNow() {
@@ -571,6 +601,7 @@
       updateDriftIndicator();
     }
     updateHud();
+    updateSensorStatus();
 
     if (!gpsCoords || gpsQuality === 'searching') return;
 
@@ -684,6 +715,7 @@
         fovH: fovH,
         fovV: fovV,
         noradIdToName: currentNoradIdToName,
+        noradIdToFreq: currentNoradIdToFreq,
         gpsQuality: gpsQuality,
         driftPaused: driftPaused
       });
@@ -717,20 +749,54 @@
      HUD
      ========================================================================== */
   function updateHud() {
-    if (!elGpsStatus || !elCamAz) return;
+    if (!elGpsStatus) return;
 
     var statusIcon, statusText;
-    if (gpsQuality === 'excellent') { statusIcon = '\uD83D\uDFE2'; statusText = 'ОТЛИЧНО'; }
-    else if (gpsQuality === 'moderate') { statusIcon = '\uD83D\uDFE1'; statusText = 'СРЕДНЕ'; }
+    if (gpsQuality === 'excellent') { statusIcon = '\uD83D\uDFE2'; statusText = 'ТОЧНО'; }
+    else if (gpsQuality === 'moderate') { statusIcon = '\uD83D\uDFE1'; statusText = 'СЛАБО'; }
     else { statusIcon = '\uD83D\uDD34'; statusText = 'ПОИСК...'; }
-    elGpsStatus.textContent = 'GPS: ' + statusIcon + ' ' + statusText;
+    elGpsStatus.textContent = statusIcon + ' ' + statusText;
 
-    var cam = getCameraAzEl();
-    elCamAz.textContent = 'АЗ: ' + cam.azimuth.toFixed(0) + '\u00B0';
-    elCamEl.textContent = 'ЭЛ: ' + cam.elevation.toFixed(0) + '\u00B0';
+    if (elCoords) {
+      if (gpsCoords) {
+        elCoords.textContent = gpsCoords.latitude.toFixed(2) + '\u00B0, ' + gpsCoords.longitude.toFixed(2) + '\u00B0';
+      } else {
+        elCoords.textContent = '---';
+      }
+    }
 
-    var dlg = gpsCoords ? gpsCoords.longitude.toFixed(0) : '---';
-    elCamDlg.textContent = 'ДЛГ: ' + dlg + '\u00B0';
+    var showTel = (state === 'focus' && focusedNoradId);
+    if (elTelemetryRow) elTelemetryRow.hidden = !showTel;
+
+    if (showTel) {
+      var focSat = null;
+      for (var i = 0; i < visibleSatellites.length; i++) {
+        if (visibleSatellites[i].noradId === focusedNoradId) { focSat = visibleSatellites[i]; break; }
+      }
+      if (focSat) {
+        var fmtAz = window.SatContactTle ? window.SatContactTle.formatAzimuth(focSat.azimuth) : focSat.azimuth.toFixed(1) + '\u00B0';
+        var fmtEl = window.SatContactTle ? window.SatContactTle.formatElevation(focSat.elevation) : focSat.elevation.toFixed(1) + '\u00B0';
+        if (elTelAz) elTelAz.textContent = 'АЗ: ' + fmtAz;
+        if (elTelEl) elTelEl.textContent = 'ЭЛ: ' + fmtEl;
+        if (elTelDist) elTelDist.textContent = 'ДИСТ: ' + Math.round(focSat.distance) + ' км';
+      }
+    }
+  }
+
+  function setSensorClass(el, cls) {
+    if (!el) return;
+    el.classList.remove('ok', 'warn', 'off');
+    if (cls) el.classList.add(cls);
+  }
+
+  function updateSensorStatus() {
+    setSensorClass(elSensorGps,
+      gpsQuality === 'excellent' ? 'ok' : gpsQuality === 'moderate' ? 'warn' : 'off');
+    setSensorClass(elSensorCamera, cameraStream ? 'ok' : 'off');
+    var hasCompass = sensorState.absolute && !compassDisabled;
+    setSensorClass(elSensorCompass, compassDisabled ? 'off' : hasCompass ? 'ok' : 'warn');
+    var gyroAlive = sensorState.timestamp && (Date.now() - sensorState.timestamp < 3000);
+    setSensorClass(elSensorGyro, gyroAlive ? 'ok' : 'off');
   }
 
   /* ==========================================================================
@@ -742,27 +808,36 @@
 
   function onBackClick() { if (window.closeArView) window.closeArView(); }
   function onShowAllClick() {
-    var filteredEntries = typeof window.getSatContactFilteredEntries === 'function'
-      ? window.getSatContactFilteredEntries()
-      : [];
-    var idSet = {};
-    var nameMap = {};
-    for (var i = 0; i < filteredEntries.length; i++) {
-      var entry = filteredEntries[i];
-      var name = (entry && entry.cleanName) || '';
-      var ids = (entry && entry.noradIds) || [];
-      for (var j = 0; j < ids.length; j++) {
-        var key = String(ids[j]);
-        if (key) {
-          idSet[key] = true;
-          if (!nameMap[key]) nameMap[key] = name || ('NORAD ' + key);
+    showAllActive = !showAllActive;
+    if (elShowAll) elShowAll.classList.toggle('active', showAllActive);
+
+    if (showAllActive) {
+      var filteredEntries = typeof window.getSatContactFilteredEntries === 'function'
+        ? window.getSatContactFilteredEntries()
+        : [];
+      var idSet = {};
+      var nameMap = {};
+      for (var i = 0; i < filteredEntries.length; i++) {
+        var entry = filteredEntries[i];
+        var name = (entry && entry.cleanName) || '';
+        var ids = (entry && entry.noradIds) || [];
+        for (var j = 0; j < ids.length; j++) {
+          var key = String(ids[j]);
+          if (key) {
+            idSet[key] = true;
+            if (!nameMap[key]) nameMap[key] = name || ('NORAD ' + key);
+          }
         }
       }
+      var allIds = Object.keys(idSet);
+      if (!allIds.length) { showAllActive = false; return; }
+      currentNoradIds = allIds;
+      currentNoradIdToName = nameMap;
+    } else {
+      currentNoradIds = initialNoradIds.slice();
+      currentNoradIdToName = Object.assign({}, initialNoradIdToName);
     }
-    var allIds = Object.keys(idSet);
-    if (!allIds.length) return;
-    currentNoradIds = allIds;
-    currentNoradIdToName = nameMap;
+
     setFocus(null);
     slowLoop();
   }
@@ -775,6 +850,18 @@
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   }
 
+  function onCompassToggleClick() {
+    compassDisabled = !compassDisabled;
+    if (elCompassToggle) {
+      elCompassToggle.classList.toggle('disabled', compassDisabled);
+    }
+    if (compassDisabled) {
+      if (!lastCalibrationTime && renderingStarted) {
+        driftPaused = true;
+      }
+    }
+  }
+
   function bindUi() {
     if (elBack) elBack.addEventListener('click', onBackClick);
     if (elFallbackBack) elFallbackBack.addEventListener('click', onBackClick);
@@ -782,6 +869,7 @@
     if (elCanvas) elCanvas.addEventListener('click', onCanvasClick);
     if (elShowAll) elShowAll.addEventListener('click', onShowAllClick);
     if (elSoundToggle) elSoundToggle.addEventListener('click', onSoundToggleClick);
+    if (elCompassToggle) elCompassToggle.addEventListener('click', onCompassToggleClick);
   }
 
   function unbindUi() {
@@ -791,6 +879,7 @@
     if (elCanvas) elCanvas.removeEventListener('click', onCanvasClick);
     if (elShowAll) elShowAll.removeEventListener('click', onShowAllClick);
     if (elSoundToggle) elSoundToggle.removeEventListener('click', onSoundToggleClick);
+    if (elCompassToggle) elCompassToggle.removeEventListener('click', onCompassToggleClick);
   }
 
   /* ==========================================================================
@@ -807,11 +896,19 @@
     elDrift = document.getElementById('arDriftIndicator');
     elHud = document.getElementById('arHud');
     elGpsStatus = document.getElementById('arGpsStatus');
-    elCamAz = document.getElementById('arCameraAz');
-    elCamEl = document.getElementById('arCameraEl');
-    elCamDlg = document.getElementById('arCameraDlg');
+    elCoords = document.getElementById('arCoords');
+    elTelemetryRow = document.getElementById('arTelemetryRow');
+    elTelAz = document.getElementById('arTelAz');
+    elTelEl = document.getElementById('arTelEl');
+    elTelDist = document.getElementById('arTelDist');
     elFallback = document.getElementById('arDesktopFallback');
     elFallbackBack = document.getElementById('arFallbackBack');
+    elCrosshair = document.getElementById('arCrosshair');
+    elCompassToggle = document.getElementById('arCompassToggle');
+    elSensorGps = document.getElementById('arSensorGps');
+    elSensorCamera = document.getElementById('arSensorCamera');
+    elSensorCompass = document.getElementById('arSensorCompass');
+    elSensorGyro = document.getElementById('arSensorGyro');
   }
 
   function startRendering() {
@@ -832,7 +929,9 @@
     state = 'overview';
     focusedNoradId = null;
     calibrationDelta = 0;
+    compassCalibrationDelta = 0;
     magneticDeclination = 0;
+    compassDisabled = false;
     lastCalibrationTime = 0;
     driftPaused = false;
     renderingStarted = false;
@@ -846,6 +945,10 @@
     if (options && options.satelliteName && currentNoradIds.length === 1) {
       currentNoradIdToName[currentNoradIds[0]] = options.satelliteName;
     }
+    currentNoradIdToFreq = (options && options.noradIdToFreq) || {};
+    initialNoradIds = currentNoradIds.slice();
+    initialNoradIdToName = Object.assign({}, currentNoradIdToName);
+    showAllActive = false;
 
     if (currentNoradIds.length === 1) {
       setFocus(currentNoradIds[0]);
@@ -902,6 +1005,9 @@
     state = 'overview';
     focusedNoradId = null;
     renderingStarted = false;
+    showAllActive = false;
+    compassDisabled = false;
+    compassCalibrationDelta = 0;
     visibleSatellites = [];
     focusedTrajectory = [];
     overviewTrajectories = {};

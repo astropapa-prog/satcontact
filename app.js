@@ -506,14 +506,18 @@
     hideMapFreqRibbon();
 
     var noradIdToName = {};
+    var noradIdToFreq = {};
     filteredEntries.forEach(function (e) {
       (e.noradIds || []).forEach(function (nid) {
         if (!noradIdToName[nid]) noradIdToName[nid] = e.cleanName || e.name || nid;
+        if (!noradIdToFreq[nid] && e.frequency) {
+          noradIdToFreq[nid] = (e.frequency / 1e6).toFixed(3);
+        }
       });
     });
 
     if (typeof window.initAr === 'function') {
-      window.initAr({ noradIds: noradIds, satelliteName: satelliteName, noradIdToName: noradIdToName });
+      window.initAr({ noradIds: noradIds, satelliteName: satelliteName, noradIdToName: noradIdToName, noradIdToFreq: noradIdToFreq });
     }
   }
 
