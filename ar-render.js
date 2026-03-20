@@ -47,10 +47,8 @@
     '  float cosEl = cos(el);',
     '  vec3 world = vec3(cosEl * sin(az), cosEl * cos(az), sin(el));',
     '  mat3 R = u_orientation;',
-    '  vec3 cam = vec3(',
-    '    R[0][0]*world.x + R[1][0]*world.y + R[2][0]*world.z,',
-    '    R[0][1]*world.x + R[1][1]*world.y + R[2][1]*world.z,',
-    '    R[0][2]*world.x + R[1][2]*world.y + R[2][2]*world.z);',
+    '  /* Как projectReal3D: v_cam = R^T * v_world → cam_i = dot(R[i], world), R[i] — столбцы */',
+    '  vec3 cam = vec3(dot(R[0], world), dot(R[1], world), dot(R[2], world));',
     '  float cz = -cam.z;',
     '  v_behind = step(cz, 0.01);',
     '  if (cz <= 0.01) {',
@@ -174,8 +172,9 @@
   }
 
   /**
-   * Угловое отклонение направления на спутник от оптической оси камеры (та же матрица и world-вектор,
-   * что в projectReal3D / WebGL). Для аудио-прицела — совпадает с тем, что видит рендер.
+   * Угловое отклонение для аудио-прицела (панорамирование). Ось прицела — (−m2,−m5,−m8):
+   * на устройстве это совпадало с фактическим направлением; не привязываем к оптической оси Canvas/WebGL,
+   * пока маркеры в focus не согласованы с тем же миром.
    */
   function computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix) {
     if (!isOrientationMatrixValid(orientationMatrix)) return null;
