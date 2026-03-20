@@ -47,7 +47,7 @@
     '  float cosEl = cos(el);',
     '  vec3 world = vec3(cosEl * sin(az), cosEl * cos(az), sin(el));',
     '  mat3 R = u_orientation;',
-    '  /* Как projectReal3D: v_cam = R^T * v_world → cam_i = dot(R[i], world), R[i] — столбцы */',
+    '  /* R^T row-major в JS → column-major в GLSL = R → dot(R[col_i], world) = (R^T · world)[i] */',
     '  vec3 cam = vec3(dot(R[0], world), dot(R[1], world), dot(R[2], world));',
     '  float cz = -cam.z;',
     '  v_behind = step(cz, 0.01);',
@@ -148,7 +148,7 @@
     var ez = Math.sin(elR);
 
     var m = orientationMatrix;
-    /* v_cam = R^T * v_world (R — ориентация устройства в мире, столбцы); раньше было R*v — переворот/ось */
+    /* v_cam = M · v_world, где M = R^T (world→device) хранится row-major в ar.js */
     var dx = m[0] * ex + m[1] * ey + m[2] * ez;
     var dy = m[3] * ex + m[4] * ey + m[5] * ez;
     var dz = m[6] * ex + m[7] * ey + m[8] * ez;
@@ -172,9 +172,8 @@
   }
 
   /**
-   * Угловое отклонение направления на спутник от оптической оси — той же, что в projectReal3D и WebGL:
-   * в камере z = dot(строка2, v_world), на экран выводится при cz = −z > 0 → ось «вперёд» в мире = −(m6,m7,m8).
-   * Вектор (−m2,−m5,−m8) совпадал со старым шейдером по ошибке и после починки проекции давал неверный звук.
+   * Угловое отклонение направления на спутник от оптической оси камеры.
+   * Forward в мире = R·(0,0,−1) = −(Row2 of R^T) = −(m6, m7, m8).
    */
   function computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix) {
     if (!isOrientationMatrixValid(orientationMatrix)) return null;

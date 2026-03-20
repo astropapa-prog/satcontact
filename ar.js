@@ -275,7 +275,7 @@
   }
 
   /* ==========================================================================
-     Матрица ориентации устройства (W3C DeviceOrientation → 3x3 rotation)
+     Матрица ориентации: R^T (world→device), row-major, ZXY Euler
      ========================================================================== */
   function computeOrientationMatrix(alpha, beta, gamma) {
     const a = alpha * DEG;
@@ -285,16 +285,18 @@
     const cb = Math.cos(b), sb = Math.sin(b);
     const cg = Math.cos(g), sg = Math.sin(g);
 
-    // ZXY Euler rotation (device orientation convention)
-    orientationMatrix[0] = ca * cg - sa * sb * sg;
-    orientationMatrix[1] = -cb * sa;
-    orientationMatrix[2] = ca * sg + cg * sa * sb;
-    orientationMatrix[3] = cg * sa + ca * sb * sg;
-    orientationMatrix[4] = ca * cb;
-    orientationMatrix[5] = sa * sg - ca * cg * sb;
-    orientationMatrix[6] = -cb * sg;
-    orientationMatrix[7] = sb;
-    orientationMatrix[8] = cb * cg;
+    // R = Rz(α)·Rx(β)·Ry(γ) — device→world (ZXY Euler).
+    // Хранится R^T (world→device) row-major: Row_i · v_world = (R^T · v)[i].
+    // Проекция, шейдер и aiming используют m[row]·v напрямую.
+    orientationMatrix[0] =  ca * cg - sa * sb * sg;
+    orientationMatrix[1] =  sa * cg + ca * sb * sg;
+    orientationMatrix[2] = -cb * sg;
+    orientationMatrix[3] = -sa * cb;
+    orientationMatrix[4] =  ca * cb;
+    orientationMatrix[5] =  sb;
+    orientationMatrix[6] =  ca * sg + sa * sb * cg;
+    orientationMatrix[7] =  sa * sg - ca * sb * cg;
+    orientationMatrix[8] =  cb * cg;
   }
 
   function refreshOrientationMatrix() {
@@ -320,8 +322,8 @@
     ax /= norm;
     ay /= norm;
     az /= norm;
-    var beta = Math.atan2(-ax, Math.sqrt(ay * ay + az * az)) * RAD;
-    var gamma = Math.atan2(ay, az) * RAD;
+    var beta  = Math.atan2(ay, Math.sqrt(ax * ax + az * az)) * RAD;
+    var gamma = Math.atan2(-ax, Math.sqrt(ay * ay + az * az)) * RAD;
     return { beta: beta, gamma: gamma };
   }
 
