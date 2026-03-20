@@ -245,14 +245,16 @@ satcontact/
 ### 6.4 Компас, калибровка, дрейф
 
 - Встроенная упрощённая **WMM** для склонения по координатам GPS (**только в магнитном режиме**, в матрицу ориентации).
+- **Матрица ориентации (`orientationMatrix[9]`):** `computeOrientationMatrix(α, β, γ)` вычисляет ZXY Euler R = Rz(α)·Rx(β)·Ry(γ) (device→world), хранит **R^T** (world→device) row-major. Все потребители (`projectReal3D`, WebGL-шейдер, `computeAimingAngularErrorDeg`) используют `m[row]·v_world` — это `(R^T · v_world)[row]`, координаты в системе устройства. Forward камеры в мире = `R·(0,0,−1)` = `−(Row2 of R^T)` = `−(m6, m7, m8)`. WebGL-upload: данные row-major с `transpose=false` → GLSL column-major автоматически даёт R, и `dot(R[col_i], world)` = `(R^T · world)[i]`.
 - **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **инерциальный** — `DeviceMotion` (`rotationRate` + `accelerationIncludingGravity`), азимут без магнитометра, WMM на yaw **не** накладывается; калибровка по небу задаёт `calibrationDelta` от `inertialAlpha`.
+- **Инерциальный контур:** `onDeviceMotion` интегрирует `rotationRate` в `inertialAlpha/Beta/Gamma` с коррекцией gimbal coupling (`dAlpha = ra·cosβ + rg·sinβ`). Наклон подмешивается из `accelerationIncludingGravity` через `tiltDegreesFromAccel` с весом `ACCEL_TILT_BLEND = 0.08`; формулы: `beta = atan2(ay, √(ax²+az²))`, `gamma = atan2(−ax, √(ay²+az²))`.
 - До **первой** калибровки в сессии шкала дрейфа показывает «исчерпано», подсказка «Требуется калибровка»; после смены режима компаса калибровку нужно выполнить снова.
 - **Дрейф:** таймер после калибровки; при превышении порога **без** доступного магнитного компаса (`absolute` в магнитном режиме) — пауза рендера (`drawDriftWarning`). Смена режима при уже запущенном рендере ставит паузу до новой калибровки.
 
 ### 6.5 Звук, «ВСЕ», события
 
 - **Звуковой прицел:** только в режиме **focus**; Web Audio API (`updateAudioPitch` в **ar.js**): частота **20–900 Гц** по величине углового отклонения **0°–90°** (константы `AUDIO_MIN_HZ` / `AUDIO_MAX_HZ` / `AUDIO_MAX_OFFSET_DEG`).
-- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» — нормализованный **`M^T·(0,0,−1)`** для матрицы ориентации устройства. Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: магнитный режим — из `DeviceOrientation`, инерциальный — из `DeviceMotion`). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
+- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» в мире = **`R·(0,0,−1)`** = `−(m6, m7, m8)` (Row2 хранимой R^T). Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: магнитный режим — из `DeviceOrientation`, инерциальный — из `DeviceMotion`). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
 - **«ВСЕ» в AR:** как тумблер — все NORAD из `getSatContactFilteredEntries()` / возврат к набору при входе.
 - Событие **`satcontact:ar-focus`** — `{ detail: { focusedIds } }` для возможной синхронизации UI.
 
@@ -630,3 +632,35 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 2. **ar.js** — в цикле рендера (**`renderLoop`**, режим focus) **`updateAudioPitch`** получает результат **`computeAimingAngularErrorDeg`** для спутника в фокусе и текущей **`orientationMatrix`** (те же **`focSat.azimuth`/`elevation`**, что и для отрисовки). Функция **`getCameraAzEl`** удалена; с **`window.SatContactAr`** снят экспорт **`getCameraAzEl`**.
 
 **Итог:** звук и отрисовка маркера используют одну матрицу ориентации и один геометрический смысл «наведения»; калибровка по Солнцу/Луне/Полярной по-прежнему влияет на **`computeOrientationMatrix`** в **`onOrientation`**, без дублирования логики для аудио.
+
+### Сессия: Исправление матрицы ориентации и проекции AR (март 2026)
+
+**Проблема:** спутники отображались в неправильных позициях (~180° от реальных); при повороте телефона маркеры двигались в противоположном направлении. В инерциальном режиме дополнительно наблюдался ложный дрейф наклона.
+
+**Причина 1 (критическая): транспозиция матрицы ориентации.**
+`computeOrientationMatrix` хранила R (device→world) row-major, но `projectReal3D`, WebGL-шейдер и `computeAimingAngularErrorDeg` умножали `m[row]·v`, что давало `(R · v_world)` вместо необходимого `(R^T · v_world)`. Результат: спутник на Севере при камере, направленной на Север, проецировался за камеру (cz < 0). По центру экрана вместо него появлялся спутник с Юга.
+
+**Причина 2 (средняя): перепутанные beta/gamma в `tiltDegreesFromAccel`.**
+Формула beta использовала `−ax` (ось gamma), а gamma — `ay/az` (ось beta). Акселерометрическая коррекция (`ACCEL_TILT_BLEND = 0.08`) медленно тянула наклон к неправильным значениям в инерциальном режиме.
+
+**Что НЕ сломано — логика разделения режимов:**
+- `refreshOrientationMatrix`: compass → `sensorState.alpha − calibrationDelta − magneticDeclination`; inertial → `inertialAlpha − calibrationDelta`. Корректно.
+- `performCalibration`: алгебра сходится в обоих режимах (effective alpha = `360 − trueAzimuth`). Корректно.
+- `onCompassToggleClick`: сброс калибровки, инициализация инерциальных углов, пауза до рекалибровки. Корректно.
+- `onDeviceMotion`: интеграция `rotationRate` с gimbal coupling (`dAlpha = ra·cosβ + rg·sinβ`). Корректно.
+
+**Исправления в коде:**
+
+1. **ar.js: `computeOrientationMatrix`** — матрица теперь хранит **R^T** (world→device) row-major. Изменены 6 off-diagonal элементов (m[1], m[2], m[3], m[5], m[6], m[7]). Ни одна из трёх функций-потребителей (`projectReal3D`, шейдер, `computeAimingAngularErrorDeg`) не потребовала правок — формула `m[row]·v` теперь даёт корректный `(R^T · v_world)[row]`.
+
+2. **ar.js: `tiltDegreesFromAccel`** — правильные формулы:
+   - `beta = atan2(ay, √(ax² + az²))` (наклон вокруг X, вперёд/назад)
+   - `gamma = atan2(−ax, √(ay² + az²))` (наклон вокруг Y, влево/вправо)
+
+3. **ar-render.js** — обновлены комментарии в `projectReal3D`, `computeAimingAngularErrorDeg` и WebGL-шейдере: точное описание конвенции R^T row-major.
+
+**Итог поведения после сессии:**
+- Спутники отображаются в правильных позициях: камера на Север → спутник на Севере по центру экрана.
+- Поворот телефона корректно сдвигает маркеры в ожидаемом направлении в обоих режимах (compass и inertial).
+- Звуковой прицел (`computeAimingAngularErrorDeg`) согласован с визуальной проекцией — forward = `−(m6, m7, m8)` = `R·(0,0,−1)`.
+- Акселерометрическая коррекция в инерциальном режиме стабилизирует наклон, а не дестабилизирует.

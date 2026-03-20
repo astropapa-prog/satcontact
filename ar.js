@@ -1,6 +1,7 @@
 /**
  * SatContact — Модуль 3: AR-трекер (Оркестратор)
- * Камера, сенсоры: режим магнитный (DeviceOrientation + WMM) или инерциальный (DeviceMotion: гиро + гравитация), GPS, калибровка, аудио-прицел, таймер дрейфа.
+ * Камера, сенсоры: магнитный режим (DeviceOrientation + WMM) и гибридный инерциальный
+ * (OS pitch/roll + гиро yaw), GPS, калибровка, аудио-прицел, таймер дрейфа.
  */
 (function () {
   'use strict';
@@ -17,13 +18,6 @@
   const AUDIO_MAX_OFFSET_DEG = 90;
   const DEFAULT_FOV_H = 60;
   const DEFAULT_FOV_V = 45;
-  /** Сглаживание наклона по акселерометру в инерциальном режиме (0…1) */
-  const ACCEL_TILT_BLEND = 0.08;
-
-  /** Угол в полуинтервал (−180°, 180°] для инерциального beta (без жёсткого clamp по W3C). */
-  function wrapAngle180(deg) {
-    return ((((deg + 180) % 360) + 360) % 360) - 180;
-  }
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll, elCalibSource, elCalibBtn;
@@ -57,13 +51,11 @@
   let calibrationDelta = 0;         // azimuth correction in degrees
   let compassCalibrationDelta = 0;  // compass-specific correction
   let magneticDeclination = 0;
-  /** false: азимут из магнитного fusion (DeviceOrientation). true: гиро+аксель, без опоры на магнитометр. */
+  /** false: полный OS fusion (DeviceOrientation). true: yaw из гироскопа, pitch/roll из OS fusion. */
   let compassDisabled = false;
 
-  /** Углы инерциального контура (совместимы с ZXY DeviceOrientation), ° */
+  /** Yaw инерциального контура (интеграл гироскопа, совместим с DeviceOrientation α), ° */
   let inertialAlpha = 0;
-  let inertialBeta = 0;
-  let inertialGamma = 0;
   let lastMotionTimestamp = 0;
   let motionStateTimestamp = 0;
 
@@ -300,31 +292,10 @@
   }
 
   function refreshOrientationMatrix() {
-    if (compassDisabled) {
-      computeOrientationMatrix(
-        inertialAlpha - calibrationDelta,
-        inertialBeta,
-        inertialGamma
-      );
-    } else {
-      computeOrientationMatrix(
-        sensorState.alpha - calibrationDelta - magneticDeclination,
-        sensorState.beta,
-        sensorState.gamma
-      );
-    }
-  }
-
-  /** Наклон из нормализованного вектора гравитации (м/с² → углы в °, грубое соответствие beta/gamma). */
-  function tiltDegreesFromAccel(ax, ay, az) {
-    var norm = Math.sqrt(ax * ax + ay * ay + az * az);
-    if (norm < 0.5) return null;
-    ax /= norm;
-    ay /= norm;
-    az /= norm;
-    var beta  = Math.atan2(ay, Math.sqrt(ax * ax + az * az)) * RAD;
-    var gamma = Math.atan2(-ax, Math.sqrt(ay * ay + az * az)) * RAD;
-    return { beta: beta, gamma: gamma };
+    var alpha = compassDisabled
+      ? inertialAlpha - calibrationDelta
+      : sensorState.alpha - calibrationDelta - magneticDeclination;
+    computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma);
   }
 
   /* ==========================================================================
@@ -371,7 +342,8 @@
   }
 
   /* ==========================================================================
-     Сенсоры: DeviceOrientation (магнитный режим) + DeviceMotion (инерциальный)
+     Сенсоры: DeviceOrientation (оба режима: pitch/roll всегда из OS fusion)
+              + DeviceMotion (инерциальный: yaw из гироскопа)
      ========================================================================== */
   function onOrientation(evt) {
     if (evt.alpha == null) return;
@@ -380,10 +352,7 @@
     sensorState.gamma = evt.gamma || 0;
     sensorState.absolute = !!evt.absolute;
     sensorState.timestamp = Date.now();
-
-    if (!compassDisabled) {
-      refreshOrientationMatrix();
-    }
+    refreshOrientationMatrix();
   }
 
   function onDeviceMotion(evt) {
@@ -399,35 +368,15 @@
     if (dt <= 0 || dt > 0.25) return;
 
     var ra = rr.alpha != null ? rr.alpha : 0;
-    var rb = rr.beta != null ? rr.beta : 0;
     var rg = rr.gamma != null ? rr.gamma : 0;
-    /*
-      При вертикальном телефоне β≈90° горизонтальный поворот даёт в основном γ̇, а не α̇ (см. логи).
-      Раздельная интеграция α и γ искажает одну степень свободы. В плоскости (α, γ) при текущем β:
-      α̇_eff = α̇ cosβ + γ̇ sinβ,   γ̇_eff = γ̇ cosβ − α̇ sinβ  (согласование с осью «рыскания» при наклоне).
-    */
-    var cosB = Math.cos(inertialBeta * DEG);
-    var sinB = Math.sin(inertialBeta * DEG);
-    var dAlpha = (ra * cosB + rg * sinB) * dt;
-    var dGamma = (rg * cosB - ra * sinB) * dt;
+
+    /* Gimbal coupling: при наклоне β горизонтальный поворот перетекает из α̇ в γ̇.
+       Для yaw берём проекцию обоих на вертикальную ось.
+       beta из OS fusion (sensorState) — не зависит от магнитометра. */
+    var beta = (sensorState.beta || 0) * DEG;
+    var dAlpha = (ra * Math.cos(beta) + rg * Math.sin(beta)) * dt;
 
     inertialAlpha = ((inertialAlpha + dAlpha) % 360 + 360) % 360;
-    inertialBeta += rb * dt;
-    inertialGamma += dGamma;
-    /* Не clamp gamma к ±90° (W3C для статичного evt): при «камера вверх» горизонтальный
-       поворот даёт большие rb/rg и малый ra; γ>90 в логах показывало насыщение и «залипание». */
-    inertialBeta = wrapAngle180(inertialBeta);
-
-    var acc = evt.accelerationIncludingGravity;
-    if (acc && acc.x != null) {
-      var tilt = tiltDegreesFromAccel(acc.x, acc.y, acc.z);
-      if (tilt) {
-        var b = ACCEL_TILT_BLEND;
-        inertialBeta += (tilt.beta - inertialBeta) * b;
-        inertialGamma += (tilt.gamma - inertialGamma) * b;
-      }
-    }
-
     refreshOrientationMatrix();
   }
 
@@ -989,8 +938,6 @@
 
     if (compassDisabled) {
       inertialAlpha = sensorState.alpha || 0;
-      inertialBeta = sensorState.beta || 0;
-      inertialGamma = sensorState.gamma || 0;
     }
 
     refreshOrientationMatrix();
@@ -1078,8 +1025,6 @@
     driftPaused = false;
     renderingStarted = false;
     inertialAlpha = 0;
-    inertialBeta = 0;
-    inertialGamma = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     soundEnabled = false;
@@ -1162,8 +1107,6 @@
     compassCalibrationDelta = 0;
     sessionCalibrated = false;
     inertialAlpha = 0;
-    inertialBeta = 0;
-    inertialGamma = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     visibleSatellites = [];
