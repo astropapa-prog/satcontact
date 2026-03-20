@@ -58,6 +58,8 @@
   let inertialAlpha = 0;
   let lastMotionTimestamp = 0;
   let motionStateTimestamp = 0;
+  /** Предыдущее значение gamma для оценки γ̇ (устранение gimbal coupling при β≈90°) */
+  let prevGamma = 0;
 
   /* ====== Дрейф ====== */
   let lastCalibrationTime = 0;
@@ -365,16 +367,32 @@
     lastMotionTimestamp = now;
     motionStateTimestamp = now;
 
-    if (dt <= 0 || dt > 0.25) return;
+    if (dt <= 0 || dt > 0.25) { prevGamma = sensorState.gamma || 0; return; }
 
     var ra = rr.alpha != null ? rr.alpha : 0;
+    var rb = rr.beta  != null ? rr.beta  : 0;
     var rg = rr.gamma != null ? rr.gamma : 0;
 
-    /* Gimbal coupling: при наклоне β горизонтальный поворот перетекает из α̇ в γ̇.
-       Для yaw берём проекцию обоих на вертикальную ось.
-       beta из OS fusion (sensorState) — не зависит от магнитометра. */
-    var beta = (sensorState.beta || 0) * DEG;
-    var dAlpha = (ra * Math.cos(beta) + rg * Math.sin(beta)) * dt;
+    /* Singularity-free extraction of Euler α̇ for R = Rz(α)·Rx(β)·Ry(γ).
+       Body angular velocities:
+         ωz (ra) = α̇·cos(γ)·cos(β) + β̇·sin(γ)
+         ωx (rb) = −α̇·sin(γ)·cos(β) + β̇·cos(γ)
+         ωy (rg) = α̇·sin(β) + γ̇
+       Exact singularity-free result:
+         α̇ = cos(β)·(ra·cos(γ) − rb·sin(γ)) + sin(β)·(rg − γ̇)
+       γ̇ estimated from OS-fusion sensorState.gamma delta. */
+    var curGamma = sensorState.gamma || 0;
+    var gammaDot = (curGamma - prevGamma) / dt;
+    prevGamma = curGamma;
+
+    var betaRad  = (sensorState.beta || 0) * DEG;
+    var gammaRad = curGamma * DEG;
+    var cosB = Math.cos(betaRad);
+    var sinB = Math.sin(betaRad);
+    var cosG = Math.cos(gammaRad);
+    var sinG = Math.sin(gammaRad);
+
+    var dAlpha = (cosB * (ra * cosG - rb * sinG) + sinB * (rg - gammaDot)) * dt;
 
     inertialAlpha = ((inertialAlpha + dAlpha) % 360 + 360) % 360;
     refreshOrientationMatrix();
@@ -938,6 +956,7 @@
 
     if (compassDisabled) {
       inertialAlpha = sensorState.alpha || 0;
+      prevGamma = sensorState.gamma || 0;
     }
 
     refreshOrientationMatrix();
@@ -1025,6 +1044,7 @@
     driftPaused = false;
     renderingStarted = false;
     inertialAlpha = 0;
+    prevGamma = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     soundEnabled = false;
@@ -1107,6 +1127,7 @@
     compassCalibrationDelta = 0;
     sessionCalibrated = false;
     inertialAlpha = 0;
+    prevGamma = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     visibleSatellites = [];

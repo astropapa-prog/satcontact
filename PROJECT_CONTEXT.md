@@ -246,15 +246,17 @@ satcontact/
 
 - Встроенная упрощённая **WMM** для склонения по координатам GPS (**только в магнитном режиме**, в матрицу ориентации).
 - **Матрица ориентации (`orientationMatrix[9]`):** `computeOrientationMatrix(α, β, γ)` вычисляет ZXY Euler R = Rz(α)·Rx(β)·Ry(γ) (device→world), хранит **R^T** (world→device) row-major. Все потребители (`projectReal3D`, WebGL-шейдер, `computeAimingAngularErrorDeg`) используют `m[row]·v_world` — это `(R^T · v_world)[row]`, координаты в системе устройства. Forward камеры в мире = `R·(0,0,−1)` = `−(Row2 of R^T)` = `−(m6, m7, m8)`. WebGL-upload: данные row-major с `transpose=false` → GLSL column-major автоматически даёт R, и `dot(R[col_i], world)` = `(R^T · world)[i]`.
-- **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **инерциальный** — `DeviceMotion` (`rotationRate` + `accelerationIncludingGravity`), азимут без магнитометра, WMM на yaw **не** накладывается; калибровка по небу задаёт `calibrationDelta` от `inertialAlpha`.
-- **Инерциальный контур:** `onDeviceMotion` интегрирует `rotationRate` в `inertialAlpha/Beta/Gamma` с коррекцией gimbal coupling (`dAlpha = ra·cosβ + rg·sinβ`). Наклон подмешивается из `accelerationIncludingGravity` через `tiltDegreesFromAccel` с весом `ACCEL_TILT_BLEND = 0.08`; формулы: `beta = atan2(ay, √(ax²+az²))`, `gamma = atan2(−ax, √(ay²+az²))`.
+- **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **гибридный инерциальный** — yaw из интеграла гироскопа (`rotationRate`), pitch/roll из OS fusion (`sensorState.beta/gamma`), WMM на yaw **не** накладывается; калибровка по небу задаёт `calibrationDelta` от `inertialAlpha`.
+- **Гибридный инерциальный контур:** `onDeviceMotion` интегрирует `rotationRate` **только в `inertialAlpha`** (yaw) с gimbal coupling (`dAlpha = ra·cos(sensorState.beta) + rg·sin(sensorState.beta)`). Pitch/roll (`sensorState.beta/gamma`) поступают из OS sensor fusion через `DeviceOrientationEvent` — они **не зависят от магнитометра** и не дрейфуют. Единственная переменная инерциального контура — `inertialAlpha`; `inertialBeta/Gamma`, `tiltDegreesFromAccel`, `ACCEL_TILT_BLEND` **удалены**.
+- **`refreshOrientationMatrix()`** — единообразная в обоих режимах: `computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma)`. Разница — только источник `alpha` (магнитный: `sensorState.alpha − calibrationDelta − magneticDeclination`; инерциальный: `inertialAlpha − calibrationDelta`).
+- **`onOrientation()`** вызывает `refreshOrientationMatrix()` **всегда** (не только в магнитном режиме) — обновляет pitch/roll для инерциального контура при каждом событии OS fusion.
 - До **первой** калибровки в сессии шкала дрейфа показывает «исчерпано», подсказка «Требуется калибровка»; после смены режима компаса калибровку нужно выполнить снова.
 - **Дрейф:** таймер после калибровки; при превышении порога **без** доступного магнитного компаса (`absolute` в магнитном режиме) — пауза рендера (`drawDriftWarning`). Смена режима при уже запущенном рендере ставит паузу до новой калибровки.
 
 ### 6.5 Звук, «ВСЕ», события
 
 - **Звуковой прицел:** только в режиме **focus**; Web Audio API (`updateAudioPitch` в **ar.js**): частота **20–900 Гц** по величине углового отклонения **0°–90°** (константы `AUDIO_MIN_HZ` / `AUDIO_MAX_HZ` / `AUDIO_MAX_OFFSET_DEG`).
-- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» в мире = **`R·(0,0,−1)`** = `−(m6, m7, m8)` (Row2 хранимой R^T). Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: магнитный режим — из `DeviceOrientation`, инерциальный — из `DeviceMotion`). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
+- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» в мире = **`R·(0,0,−1)`** = `−(m6, m7, m8)` (Row2 хранимой R^T). Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: в обоих режимах beta/gamma из OS fusion; alpha — из `DeviceOrientation` в магнитном, из `inertialAlpha` в инерциальном). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
 - **«ВСЕ» в AR:** как тумблер — все NORAD из `getSatContactFilteredEntries()` / возврат к набору при входе.
 - Событие **`satcontact:ar-focus`** — `{ detail: { focusedIds } }` для возможной синхронизации UI.
 
@@ -664,3 +666,70 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 - Поворот телефона корректно сдвигает маркеры в ожидаемом направлении в обоих режимах (compass и inertial).
 - Звуковой прицел (`computeAimingAngularErrorDeg`) согласован с визуальной проекцией — forward = `−(m6, m7, m8)` = `R·(0,0,−1)`.
 - Акселерометрическая коррекция в инерциальном режиме стабилизирует наклон, а не дестабилизирует.
+
+### Сессия: Гибридный инерциальный режим — OS pitch/roll + гиро yaw (март 2026)
+
+**Проблема:** в инерциальном режиме (компас выключен) спутники отображались неправильно и нелогично реагировали на движение телефона. Причина — инерциальный контур **переизобретал** pitch/roll из сырых данных `DeviceMotionEvent` (`accelerationIncludingGravity` с 8% blend + интеграция `rotationRate` по всем трём осям), вместо того чтобы использовать готовые стабильные значения из OS sensor fusion. Самодельный наклон отставал, был неточным, страдал от gimbal lock при β ≈ ±90°.
+
+**Ключевое наблюдение:** `DeviceOrientationEvent.beta` (pitch) и `.gamma` (roll) определяются из **акселерометра + гироскопа** на уровне ОС и **не зависят от магнитометра**. Магнитометр влияет **только** на `.alpha` (yaw/heading). Поэтому даже в магнитно неблагоприятной среде beta и gamma остаются корректными.
+
+**Архитектурное решение — гибридный инерциальный режим:**
+- **Pitch/roll** (`sensorState.beta/gamma`) — всегда из OS fusion (`DeviceOrientationEvent`), в обоих режимах.
+- **Yaw** (`alpha`) — в магнитном режиме из OS fusion + WMM; в инерциальном — интеграл гироскопа (`inertialAlpha`) с привязкой к калибровке по небесному телу.
+- `refreshOrientationMatrix()` стала единообразной: `computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma)`, разница — только в источнике `alpha`.
+
+**Удалённый код (ar.js):**
+- Переменные `inertialBeta`, `inertialGamma` — pitch/roll больше не интегрируются из гироскопа.
+- Функция `tiltDegreesFromAccel()` — самодельное восстановление наклона из акселерометра больше не нужно.
+- Константа `ACCEL_TILT_BLEND` (0.08) — вес подмешивания акселерометра больше не нужен.
+- Функция `wrapAngle180()` — использовалась только для `inertialBeta`.
+- В `onDeviceMotion`: удалены интеграция `rb·dt` (beta), `dGamma` (gamma), весь блок акселерометрической коррекции.
+- В `onCompassToggleClick`, `initAr`, `cleanupAr`: убраны инициализация и сброс `inertialBeta/Gamma`.
+
+**Изменённый код (ar.js):**
+1. **`refreshOrientationMatrix()`** — beta/gamma **всегда** из `sensorState`; alpha по режиму.
+2. **`onOrientation()`** — вызывает `refreshOrientationMatrix()` **всегда**, а не только в магнитном режиме (обновляет pitch/roll для инерциального контура).
+3. **`onDeviceMotion()`** — интегрирует **только yaw** (`inertialAlpha`); gimbal coupling использует `sensorState.beta` (точный OS-ный, а не самодельный).
+
+**Не изменено:**
+- **ar-render.js** — рендерер работает с `orientationMatrix[9]` как чёрным ящиком; `projectReal3D`, WebGL-шейдер, `computeAimingAngularErrorDeg` не затронуты.
+- **`computeOrientationMatrix()`** — формула R^T (world→device) ZXY Euler не изменена.
+- **`performCalibration()`** — алгебра калибровки по небесному телу не изменена (использует только `inertialAlpha`, не beta/gamma).
+- **Таймер дрейфа, звуковой прицел, машина состояний** — без изменений.
+
+**Итог поведения после сессии:**
+- Инерциальный режим: pitch/roll стабильны и точны (OS fusion), наклон телефона корректно сдвигает маркеры. Единственный дрейфующий параметр — yaw (азимут), ~1–5°/мин, покрывается калибровкой.
+- Магнитный режим: поведение не изменилось (beta/gamma и раньше брались из `sensorState`).
+- Код упрощён: одна интегрируемая переменная (`inertialAlpha`) вместо трёх + акселерометрический blend.
+
+### Сессия: Исправление формулы gimbal coupling в инерциальном режиме (март 2026)
+
+**Проблема:** в инерциальном режиме калибровка в портретной ориентации (телефон вертикально, β ≈ 90°) приводила к неправильному отображению спутников и ложной реакции на движение по осям. Спутник на 13° долготы отображался на ~75°. Калибровка в ландшафтной ориентации (β ≈ 0°) с последующим просмотром в портретной — работала корректно. В магнитном режиме (компас включён) портретная калибровка проблем не вызывала.
+
+**Причина: ошибочная формула gimbal coupling в `onDeviceMotion`.**
+
+Старая формула: `dAlpha = (ra·cos(β) + rg·sin(β)) · dt`
+
+Для R = Rz(α)·Rx(β)·Ry(γ) (ZXY Euler) связь body angular velocity с Euler-скоростями:
+- `ωz (ra) = α̇·cos(γ)·cos(β) + β̇·sin(γ)`
+- `ωx (rb) = −α̇·sin(γ)·cos(β) + β̇·cos(γ)`
+- `ωy (rg) = α̇·sin(β) + γ̇`
+
+При подстановке в старую формулу: `ra·cos(β) + rg·sin(β)` = `α̇·(cos(γ)·cos²(β) + sin²(β)) + β̇·sin(γ)·cos(β) + γ̇·sin(β)`.
+
+При β ≈ 90° и γ ≈ 0° это даёт `α̇ + γ̇` вместо `α̇`. Каждое изменение gamma (наклон влево-вправо) целиком засчитывалось как yaw и **удваивалось**: один раз через `inertialAlpha`, второй раз через `sensorState.gamma` в `computeOrientationMatrix`. Также `rotationRate.beta` (ωx) полностью игнорировался.
+
+**Исправление (ar.js):**
+
+1. **`onDeviceMotion()`** — новая singularity-free формула:
+   `α̇ = cos(β)·(ra·cos(γ) − rb·sin(γ)) + sin(β)·(rg − γ̇)`
+   где `γ̇` оценивается как `Δ(sensorState.gamma)/dt`. Теперь используются все три компоненты `rotationRate` (ra, rb, rg).
+
+2. **Переменная `prevGamma`** — отслеживает предыдущее значение `sensorState.gamma` для оценки γ̇. Инициализируется в `initAr`, `cleanupAr`, `onCompassToggleClick`.
+
+**Не изменено:** `computeOrientationMatrix`, `refreshOrientationMatrix`, `performCalibration`, ar-render.js, калибровка по небесным телам, таймер дрейфа, звуковой прицел.
+
+**Математическое обоснование формулы:**
+- При β = 0° (ландшафтная): `α̇ = ra·cos(γ) − rb·sin(γ)` — точная формула.
+- При β = 90° (портретная): `α̇ = rg − γ̇ = (α̇·sin(β) + γ̇) − γ̇ = α̇` — корректно вычитает γ̇.
+- Промежуточные β: взвешенная сумма обоих выражений, нет сингулярностей.
