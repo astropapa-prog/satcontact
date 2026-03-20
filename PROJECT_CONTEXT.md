@@ -246,9 +246,9 @@ satcontact/
 
 - Встроенная упрощённая **WMM** для склонения по координатам GPS (**только в магнитном режиме**, в матрицу ориентации).
 - **Матрица ориентации (`orientationMatrix[9]`):** `computeOrientationMatrix(α, β, γ)` вычисляет ZXY Euler R = Rz(α)·Rx(β)·Ry(γ) (device→world), хранит **R^T** (world→device) row-major. Все потребители (`projectReal3D`, WebGL-шейдер, `computeAimingAngularErrorDeg`) используют `m[row]·v_world` — это `(R^T · v_world)[row]`, координаты в системе устройства. Forward камеры в мире = `R·(0,0,−1)` = `−(Row2 of R^T)` = `−(m6, m7, m8)`. WebGL-upload: данные row-major с `transpose=false` → GLSL column-major автоматически даёт R, и `dot(R[col_i], world)` = `(R^T · world)[i]`.
-- **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **гибридный инерциальный** — yaw из интеграла гироскопа (`rotationRate`), pitch/roll из OS fusion (`sensorState.beta/gamma`), WMM на yaw **не** накладывается; калибровка по небу задаёт `calibrationDelta` от `inertialAlpha`.
-- **Гибридный инерциальный контур:** `onDeviceMotion` интегрирует `rotationRate` **только в `inertialAlpha`** (yaw) с gimbal coupling (`dAlpha = ra·cos(sensorState.beta) + rg·sin(sensorState.beta)`). Pitch/roll (`sensorState.beta/gamma`) поступают из OS sensor fusion через `DeviceOrientationEvent` — они **не зависят от магнитометра** и не дрейфуют. Единственная переменная инерциального контура — `inertialAlpha`; `inertialBeta/Gamma`, `tiltDegreesFromAccel`, `ACCEL_TILT_BLEND` **удалены**.
-- **`refreshOrientationMatrix()`** — единообразная в обоих режимах: `computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma)`. Разница — только источник `alpha` (магнитный: `sensorState.alpha − calibrationDelta − magneticDeclination`; инерциальный: `inertialAlpha − calibrationDelta`).
+- **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **heading-based инерциальный** — мировой heading (азимут камеры) из интеграла world yaw rate гироскопа, pitch/roll из OS fusion (`sensorState.beta/gamma`), WMM **не** накладывается; калибровка по небу задаёт `calibrationDelta` (heading-коррекция).
+- **Heading-based инерциальный контур:** `onDeviceMotion` интегрирует world yaw rate (`yawRate = cosβ·(ra·cosγ − rb·sinγ) + sinβ·rg`) в **`inertialHeading`** (мировой азимут). Формула точная, без сингулярностей при любом β. Pitch/roll (`sensorState.beta/gamma`) из OS sensor fusion — не зависят от магнитометра. Вспомогательные функции **`alphaToHeading`** / **`headingToAlpha`** конвертируют между heading и Euler α без gimbal lock.
+- **`refreshOrientationMatrix()`** — в магнитном режиме: `computeOrientationMatrix(sensorState.alpha − calibrationDelta − magneticDeclination, ...)`. В инерциальном: `correctedHeading = inertialHeading − calibrationDelta`, затем `alpha = headingToAlpha(correctedHeading, beta, gamma)`, затем `computeOrientationMatrix(alpha, ...)`.
 - **`onOrientation()`** вызывает `refreshOrientationMatrix()` **всегда** (не только в магнитном режиме) — обновляет pitch/roll для инерциального контура при каждом событии OS fusion.
 - До **первой** калибровки в сессии шкала дрейфа показывает «исчерпано», подсказка «Требуется калибровка»; после смены режима компаса калибровку нужно выполнить снова.
 - **Дрейф:** таймер после калибровки; при превышении порога **без** доступного магнитного компаса (`absolute` в магнитном режиме) — пауза рендера (`drawDriftWarning`). Смена режима при уже запущенном рендере ставит паузу до новой калибровки.
@@ -702,34 +702,48 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 - Магнитный режим: поведение не изменилось (beta/gamma и раньше брались из `sensorState`).
 - Код упрощён: одна интегрируемая переменная (`inertialAlpha`) вместо трёх + акселерометрический blend.
 
-### Сессия: Исправление формулы gimbal coupling в инерциальном режиме (март 2026)
+### Сессия: Heading-based инерциальный tracking — устранение gimbal lock (март 2026)
 
-**Проблема:** в инерциальном режиме калибровка в портретной ориентации (телефон вертикально, β ≈ 90°) приводила к неправильному отображению спутников и ложной реакции на движение по осям. Спутник на 13° долготы отображался на ~75°. Калибровка в ландшафтной ориентации (β ≈ 0°) с последующим просмотром в портретной — работала корректно. В магнитном режиме (компас включён) портретная калибровка проблем не вызывала.
+**Проблема:** в инерциальном режиме калибровка в портретной ориентации (β ≈ 90°) приводила к неправильному отображению спутников (~62° ошибка азимута). Спутник на 13° долготы отображался на ~75°. Калибровка в ландшафтной (β ≈ 0°) с просмотром в портретной — работала. В магнитном режиме портретная калибровка проблем не вызывала.
 
-**Причина: ошибочная формула gimbal coupling в `onDeviceMotion`.**
+**Корневая причина:** ZXY Euler-углы имеют **gimbal lock** при β = ±90° (портретная ориентация). При β = 90° матрица зависит от суммы (α + γ), а не от α и γ по отдельности. Старая формула `dAlpha = ra·cos(β) + rg·sin(β)` интегрировала **world yaw rate** (= α̇ + γ̇·sin(β)), а не Euler α̇. При β ≈ 90° вся γ̇ попадала в `inertialAlpha` и **удваивалась** (один раз из `inertialAlpha`, второй — из `sensorState.gamma`). Промежуточная попытка вычитать γ̇ через `Δgamma/dt` провалилась: оценка γ̇ крайне шумная из-за несинхронности `DeviceOrientationEvent` и `DeviceMotionEvent`.
 
-Старая формула: `dAlpha = (ra·cos(β) + rg·sin(β)) · dt`
+**Решение — heading-based tracking (полная замена подхода):**
 
-Для R = Rz(α)·Rx(β)·Ry(γ) (ZXY Euler) связь body angular velocity с Euler-скоростями:
-- `ωz (ra) = α̇·cos(γ)·cos(β) + β̇·sin(γ)`
-- `ωx (rb) = −α̇·sin(γ)·cos(β) + β̇·cos(γ)`
-- `ωy (rg) = α̇·sin(β) + γ̇`
+Вместо отслеживания Euler α (подвержен gimbal lock) инерциальный контур теперь отслеживает **heading** — мировой азимут направления камеры. Heading не имеет сингулярностей при любом β.
 
-При подстановке в старую формулу: `ra·cos(β) + rg·sin(β)` = `α̇·(cos(γ)·cos²(β) + sin²(β)) + β̇·sin(γ)·cos(β) + γ̇·sin(β)`.
+**Новая архитектура:**
 
-При β ≈ 90° и γ ≈ 0° это даёт `α̇ + γ̇` вместо `α̇`. Каждое изменение gamma (наклон влево-вправо) целиком засчитывалось как yaw и **удваивалось**: один раз через `inertialAlpha`, второй раз через `sensorState.gamma` в `computeOrientationMatrix`. Также `rotationRate.beta` (ωx) полностью игнорировался.
+1. **Переменная `inertialHeading`** (заменила `inertialAlpha`) — мировой азимут [0, 360), интегрируется из гироскопа.
 
-**Исправление (ar.js):**
+2. **`onDeviceMotion()`** — интеграция world yaw rate (проекция ω на вертикаль):
+   `yawRate = cos(β)·(ra·cos(γ) − rb·sin(γ)) + sin(β)·rg`
+   `inertialHeading −= yawRate · dt` (heading растёт по часовой, yawRate — CCW)
+   Формула **точная**, не требует оценки γ̇, не имеет сингулярностей. Использует все три компоненты `rotationRate`.
 
-1. **`onDeviceMotion()`** — новая singularity-free формула:
-   `α̇ = cos(β)·(ra·cos(γ) − rb·sin(γ)) + sin(β)·(rg − γ̇)`
-   где `γ̇` оценивается как `Δ(sensorState.gamma)/dt`. Теперь используются все три компоненты `rotationRate` (ra, rb, rg).
+3. **`headingToAlpha(H, β, γ)`** — singularity-free конверсия heading → Euler α:
+   `α = atan2(−(sb·cg·sin(H) + sg·cos(H)), sb·cg·cos(H) − sg·sin(H))`
+   Обратная к `alphaToHeading`. Round-trip `headingToAlpha(alphaToHeading(α,β,γ), β, γ) = α` выполняется для всех (α, β, γ).
 
-2. **Переменная `prevGamma`** — отслеживает предыдущее значение `sensorState.gamma` для оценки γ̇. Инициализируется в `initAr`, `cleanupAr`, `onCompassToggleClick`.
+4. **`alphaToHeading(α, β, γ)`** — heading из Euler-углов (forward = −(m6, m7, m8)):
+   `H = atan2(forward_x, forward_y)` где `forward_x = −(ca·sg + sa·sb·cg)`, `forward_y = ca·sb·cg − sa·sg`.
 
-**Не изменено:** `computeOrientationMatrix`, `refreshOrientationMatrix`, `performCalibration`, ar-render.js, калибровка по небесным телам, таймер дрейфа, звуковой прицел.
+5. **`refreshOrientationMatrix()`** — в инерциальном режиме:
+   `correctedHeading = inertialHeading − calibrationDelta`
+   `alpha = headingToAlpha(correctedHeading, sensorState.beta, sensorState.gamma)`
+   `computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma)`
 
-**Математическое обоснование формулы:**
-- При β = 0° (ландшафтная): `α̇ = ra·cos(γ) − rb·sin(γ)` — точная формула.
-- При β = 90° (портретная): `α̇ = rg − γ̇ = (α̇·sin(β) + γ̇) − γ̇ = α̇` — корректно вычитает γ̇.
-- Промежуточные β: взвешенная сумма обоих выражений, нет сингулярностей.
+6. **`performCalibration()`** — калибровка в пространстве heading:
+   `calibrationDelta = inertialHeading − trueAzimuth`
+
+7. **`onCompassToggleClick()`** — инициализация heading из OS-ориентации:
+   `inertialHeading = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma)`
+
+**Удалённый код:** `inertialAlpha`, `prevGamma`, вся логика `sensorAzIn = (360 − inertialAlpha)`.
+
+**Не изменено:** `computeOrientationMatrix` (R^T, ZXY), ar-render.js, WebGL-шейдер, `computeAimingAngularErrorDeg`, калибровка компасного режима, таймер дрейфа, звуковой прицел, `onOrientation` (pitch/roll из OS fusion по-прежнему).
+
+**Почему это решает проблему:**
+- При β = 90° (портретная): heading rate = rg (rotation around Y). Heading интегрируется корректно. Затем `headingToAlpha` вычисляет α с учётом текущего γ — без двойного счёта.
+- При β = 0° (ландшафтная): heading rate = ra·cos(γ) − rb·sin(γ). При γ = 0: heading rate = ra. Работает как прежде.
+- Переходные β: формула непрерывна и точна при любых углах.

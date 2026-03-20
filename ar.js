@@ -54,18 +54,11 @@
   /** false: полный OS fusion (DeviceOrientation). true: yaw из гироскопа, pitch/roll из OS fusion. */
   let compassDisabled = false;
 
-  /** Yaw инерциального контура (интеграл гироскопа, совместим с DeviceOrientation α), ° */
-  let inertialAlpha = 0;
+  /** Мировой heading (азимут направления камеры) инерциального контура, ° [0, 360).
+   *  Интегрируется из gyro world-yaw-rate; не страдает от gimbal lock в отличие от Euler α. */
+  let inertialHeading = 0;
   let lastMotionTimestamp = 0;
   let motionStateTimestamp = 0;
-  let prevGamma = 0;
-
-  // #region agent log
-  let _dbgLastLog = 0;
-  let _dbgEl = null;
-  let _dbgSamples = [];
-  function _dbgLog(loc, msg, data) { fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88efaa'},body:JSON.stringify({sessionId:'88efaa',location:loc,message:msg,data:data,timestamp:Date.now()})}).catch(function(){}); }
-  // #endregion
 
   /* ====== Дрейф ====== */
   let lastCalibrationTime = 0;
@@ -299,10 +292,36 @@
     orientationMatrix[8] =  cb * cg;
   }
 
+  /** Heading (азимут камеры) из Euler (α, β, γ).
+   *  forward = -(m6, m7, m8) of R^T → heading = atan2(forward_x, forward_y). */
+  function alphaToHeading(alphaDeg, betaDeg, gammaDeg) {
+    var a = alphaDeg * DEG, b = betaDeg * DEG, g = gammaDeg * DEG;
+    var ca = Math.cos(a), sa = Math.sin(a);
+    var sb = Math.sin(b), cg = Math.cos(g), sg = Math.sin(g);
+    var fx = -(ca * sg + sa * sb * cg);
+    var fy = ca * sb * cg - sa * sg;
+    return ((Math.atan2(fx, fy) * RAD) % 360 + 360) % 360;
+  }
+
+  /** Euler α из heading (H) и OS beta/gamma. Singularity-free.
+   *  Обратная к alphaToHeading: headingToAlpha(alphaToHeading(α,β,γ), β, γ) = α. */
+  function headingToAlpha(headingDeg, betaDeg, gammaDeg) {
+    var h = headingDeg * DEG;
+    var sb = Math.sin(betaDeg * DEG), cg = Math.cos(gammaDeg * DEG), sg = Math.sin(gammaDeg * DEG);
+    var sh = Math.sin(h), ch = Math.cos(h);
+    var y = -(sb * cg * sh + sg * ch);
+    var x = sb * cg * ch - sg * sh;
+    return ((Math.atan2(y, x) * RAD) % 360 + 360) % 360;
+  }
+
   function refreshOrientationMatrix() {
-    var alpha = compassDisabled
-      ? inertialAlpha - calibrationDelta
-      : sensorState.alpha - calibrationDelta - magneticDeclination;
+    var alpha;
+    if (compassDisabled) {
+      var corrH = ((inertialHeading - calibrationDelta) % 360 + 360) % 360;
+      alpha = headingToAlpha(corrH, sensorState.beta || 0, sensorState.gamma || 0);
+    } else {
+      alpha = sensorState.alpha - calibrationDelta - magneticDeclination;
+    }
     computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma);
   }
 
@@ -373,40 +392,24 @@
     lastMotionTimestamp = now;
     motionStateTimestamp = now;
 
-    if (dt <= 0 || dt > 0.25) { prevGamma = sensorState.gamma || 0; return; }
+    if (dt <= 0 || dt > 0.25) return;
 
     var ra = rr.alpha != null ? rr.alpha : 0;
     var rb = rr.beta  != null ? rr.beta  : 0;
     var rg = rr.gamma != null ? rr.gamma : 0;
 
-    var curBeta  = sensorState.beta  || 0;
-    var curGamma = sensorState.gamma || 0;
-    var betaRad  = curBeta * DEG;
-    var gammaRad = curGamma * DEG;
+    var betaRad  = (sensorState.beta  || 0) * DEG;
+    var gammaRad = (sensorState.gamma || 0) * DEG;
     var cosB = Math.cos(betaRad);
     var sinB = Math.sin(betaRad);
     var cosG = Math.cos(gammaRad);
     var sinG = Math.sin(gammaRad);
 
-    var gammaDot = (curGamma - prevGamma) / dt;
-    prevGamma = curGamma;
-
-    /* OLD formula (active): world yaw rate, includes γ̇ at β≈90° */
-    var dAlphaOld = (ra * cosB + rg * sinB) * dt;
-
-    /* Heading-based rate (diagnostic only — no γ̇, no singularity) */
-    var headingRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
-
-    // #region agent log
-    if (now - _dbgLastLog > 400) {
-      _dbgLastLog = now;
-      var d = {b:+curBeta.toFixed(1),g:+curGamma.toFixed(1),ra:+ra.toFixed(2),rb:+rb.toFixed(2),rg:+rg.toFixed(2),gDot:+gammaDot.toFixed(1),dAold:+dAlphaOld.toFixed(4),hRate:+headingRate.toFixed(2),iA:+inertialAlpha.toFixed(1),dt:+(dt*1000).toFixed(0)};
-      _dbgLog('ar.js:motion','sensors',d);
-      if (_dbgEl) _dbgEl.textContent='b='+d.b+' g='+d.g+' ra='+d.ra+' rb='+d.rb+' rg='+d.rg+'\ngDot='+d.gDot+' dA='+d.dAold+' hR='+d.hRate+' iA='+d.iA;
-    }
-    // #endregion
-
-    inertialAlpha = ((inertialAlpha + dAlphaOld) % 360 + 360) % 360;
+    /* World yaw rate = ω · ĝ_device, where ĝ_device = R^T·[0,0,1].
+       Exact, no singularities, no γ̇ estimation needed.
+       Heading (CW from North) increases when yaw_rate is negative. */
+    var yawRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
+    inertialHeading = ((inertialHeading - yawRate * dt) % 360 + 360) % 360;
     refreshOrientationMatrix();
   }
 
@@ -602,14 +605,9 @@
     if (!truePos) return;
 
     if (compassDisabled) {
-      var rawInertial = inertialAlpha;
-      var sensorAzIn = ((360 - rawInertial) % 360 + 360) % 360;
-      calibrationDelta = truePos.azimuth - sensorAzIn;
+      calibrationDelta = inertialHeading - truePos.azimuth;
       if (calibrationDelta > 180) calibrationDelta -= 360;
       if (calibrationDelta < -180) calibrationDelta += 360;
-      // #region agent log
-      _dbgLog('ar.js:calib','inertial_calib',{trueAz:+truePos.azimuth.toFixed(2),trueEl:+truePos.elevation.toFixed(2),iA:+rawInertial.toFixed(2),sensorAz:+sensorAzIn.toFixed(2),calDelta:+calibrationDelta.toFixed(2),beta:+(sensorState.beta||0).toFixed(1),gamma:+(sensorState.gamma||0).toFixed(1),osAlpha:+(sensorState.alpha||0).toFixed(1),source:source});
-      // #endregion
     } else {
       var rawAlpha = sensorState.alpha;
       var sensorAz = ((360 - rawAlpha + magneticDeclination) % 360 + 360) % 360;
@@ -970,8 +968,8 @@
     lastMotionTimestamp = 0;
 
     if (compassDisabled) {
-      inertialAlpha = sensorState.alpha || 0;
-      prevGamma = sensorState.gamma || 0;
+      inertialHeading = alphaToHeading(
+        sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
     }
 
     refreshOrientationMatrix();
@@ -1029,10 +1027,6 @@
     elSensorCamera = document.getElementById('arSensorCamera');
     elSensorCompass = document.getElementById('arSensorCompass');
     elSensorGyro = document.getElementById('arSensorGyro');
-    // #region agent log
-    _dbgEl = document.getElementById('arDbgOverlay');
-    if (!_dbgEl) { _dbgEl = document.createElement('div'); _dbgEl.id = 'arDbgOverlay'; _dbgEl.style.cssText = 'position:absolute;top:38px;left:4px;font:10px monospace;color:#0f0;background:rgba(0,0,0,0.6);padding:3px 5px;z-index:9999;pointer-events:none;white-space:pre;border-radius:3px;'; var arv = document.getElementById('arView'); if (arv) arv.appendChild(_dbgEl); }
-    // #endregion
   }
 
   function startRendering() {
@@ -1062,8 +1056,7 @@
     sessionCalibrated = false;
     driftPaused = false;
     renderingStarted = false;
-    inertialAlpha = 0;
-    prevGamma = 0;
+    inertialHeading = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     soundEnabled = false;
@@ -1145,8 +1138,7 @@
     compassDisabled = false;
     compassCalibrationDelta = 0;
     sessionCalibrated = false;
-    inertialAlpha = 0;
-    prevGamma = 0;
+    inertialHeading = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     visibleSatellites = [];
