@@ -41,18 +41,31 @@
   }
 
   let elArDebugOverlay = null;
-  let arDebugUiEnabled = false;
+  /** Включено жестом (5× тап по GPS) — не требует ?ardebug=1 в URL. */
+  let arDebugUiForced = false;
+  var arGpsDebugTapCount = 0;
+  var arGpsDebugTapTimer = null;
 
   function isArDebugUiEnabled() {
     try {
+      if (arDebugUiForced) return true;
       if (new URLSearchParams(window.location.search).get('ardebug') === '1') return true;
+      var hash = window.location.hash || '';
+      if (hash.indexOf('ardebug=1') >= 0) return true;
       if (window.localStorage && window.localStorage.getItem('satcontact_ardebug') === '1') return true;
     } catch (_) { /* ignore */ }
     return false;
   }
 
+  function removeArDebugOverlay() {
+    if (elArDebugOverlay && elArDebugOverlay.parentNode) {
+      elArDebugOverlay.parentNode.removeChild(elArDebugOverlay);
+    }
+    elArDebugOverlay = null;
+  }
+
   function ensureArDebugOverlay() {
-    if (!arDebugUiEnabled) return;
+    if (!isArDebugUiEnabled()) return;
     var arView = document.getElementById('arView');
     if (!arView || elArDebugOverlay) return;
     elArDebugOverlay = document.createElement('pre');
@@ -61,16 +74,39 @@
     elArDebugOverlay.style.cssText = [
       'position:absolute', 'left:4px', 'right:4px', 'bottom:72px', 'max-height:38vh',
       'overflow:auto', 'margin:0', 'padding:6px 8px', 'font:11px/1.35 monospace',
-      'color:#9f6', 'background:rgba(0,0,0,0.82)', 'border:1px solid rgba(255,255,255,0.2)',
-      'border-radius:6px', 'z-index:50', 'pointer-events:none', 'white-space:pre-wrap',
+      'color:#9f6', 'background:rgba(0,0,0,0.88)', 'border:1px solid rgba(255,255,255,0.25)',
+      'border-radius:6px', 'z-index:10000', 'pointer-events:none', 'white-space:pre-wrap',
       'word-break:break-all', '-webkit-overflow-scrolling:touch'
     ].join(';');
-    elArDebugOverlay.textContent = 'AR debug: ?ardebug=1 | localStorage satcontact_ardebug=1';
+    elArDebugOverlay.textContent = 'AR debug ON\nURL ?ardebug=1 | localStorage satcontact_ardebug=1\nили 5× тап по строке GPS выше — выкл.\n';
     arView.appendChild(elArDebugOverlay);
   }
 
+  function toggleArDebugUiByGesture() {
+    arDebugUiForced = !arDebugUiForced;
+    if (!isArDebugUiEnabled()) {
+      removeArDebugOverlay();
+    } else {
+      ensureArDebugOverlay();
+      if (elArDebugOverlay) {
+        elArDebugOverlay.textContent = 'AR debug ON (жест)\n';
+      }
+    }
+  }
+
+  function onArGpsStatusMultiTap() {
+    arGpsDebugTapCount += 1;
+    if (arGpsDebugTapTimer) clearTimeout(arGpsDebugTapTimer);
+    arGpsDebugTapTimer = setTimeout(function () { arGpsDebugTapCount = 0; }, 1100);
+    if (arGpsDebugTapCount >= 5) {
+      arGpsDebugTapCount = 0;
+      if (arGpsDebugTapTimer) clearTimeout(arGpsDebugTapTimer);
+      toggleArDebugUiByGesture();
+    }
+  }
+
   function appendArDebugOverlayLine(payload) {
-    if (!arDebugUiEnabled || !elArDebugOverlay) return;
+    if (!isArDebugUiEnabled() || !elArDebugOverlay) return;
     var msg = (payload.location || '') + ' | ' + (payload.message || '') + ' | ' + JSON.stringify(payload.data || {});
     var lines = (elArDebugOverlay.textContent + '\n' + msg).split('\n');
     elArDebugOverlay.textContent = lines.slice(-20).join('\n');
@@ -1072,6 +1108,7 @@
   function bindUi() {
     if (elBack) elBack.addEventListener('click', onBackClick);
     if (elFallbackBack) elFallbackBack.addEventListener('click', onBackClick);
+    if (elGpsStatus) elGpsStatus.addEventListener('click', onArGpsStatusMultiTap);
     if (elCalibBtn) elCalibBtn.addEventListener('click', performCalibration);
     if (elCanvas) elCanvas.addEventListener('click', onCanvasClick);
     if (elShowAll) elShowAll.addEventListener('click', onShowAllClick);
@@ -1082,6 +1119,7 @@
   function unbindUi() {
     if (elBack) elBack.removeEventListener('click', onBackClick);
     if (elFallbackBack) elFallbackBack.removeEventListener('click', onBackClick);
+    if (elGpsStatus) elGpsStatus.removeEventListener('click', onArGpsStatusMultiTap);
     if (elCalibBtn) elCalibBtn.removeEventListener('click', performCalibration);
     if (elCanvas) elCanvas.removeEventListener('click', onCanvasClick);
     if (elShowAll) elShowAll.removeEventListener('click', onShowAllClick);
@@ -1135,7 +1173,6 @@
 
   async function initAr(options) {
     cacheDom();
-    arDebugUiEnabled = isArDebugUiEnabled();
     ensureArDebugOverlay();
     active = true;
     state = 'overview';
@@ -1211,10 +1248,8 @@
 
   function cleanupAr() {
     active = false;
-    if (elArDebugOverlay && elArDebugOverlay.parentNode) {
-      elArDebugOverlay.parentNode.removeChild(elArDebugOverlay);
-    }
-    elArDebugOverlay = null;
+    arDebugUiForced = false;
+    removeArDebugOverlay();
     if (slowLoopId) { clearInterval(slowLoopId); slowLoopId = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     stopTrajectoryTimer();
