@@ -58,8 +58,14 @@
   let inertialAlpha = 0;
   let lastMotionTimestamp = 0;
   let motionStateTimestamp = 0;
-  /** Предыдущее значение gamma для оценки γ̇ (устранение gimbal coupling при β≈90°) */
   let prevGamma = 0;
+
+  // #region agent log
+  let _dbgLastLog = 0;
+  let _dbgEl = null;
+  let _dbgSamples = [];
+  function _dbgLog(loc, msg, data) { fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88efaa'},body:JSON.stringify({sessionId:'88efaa',location:loc,message:msg,data:data,timestamp:Date.now()})}).catch(function(){}); }
+  // #endregion
 
   /* ====== Дрейф ====== */
   let lastCalibrationTime = 0;
@@ -373,28 +379,34 @@
     var rb = rr.beta  != null ? rr.beta  : 0;
     var rg = rr.gamma != null ? rr.gamma : 0;
 
-    /* Singularity-free extraction of Euler α̇ for R = Rz(α)·Rx(β)·Ry(γ).
-       Body angular velocities:
-         ωz (ra) = α̇·cos(γ)·cos(β) + β̇·sin(γ)
-         ωx (rb) = −α̇·sin(γ)·cos(β) + β̇·cos(γ)
-         ωy (rg) = α̇·sin(β) + γ̇
-       Exact singularity-free result:
-         α̇ = cos(β)·(ra·cos(γ) − rb·sin(γ)) + sin(β)·(rg − γ̇)
-       γ̇ estimated from OS-fusion sensorState.gamma delta. */
+    var curBeta  = sensorState.beta  || 0;
     var curGamma = sensorState.gamma || 0;
-    var gammaDot = (curGamma - prevGamma) / dt;
-    prevGamma = curGamma;
-
-    var betaRad  = (sensorState.beta || 0) * DEG;
+    var betaRad  = curBeta * DEG;
     var gammaRad = curGamma * DEG;
     var cosB = Math.cos(betaRad);
     var sinB = Math.sin(betaRad);
     var cosG = Math.cos(gammaRad);
     var sinG = Math.sin(gammaRad);
 
-    var dAlpha = (cosB * (ra * cosG - rb * sinG) + sinB * (rg - gammaDot)) * dt;
+    var gammaDot = (curGamma - prevGamma) / dt;
+    prevGamma = curGamma;
 
-    inertialAlpha = ((inertialAlpha + dAlpha) % 360 + 360) % 360;
+    /* OLD formula (active): world yaw rate, includes γ̇ at β≈90° */
+    var dAlphaOld = (ra * cosB + rg * sinB) * dt;
+
+    /* Heading-based rate (diagnostic only — no γ̇, no singularity) */
+    var headingRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
+
+    // #region agent log
+    if (now - _dbgLastLog > 400) {
+      _dbgLastLog = now;
+      var d = {b:+curBeta.toFixed(1),g:+curGamma.toFixed(1),ra:+ra.toFixed(2),rb:+rb.toFixed(2),rg:+rg.toFixed(2),gDot:+gammaDot.toFixed(1),dAold:+dAlphaOld.toFixed(4),hRate:+headingRate.toFixed(2),iA:+inertialAlpha.toFixed(1),dt:+(dt*1000).toFixed(0)};
+      _dbgLog('ar.js:motion','sensors',d);
+      if (_dbgEl) _dbgEl.textContent='b='+d.b+' g='+d.g+' ra='+d.ra+' rb='+d.rb+' rg='+d.rg+'\ngDot='+d.gDot+' dA='+d.dAold+' hR='+d.hRate+' iA='+d.iA;
+    }
+    // #endregion
+
+    inertialAlpha = ((inertialAlpha + dAlphaOld) % 360 + 360) % 360;
     refreshOrientationMatrix();
   }
 
@@ -595,6 +607,9 @@
       calibrationDelta = truePos.azimuth - sensorAzIn;
       if (calibrationDelta > 180) calibrationDelta -= 360;
       if (calibrationDelta < -180) calibrationDelta += 360;
+      // #region agent log
+      _dbgLog('ar.js:calib','inertial_calib',{trueAz:+truePos.azimuth.toFixed(2),trueEl:+truePos.elevation.toFixed(2),iA:+rawInertial.toFixed(2),sensorAz:+sensorAzIn.toFixed(2),calDelta:+calibrationDelta.toFixed(2),beta:+(sensorState.beta||0).toFixed(1),gamma:+(sensorState.gamma||0).toFixed(1),osAlpha:+(sensorState.alpha||0).toFixed(1),source:source});
+      // #endregion
     } else {
       var rawAlpha = sensorState.alpha;
       var sensorAz = ((360 - rawAlpha + magneticDeclination) % 360 + 360) % 360;
@@ -1014,6 +1029,10 @@
     elSensorCamera = document.getElementById('arSensorCamera');
     elSensorCompass = document.getElementById('arSensorCompass');
     elSensorGyro = document.getElementById('arSensorGyro');
+    // #region agent log
+    _dbgEl = document.getElementById('arDbgOverlay');
+    if (!_dbgEl) { _dbgEl = document.createElement('div'); _dbgEl.id = 'arDbgOverlay'; _dbgEl.style.cssText = 'position:absolute;top:38px;left:4px;font:10px monospace;color:#0f0;background:rgba(0,0,0,0.6);padding:3px 5px;z-index:9999;pointer-events:none;white-space:pre;border-radius:3px;'; var arv = document.getElementById('arView'); if (arv) arv.appendChild(_dbgEl); }
+    // #endregion
   }
 
   function startRendering() {
