@@ -20,6 +20,62 @@
   /** Сглаживание наклона по акселерометру в инерциальном режиме (0…1) */
   const ACCEL_TILT_BLEND = 0.08;
 
+  /** Debug: NDJSON через ingest + копия в window для телефона (USB / adb reverse). */
+  var lastArDebugOrientTs = 0;
+  var lastArDebugMotionEntryTs = 0;
+  var lastArDebugMotionDtTs = 0;
+  var lastArDebugMotionIntTs = 0;
+  function arDebugLog(entry) {
+    var payload = Object.assign({ sessionId: 'fbe501', timestamp: Date.now(), runId: entry.runId || 'pre-fix' }, entry);
+    try {
+      if (!window.__SC_AR_DEBUG) window.__SC_AR_DEBUG = [];
+      window.__SC_AR_DEBUG.push(payload);
+      if (window.__SC_AR_DEBUG.length > 120) window.__SC_AR_DEBUG.shift();
+    } catch (_) { /* ignore */ }
+    appendArDebugOverlayLine(payload);
+    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' },
+      body: JSON.stringify(payload)
+    }).catch(function () {});
+  }
+
+  let elArDebugOverlay = null;
+  let arDebugUiEnabled = false;
+
+  function isArDebugUiEnabled() {
+    try {
+      if (new URLSearchParams(window.location.search).get('ardebug') === '1') return true;
+      if (window.localStorage && window.localStorage.getItem('satcontact_ardebug') === '1') return true;
+    } catch (_) { /* ignore */ }
+    return false;
+  }
+
+  function ensureArDebugOverlay() {
+    if (!arDebugUiEnabled) return;
+    var arView = document.getElementById('arView');
+    if (!arView || elArDebugOverlay) return;
+    elArDebugOverlay = document.createElement('pre');
+    elArDebugOverlay.id = 'arDebugOverlay';
+    elArDebugOverlay.setAttribute('aria-hidden', 'true');
+    elArDebugOverlay.style.cssText = [
+      'position:absolute', 'left:4px', 'right:4px', 'bottom:72px', 'max-height:38vh',
+      'overflow:auto', 'margin:0', 'padding:6px 8px', 'font:11px/1.35 monospace',
+      'color:#9f6', 'background:rgba(0,0,0,0.82)', 'border:1px solid rgba(255,255,255,0.2)',
+      'border-radius:6px', 'z-index:50', 'pointer-events:none', 'white-space:pre-wrap',
+      'word-break:break-all', '-webkit-overflow-scrolling:touch'
+    ].join(';');
+    elArDebugOverlay.textContent = 'AR debug: ?ardebug=1 | localStorage satcontact_ardebug=1';
+    arView.appendChild(elArDebugOverlay);
+  }
+
+  function appendArDebugOverlayLine(payload) {
+    if (!arDebugUiEnabled || !elArDebugOverlay) return;
+    var msg = (payload.location || '') + ' | ' + (payload.message || '') + ' | ' + JSON.stringify(payload.data || {});
+    var lines = (elArDebugOverlay.textContent + '\n' + msg).split('\n');
+    elArDebugOverlay.textContent = lines.slice(-20).join('\n');
+  }
+
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll, elCalibSource, elCalibBtn;
   let elSoundToggle, elDrift, elHud, elGpsStatus, elCoords;
@@ -376,7 +432,11 @@
 
     // #region agent log
     if (compassDisabled && active) {
-      fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H5', location: 'ar.js:onOrientation:inertial', message: 'orientation while inertial (matrix not from this)', data: { alpha: evt.alpha, beta: evt.beta, gamma: evt.gamma }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+      var nt = Date.now();
+      if (nt - lastArDebugOrientTs > 250) {
+        lastArDebugOrientTs = nt;
+        arDebugLog({ hypothesisId: 'H5', location: 'ar.js:onOrientation:inertial', message: 'orientation while inertial', data: { alpha: evt.alpha, beta: evt.beta, gamma: evt.gamma, absolute: !!evt.absolute } });
+      }
     }
     // #endregion
     if (!compassDisabled) {
@@ -385,10 +445,14 @@
   }
 
   function onDeviceMotion(evt) {
-    // #region agent log
-    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H1-H2', location: 'ar.js:onDeviceMotion:entry', message: 'devicemotion entry', data: { active: active, compassDisabled: compassDisabled, hasRR: !!evt.rotationRate, ra: evt.rotationRate ? evt.rotationRate.alpha : null, rb: evt.rotationRate ? evt.rotationRate.beta : null, rg: evt.rotationRate ? evt.rotationRate.gamma : null, ua: (typeof navigator !== 'undefined' && navigator.userAgent) ? String(navigator.userAgent).slice(0, 80) : '' }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
-    // #endregion
     if (!active || !compassDisabled) return;
+    // #region agent log
+    var _mt = Date.now();
+    if (_mt - lastArDebugMotionEntryTs > 200) {
+      lastArDebugMotionEntryTs = _mt;
+      arDebugLog({ hypothesisId: 'H1-H2', location: 'ar.js:onDeviceMotion:entry', message: 'devicemotion entry', data: { hasRR: !!evt.rotationRate, ra: evt.rotationRate ? evt.rotationRate.alpha : null, rb: evt.rotationRate ? evt.rotationRate.beta : null, rg: evt.rotationRate ? evt.rotationRate.gamma : null, ua: (typeof navigator !== 'undefined' && navigator.userAgent) ? String(navigator.userAgent).slice(0, 80) : '' } });
+    }
+    // #endregion
     var rr = evt.rotationRate;
     if (!rr) return;
 
@@ -398,7 +462,11 @@
     motionStateTimestamp = now;
 
     // #region agent log
-    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H2', location: 'ar.js:onDeviceMotion:dt', message: 'dt gate', data: { dt: dt, skip: dt <= 0 || dt > 0.25, iaBefore: inertialAlpha }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+    var _dtl = Date.now();
+    if (_dtl - lastArDebugMotionDtTs > 200) {
+      lastArDebugMotionDtTs = _dtl;
+      arDebugLog({ hypothesisId: 'H2', location: 'ar.js:onDeviceMotion:dt', message: 'dt gate', data: { dt: dt, skip: dt <= 0 || dt > 0.25, iaBefore: inertialAlpha } });
+    }
     // #endregion
     if (dt <= 0 || dt > 0.25) return;
 
@@ -423,7 +491,11 @@
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H3-H5', location: 'ar.js:onDeviceMotion:integrated', message: 'after gyro step', data: { da: da, db: db, dg: dg, inertialAlpha: inertialAlpha, inertialBeta: inertialBeta, inertialGamma: inertialGamma }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+    var _intl = Date.now();
+    if (_intl - lastArDebugMotionIntTs > 200) {
+      lastArDebugMotionIntTs = _intl;
+      arDebugLog({ hypothesisId: 'H3-H5', location: 'ar.js:onDeviceMotion:integrated', message: 'after gyro step', data: { da: da, db: db, dg: dg, inertialAlpha: inertialAlpha, inertialBeta: inertialBeta, inertialGamma: inertialGamma } });
+    }
     // #endregion
     refreshOrientationMatrix();
   }
@@ -1063,6 +1135,8 @@
 
   async function initAr(options) {
     cacheDom();
+    arDebugUiEnabled = isArDebugUiEnabled();
+    ensureArDebugOverlay();
     active = true;
     state = 'overview';
     focusedNoradId = null;
@@ -1137,6 +1211,10 @@
 
   function cleanupAr() {
     active = false;
+    if (elArDebugOverlay && elArDebugOverlay.parentNode) {
+      elArDebugOverlay.parentNode.removeChild(elArDebugOverlay);
+    }
+    elArDebugOverlay = null;
     if (slowLoopId) { clearInterval(slowLoopId); slowLoopId = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     stopTrajectoryTimer();
