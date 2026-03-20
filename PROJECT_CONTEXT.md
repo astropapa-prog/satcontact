@@ -256,7 +256,7 @@ satcontact/
 ### 6.5 Звук, «ВСЕ», события
 
 - **Звуковой прицел:** только в режиме **focus**; Web Audio API (`updateAudioPitch` в **ar.js**): частота **20–900 Гц** по величине углового отклонения **0°–90°** (константы `AUDIO_MIN_HZ` / `AUDIO_MAX_HZ` / `AUDIO_MAX_OFFSET_DEG`).
-- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» в мире = **`R·(0,0,−1)`** = `−(m6, m7, m8)` (Row2 хранимой R^T). Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: в обоих режимах beta/gamma из OS fusion; alpha — из `DeviceOrientation` в магнитном, из `inertialAlpha` в инерциальном). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
+- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» в мире = **`R·(0,0,−1)`** = `−(m6, m7, m8)` (Row2 хранимой R^T). Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: в обоих режимах beta/gamma из OS fusion; Euler **α** для матрицы — в магнитном режиме из `DeviceOrientation` после `calibrationDelta` и WMM; в инерциальном — **`headingToAlpha(inertialHeading − calibrationDelta, β, γ)`**, где **`inertialHeading`** накапливается в **`onDeviceMotion`**). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
 - **«ВСЕ» в AR:** как тумблер — все NORAD из `getSatContactFilteredEntries()` / возврат к набору при входе.
 - Событие **`satcontact:ar-focus`** — `{ detail: { focusedIds } }` для возможной синхронизации UI.
 
@@ -633,7 +633,7 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 1. **ar-render.js** — функция **`computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`**: угол между направлением на спутник и оптической осью камеры; те же world-вектор (az/el) и соглашения, что в **`projectReal3D`** и вершинном шейдере. Экспорт: **`SatContactArRender.computeAimingAngularErrorDeg`**.
 2. **ar.js** — в цикле рендера (**`renderLoop`**, режим focus) **`updateAudioPitch`** получает результат **`computeAimingAngularErrorDeg`** для спутника в фокусе и текущей **`orientationMatrix`** (те же **`focSat.azimuth`/`elevation`**, что и для отрисовки). Функция **`getCameraAzEl`** удалена; с **`window.SatContactAr`** снят экспорт **`getCameraAzEl`**.
 
-**Итог:** звук и отрисовка маркера используют одну матрицу ориентации и один геометрический смысл «наведения»; калибровка по Солнцу/Луне/Полярной по-прежнему влияет на **`computeOrientationMatrix`** в **`onOrientation`**, без дублирования логики для аудио.
+**Итог:** звук и отрисовка маркера используют одну матрицу ориентации и один геометрический смысл «наведения»; калибровка по Солнцу/Луне/Полярной по-прежнему влияет на **`computeOrientationMatrix`** через **`refreshOrientationMatrix()`** (из **`onOrientation`** и при инерциальном режиме — из **`onDeviceMotion`**), без дублирования логики для аудио.
 
 ### Сессия: Исправление матрицы ориентации и проекции AR (март 2026)
 
@@ -645,11 +645,11 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 **Причина 2 (средняя): перепутанные beta/gamma в `tiltDegreesFromAccel`.**
 Формула beta использовала `−ax` (ось gamma), а gamma — `ay/az` (ось beta). Акселерометрическая коррекция (`ACCEL_TILT_BLEND = 0.08`) медленно тянула наклон к неправильным значениям в инерциальном режиме.
 
-**Что НЕ сломано — логика разделения режимов:**
-- `refreshOrientationMatrix`: compass → `sensorState.alpha − calibrationDelta − magneticDeclination`; inertial → `inertialAlpha − calibrationDelta`. Корректно.
-- `performCalibration`: алгебра сходится в обоих режимах (effective alpha = `360 − trueAzimuth`). Корректно.
-- `onCompassToggleClick`: сброс калибровки, инициализация инерциальных углов, пауза до рекалибровки. Корректно.
-- `onDeviceMotion`: интеграция `rotationRate` с gimbal coupling (`dAlpha = ra·cosβ + rg·sinβ`). Корректно.
+**Что на тот момент считалось корректным разделением режимов** (после heading-based миграции формулировки уточнены под актуальный код):
+- `refreshOrientationMatrix`: магнитный → `sensorState.alpha − calibrationDelta − magneticDeclination`; инерциальный → `alpha = headingToAlpha((inertialHeading − calibrationDelta) mod 360, β, γ)` (см. **ar.js**).
+- `performCalibration`: магнитный — `calibrationDelta` из `truePos.azimuth` и `sensorAz`; инерциальный — `calibrationDelta = inertialHeading − truePos.azimuth` (нормализация ±180°).
+- `onCompassToggleClick`: сброс калибровки, при включении инерциального режима — `inertialHeading = alphaToHeading(...)`, пауза до рекалибровки.
+- `onDeviceMotion` (инерциальный): интеграция `yawRate` в `inertialHeading` (не старая связка `dAlpha = ra·cosβ + rg·sinβ` — она заменена в сессии heading-based).
 
 **Исправления в коде:**
 
@@ -675,8 +675,8 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 
 **Архитектурное решение — гибридный инерциальный режим:**
 - **Pitch/roll** (`sensorState.beta/gamma`) — всегда из OS fusion (`DeviceOrientationEvent`), в обоих режимах.
-- **Yaw** (`alpha`) — в магнитном режиме из OS fusion + WMM; в инерциальном — интеграл гироскопа (`inertialAlpha`) с привязкой к калибровке по небесному телу.
-- `refreshOrientationMatrix()` стала единообразной: `computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma)`, разница — только в источнике `alpha`.
+- **Yaw для матрицы** — в магнитном режиме: **α** из OS fusion + WMM после `calibrationDelta`; в инерциальном (актуально): сначала интеграция мирового heading в **`inertialHeading`** (`onDeviceMotion`), затем **`headingToAlpha(inertialHeading − calibrationDelta, β, γ)`** → **α** (подход heading-based заменил хранение «сырого» Euler **α** как `inertialAlpha`).
+- `refreshOrientationMatrix()` единообразна: `computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma)`, разница — только в способе получения **α**.
 
 **Удалённый код (ar.js):**
 - Переменные `inertialBeta`, `inertialGamma` — pitch/roll больше не интегрируются из гироскопа.
@@ -689,18 +689,18 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 **Изменённый код (ar.js):**
 1. **`refreshOrientationMatrix()`** — beta/gamma **всегда** из `sensorState`; alpha по режиму.
 2. **`onOrientation()`** — вызывает `refreshOrientationMatrix()` **всегда**, а не только в магнитном режиме (обновляет pitch/roll для инерциального контура).
-3. **`onDeviceMotion()`** — интегрирует **только yaw** (`inertialAlpha`); gimbal coupling использует `sensorState.beta` (точный OS-ный, а не самодельный).
+3. **`onDeviceMotion()`** — в инерциальном режиме интегрирует **только** мировой yaw в **`inertialHeading`** (актуально — через **`yawRate`**, см. сессию heading-based); для шага используются `sensorState.beta/gamma` из OS fusion.
 
 **Не изменено:**
 - **ar-render.js** — рендерер работает с `orientationMatrix[9]` как чёрным ящиком; `projectReal3D`, WebGL-шейдер, `computeAimingAngularErrorDeg` не затронуты.
 - **`computeOrientationMatrix()`** — формула R^T (world→device) ZXY Euler не изменена.
-- **`performCalibration()`** — алгебра калибровки по небесному телу не изменена (использует только `inertialAlpha`, не beta/gamma).
+- **`performCalibration()`** — магнитный контур без изменений; инерциальный после heading-based задаёт **`calibrationDelta`** через **`inertialHeading`** и истинный азимут тела (не через отдельный «сырой» **α**).
 - **Таймер дрейфа, звуковой прицел, машина состояний** — без изменений.
 
 **Итог поведения после сессии:**
 - Инерциальный режим: pitch/roll стабильны и точны (OS fusion), наклон телефона корректно сдвигает маркеры. Единственный дрейфующий параметр — yaw (азимут), ~1–5°/мин, покрывается калибровкой.
 - Магнитный режим: поведение не изменилось (beta/gamma и раньше брались из `sensorState`).
-- Код упрощён: одна интегрируемая переменная (`inertialAlpha`) вместо трёх + акселерометрический blend.
+- Код упрощён: одна интегрируемая скалярная величина по yaw (**актуально `inertialHeading`**, ранее промежуточно — `inertialAlpha`) вместо трёх интегралов + акселерометрический blend.
 
 ### Сессия: Heading-based инерциальный tracking — устранение gimbal lock (март 2026)
 
