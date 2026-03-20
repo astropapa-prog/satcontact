@@ -20,96 +20,9 @@
   /** Сглаживание наклона по акселерометру в инерциальном режиме (0…1) */
   const ACCEL_TILT_BLEND = 0.08;
 
-  /** Debug: NDJSON через ingest + копия в window для телефона (USB / adb reverse). */
-  var lastArDebugOrientTs = 0;
-  var lastArDebugMotionEntryTs = 0;
-  var lastArDebugMotionDtTs = 0;
-  var lastArDebugMotionIntTs = 0;
-  function arDebugLog(entry) {
-    var payload = Object.assign({ sessionId: 'fbe501', timestamp: Date.now(), runId: entry.runId || 'pre-fix' }, entry);
-    try {
-      if (!window.__SC_AR_DEBUG) window.__SC_AR_DEBUG = [];
-      window.__SC_AR_DEBUG.push(payload);
-      if (window.__SC_AR_DEBUG.length > 120) window.__SC_AR_DEBUG.shift();
-    } catch (_) { /* ignore */ }
-    appendArDebugOverlayLine(payload);
-    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' },
-      body: JSON.stringify(payload)
-    }).catch(function () {});
-  }
-
-  let elArDebugOverlay = null;
-  /** Включено жестом (5× тап по GPS) — не требует ?ardebug=1 в URL. */
-  let arDebugUiForced = false;
-  var arGpsDebugTapCount = 0;
-  var arGpsDebugTapTimer = null;
-
-  function isArDebugUiEnabled() {
-    try {
-      if (arDebugUiForced) return true;
-      if (new URLSearchParams(window.location.search).get('ardebug') === '1') return true;
-      var hash = window.location.hash || '';
-      if (hash.indexOf('ardebug=1') >= 0) return true;
-      if (window.localStorage && window.localStorage.getItem('satcontact_ardebug') === '1') return true;
-    } catch (_) { /* ignore */ }
-    return false;
-  }
-
-  function removeArDebugOverlay() {
-    if (elArDebugOverlay && elArDebugOverlay.parentNode) {
-      elArDebugOverlay.parentNode.removeChild(elArDebugOverlay);
-    }
-    elArDebugOverlay = null;
-  }
-
-  function ensureArDebugOverlay() {
-    if (!isArDebugUiEnabled()) return;
-    var arView = document.getElementById('arView');
-    if (!arView || elArDebugOverlay) return;
-    elArDebugOverlay = document.createElement('pre');
-    elArDebugOverlay.id = 'arDebugOverlay';
-    elArDebugOverlay.setAttribute('aria-hidden', 'true');
-    elArDebugOverlay.style.cssText = [
-      'position:absolute', 'left:4px', 'right:4px', 'bottom:72px', 'max-height:38vh',
-      'overflow:auto', 'margin:0', 'padding:6px 8px', 'font:11px/1.35 monospace',
-      'color:#9f6', 'background:rgba(0,0,0,0.88)', 'border:1px solid rgba(255,255,255,0.25)',
-      'border-radius:6px', 'z-index:10000', 'pointer-events:none', 'white-space:pre-wrap',
-      'word-break:break-all', '-webkit-overflow-scrolling:touch'
-    ].join(';');
-    elArDebugOverlay.textContent = 'AR debug ON\nURL ?ardebug=1 | localStorage satcontact_ardebug=1\nили 5× тап по строке GPS выше — выкл.\n';
-    arView.appendChild(elArDebugOverlay);
-  }
-
-  function toggleArDebugUiByGesture() {
-    arDebugUiForced = !arDebugUiForced;
-    if (!isArDebugUiEnabled()) {
-      removeArDebugOverlay();
-    } else {
-      ensureArDebugOverlay();
-      if (elArDebugOverlay) {
-        elArDebugOverlay.textContent = 'AR debug ON (жест)\n';
-      }
-    }
-  }
-
-  function onArGpsStatusMultiTap() {
-    arGpsDebugTapCount += 1;
-    if (arGpsDebugTapTimer) clearTimeout(arGpsDebugTapTimer);
-    arGpsDebugTapTimer = setTimeout(function () { arGpsDebugTapCount = 0; }, 1100);
-    if (arGpsDebugTapCount >= 5) {
-      arGpsDebugTapCount = 0;
-      if (arGpsDebugTapTimer) clearTimeout(arGpsDebugTapTimer);
-      toggleArDebugUiByGesture();
-    }
-  }
-
-  function appendArDebugOverlayLine(payload) {
-    if (!isArDebugUiEnabled() || !elArDebugOverlay) return;
-    var msg = (payload.location || '') + ' | ' + (payload.message || '') + ' | ' + JSON.stringify(payload.data || {});
-    var lines = (elArDebugOverlay.textContent + '\n' + msg).split('\n');
-    elArDebugOverlay.textContent = lines.slice(-20).join('\n');
+  /** Угол в полуинтервал (−180°, 180°] для инерциального beta (без жёсткого clamp по W3C). */
+  function wrapAngle180(deg) {
+    return ((((deg + 180) % 360) + 360) % 360) - 180;
   }
 
   /* ====== DOM ====== */
@@ -466,15 +379,6 @@
     sensorState.absolute = !!evt.absolute;
     sensorState.timestamp = Date.now();
 
-    // #region agent log
-    if (compassDisabled && active) {
-      var nt = Date.now();
-      if (nt - lastArDebugOrientTs > 250) {
-        lastArDebugOrientTs = nt;
-        arDebugLog({ hypothesisId: 'H5', location: 'ar.js:onOrientation:inertial', message: 'orientation while inertial', data: { alpha: evt.alpha, beta: evt.beta, gamma: evt.gamma, absolute: !!evt.absolute } });
-      }
-    }
-    // #endregion
     if (!compassDisabled) {
       refreshOrientationMatrix();
     }
@@ -482,13 +386,6 @@
 
   function onDeviceMotion(evt) {
     if (!active || !compassDisabled) return;
-    // #region agent log
-    var _mt = Date.now();
-    if (_mt - lastArDebugMotionEntryTs > 200) {
-      lastArDebugMotionEntryTs = _mt;
-      arDebugLog({ hypothesisId: 'H1-H2', location: 'ar.js:onDeviceMotion:entry', message: 'devicemotion entry', data: { hasRR: !!evt.rotationRate, ra: evt.rotationRate ? evt.rotationRate.alpha : null, rb: evt.rotationRate ? evt.rotationRate.beta : null, rg: evt.rotationRate ? evt.rotationRate.gamma : null, ua: (typeof navigator !== 'undefined' && navigator.userAgent) ? String(navigator.userAgent).slice(0, 80) : '' } });
-    }
-    // #endregion
     var rr = evt.rotationRate;
     if (!rr) return;
 
@@ -497,13 +394,6 @@
     lastMotionTimestamp = now;
     motionStateTimestamp = now;
 
-    // #region agent log
-    var _dtl = Date.now();
-    if (_dtl - lastArDebugMotionDtTs > 200) {
-      lastArDebugMotionDtTs = _dtl;
-      arDebugLog({ hypothesisId: 'H2', location: 'ar.js:onDeviceMotion:dt', message: 'dt gate', data: { dt: dt, skip: dt <= 0 || dt > 0.25, iaBefore: inertialAlpha } });
-    }
-    // #endregion
     if (dt <= 0 || dt > 0.25) return;
 
     var da = (rr.alpha != null ? rr.alpha : 0) * dt;
@@ -513,8 +403,9 @@
     inertialAlpha = ((inertialAlpha + da) % 360 + 360) % 360;
     inertialBeta += db;
     inertialGamma += dg;
-    inertialBeta = Math.max(-180, Math.min(180, inertialBeta));
-    inertialGamma = Math.max(-90, Math.min(90, inertialGamma));
+    /* Не clamp gamma к ±90° (W3C для статичного evt): при «камера вверх» горизонтальный
+       поворот даёт большие rb/rg и малый ra; γ>90 в логах показывало насыщение и «залипание». */
+    inertialBeta = wrapAngle180(inertialBeta);
 
     var acc = evt.accelerationIncludingGravity;
     if (acc && acc.x != null) {
@@ -526,13 +417,6 @@
       }
     }
 
-    // #region agent log
-    var _intl = Date.now();
-    if (_intl - lastArDebugMotionIntTs > 200) {
-      lastArDebugMotionIntTs = _intl;
-      arDebugLog({ hypothesisId: 'H3-H5', location: 'ar.js:onDeviceMotion:integrated', message: 'after gyro step', data: { da: da, db: db, dg: dg, inertialAlpha: inertialAlpha, inertialBeta: inertialBeta, inertialGamma: inertialGamma } });
-    }
-    // #endregion
     refreshOrientationMatrix();
   }
 
@@ -1108,7 +992,6 @@
   function bindUi() {
     if (elBack) elBack.addEventListener('click', onBackClick);
     if (elFallbackBack) elFallbackBack.addEventListener('click', onBackClick);
-    if (elGpsStatus) elGpsStatus.addEventListener('click', onArGpsStatusMultiTap);
     if (elCalibBtn) elCalibBtn.addEventListener('click', performCalibration);
     if (elCanvas) elCanvas.addEventListener('click', onCanvasClick);
     if (elShowAll) elShowAll.addEventListener('click', onShowAllClick);
@@ -1119,7 +1002,6 @@
   function unbindUi() {
     if (elBack) elBack.removeEventListener('click', onBackClick);
     if (elFallbackBack) elFallbackBack.removeEventListener('click', onBackClick);
-    if (elGpsStatus) elGpsStatus.removeEventListener('click', onArGpsStatusMultiTap);
     if (elCalibBtn) elCalibBtn.removeEventListener('click', performCalibration);
     if (elCanvas) elCanvas.removeEventListener('click', onCanvasClick);
     if (elShowAll) elShowAll.removeEventListener('click', onShowAllClick);
@@ -1173,7 +1055,6 @@
 
   async function initAr(options) {
     cacheDom();
-    ensureArDebugOverlay();
     active = true;
     state = 'overview';
     focusedNoradId = null;
@@ -1248,8 +1129,6 @@
 
   function cleanupAr() {
     active = false;
-    arDebugUiForced = false;
-    removeArDebugOverlay();
     if (slowLoopId) { clearInterval(slowLoopId); slowLoopId = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     stopTrajectoryTimer();
