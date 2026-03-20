@@ -396,13 +396,22 @@
 
     if (dt <= 0 || dt > 0.25) return;
 
-    var da = (rr.alpha != null ? rr.alpha : 0) * dt;
-    var db = (rr.beta != null ? rr.beta : 0) * dt;
-    var dg = (rr.gamma != null ? rr.gamma : 0) * dt;
+    var ra = rr.alpha != null ? rr.alpha : 0;
+    var rb = rr.beta != null ? rr.beta : 0;
+    var rg = rr.gamma != null ? rr.gamma : 0;
+    /*
+      При вертикальном телефоне β≈90° горизонтальный поворот даёт в основном γ̇, а не α̇ (см. логи).
+      Раздельная интеграция α и γ искажает одну степень свободы. В плоскости (α, γ) при текущем β:
+      α̇_eff = α̇ cosβ + γ̇ sinβ,   γ̇_eff = γ̇ cosβ − α̇ sinβ  (согласование с осью «рыскания» при наклоне).
+    */
+    var cosB = Math.cos(inertialBeta * DEG);
+    var sinB = Math.sin(inertialBeta * DEG);
+    var dAlpha = (ra * cosB + rg * sinB) * dt;
+    var dGamma = (rg * cosB - ra * sinB) * dt;
 
-    inertialAlpha = ((inertialAlpha + da) % 360 + 360) % 360;
-    inertialBeta += db;
-    inertialGamma += dg;
+    inertialAlpha = ((inertialAlpha + dAlpha) % 360 + 360) % 360;
+    inertialBeta += rb * dt;
+    inertialGamma += dGamma;
     /* Не clamp gamma к ±90° (W3C для статичного evt): при «камера вверх» горизонтальный
        поворот даёт большие rb/rg и малый ra; γ>90 в логах показывало насыщение и «залипание». */
     inertialBeta = wrapAngle180(inertialBeta);

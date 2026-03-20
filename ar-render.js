@@ -46,7 +46,11 @@
     '  float el = a_azEl.y * 0.017453292519943295;',
     '  float cosEl = cos(el);',
     '  vec3 world = vec3(cosEl * sin(az), cosEl * cos(az), sin(el));',
-    '  vec3 cam = u_orientation * world;',
+    '  mat3 R = u_orientation;',
+    '  vec3 cam = vec3(',
+    '    R[0][0]*world.x + R[1][0]*world.y + R[2][0]*world.z,',
+    '    R[0][1]*world.x + R[1][1]*world.y + R[2][1]*world.z,',
+    '    R[0][2]*world.x + R[1][2]*world.y + R[2][2]*world.z);',
     '  float cz = -cam.z;',
     '  v_behind = step(cz, 0.01);',
     '  if (cz <= 0.01) {',
@@ -146,9 +150,10 @@
     var ez = Math.sin(elR);
 
     var m = orientationMatrix;
-    var dx = m[0] * ex + m[3] * ey + m[6] * ez;
-    var dy = m[1] * ex + m[4] * ey + m[7] * ez;
-    var dz = m[2] * ex + m[5] * ey + m[8] * ez;
+    /* v_cam = R^T * v_world (R — ориентация устройства в мире, столбцы); раньше было R*v — переворот/ось */
+    var dx = m[0] * ex + m[1] * ey + m[2] * ez;
+    var dy = m[3] * ex + m[4] * ey + m[5] * ez;
+    var dz = m[6] * ex + m[7] * ey + m[8] * ez;
 
     var cz = -dz;
     if (cz <= 0.01) return { x: 0, y: 0, visible: false };
