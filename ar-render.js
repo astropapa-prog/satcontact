@@ -172,9 +172,9 @@
   }
 
   /**
-   * Угловое отклонение для аудио-прицела (панорамирование). Ось прицела — (−m2,−m5,−m8):
-   * на устройстве это совпадало с фактическим направлением; не привязываем к оптической оси Canvas/WebGL,
-   * пока маркеры в focus не согласованы с тем же миром.
+   * Угловое отклонение направления на спутник от оптической оси — той же, что в projectReal3D и WebGL:
+   * в камере z = dot(строка2, v_world), на экран выводится при cz = −z > 0 → ось «вперёд» в мире = −(m6,m7,m8).
+   * Вектор (−m2,−m5,−m8) совпадал со старым шейдером по ошибке и после починки проекции давал неверный звук.
    */
   function computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix) {
     if (!isOrientationMatrixValid(orientationMatrix)) return null;
@@ -185,8 +185,8 @@
     var ey = cosEl * Math.cos(azR);
     var ez = Math.sin(elR);
     var m = orientationMatrix;
-    var fx = -m[2];
-    var fy = -m[5];
+    var fx = -m[6];
+    var fy = -m[7];
     var fz = -m[8];
     var flen = Math.sqrt(fx * fx + fy * fy + fz * fz);
     if (flen < 1e-6) return null;
