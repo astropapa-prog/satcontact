@@ -168,6 +168,33 @@
     return sum > 0.01;
   }
 
+  /**
+   * Угловое отклонение направления на спутник от оптической оси камеры (та же матрица и world-вектор,
+   * что в projectReal3D / WebGL). Для аудио-прицела — совпадает с тем, что видит рендер.
+   */
+  function computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix) {
+    if (!isOrientationMatrixValid(orientationMatrix)) return null;
+    var azR = satAz * DEG;
+    var elR = satEl * DEG;
+    var cosEl = Math.cos(elR);
+    var ex = cosEl * Math.sin(azR);
+    var ey = cosEl * Math.cos(azR);
+    var ez = Math.sin(elR);
+    var m = orientationMatrix;
+    var fx = -m[2];
+    var fy = -m[5];
+    var fz = -m[8];
+    var flen = Math.sqrt(fx * fx + fy * fy + fz * fz);
+    if (flen < 1e-6) return null;
+    fx /= flen;
+    fy /= flen;
+    fz /= flen;
+    var dot = ex * fx + ey * fy + ez * fz;
+    if (dot > 1) dot = 1;
+    else if (dot < -1) dot = -1;
+    return Math.acos(dot) / DEG;
+  }
+
   /* ==========================================================================
      Обновление VBO из данных траекторий Worker
      ========================================================================== */
@@ -519,6 +546,7 @@
     draw: draw,
     drawDriftWarning: drawDriftWarning,
     hitTest: hitTest,
-    updateTrajectories: updateTrajectories
+    updateTrajectories: updateTrajectories,
+    computeAimingAngularErrorDeg: computeAimingAngularErrorDeg
   };
 })();

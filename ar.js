@@ -280,13 +280,6 @@
     orientationMatrix[8] = cb * cg;
   }
 
-  function getCameraAzEl() {
-    var decl = compassDisabled ? 0 : magneticDeclination;
-    var az = ((360 - sensorState.alpha + calibrationDelta + decl + compassCalibrationDelta) % 360 + 360) % 360;
-    var el = Math.max(-90, Math.min(90, sensorState.beta - 90));
-    return { azimuth: az, elevation: el };
-  }
-
   /* ==========================================================================
      Камера
      ========================================================================== */
@@ -709,7 +702,6 @@
     if (now - lastRenderTime < RENDER_INTERVAL_MS) return;
     lastRenderTime = now;
 
-    var cam = getCameraAzEl();
     var renderer = window.SatContactArRender;
     var interpSats = interpolateSatellites();
 
@@ -737,11 +729,15 @@
         }
       }
       if (focSat) {
-        var dAz = focSat.azimuth - cam.azimuth;
-        if (dAz > 180) dAz -= 360;
-        if (dAz < -180) dAz += 360;
-        var dEl = focSat.elevation - cam.elevation;
-        var angOffset = Math.sqrt(dAz * dAz + dEl * dEl);
+        var angOffset = AUDIO_MAX_OFFSET_DEG;
+        if (renderer && renderer.computeAimingAngularErrorDeg) {
+          var computed = renderer.computeAimingAngularErrorDeg(
+            focSat.azimuth,
+            focSat.elevation,
+            orientationMatrix
+          );
+          if (computed != null) angOffset = computed;
+        }
         updateAudioPitch(angOffset);
       }
     } else {
@@ -1041,7 +1037,6 @@
     getSensorState: function () { return sensorState; },
     getGpsQuality: function () { return gpsQuality; },
     getGpsCoords: function () { return gpsCoords; },
-    getCameraAzEl: getCameraAzEl,
     getFov: function () { return { h: fovH, v: fovV }; }
   };
 })();
