@@ -1306,8 +1306,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--drift-fill, 100%);
-  background: hsl(var(--drift-hue, 120), 80%, 50%);
+  height: var(--drift-fill, 0%);
+  background: hsl(var(--drift-hue, 0), 80%, 50%);
   border-radius: 2px;
   transition: height 0.3s ease, background 0.3s ease;
 }

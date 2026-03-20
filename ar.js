@@ -1,6 +1,6 @@
 /**
  * SatContact — Модуль 3: AR-трекер (Оркестратор)
- * Камера, сенсоры (гироскоп + компас + WMM), GPS, состояние, калибровка, аудио-прицел, таймер дрейфа.
+ * Камера, сенсоры: режим магнитный (DeviceOrientation + WMM) или инерциальный (DeviceMotion: гиро + гравитация), GPS, калибровка, аудио-прицел, таймер дрейфа.
  */
 (function () {
   'use strict';
@@ -17,6 +17,8 @@
   const AUDIO_MAX_OFFSET_DEG = 90;
   const DEFAULT_FOV_H = 60;
   const DEFAULT_FOV_V = 45;
+  /** Сглаживание наклона по акселерометру в инерциальном режиме (0…1) */
+  const ACCEL_TILT_BLEND = 0.08;
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll, elCalibSource, elCalibBtn;
@@ -50,10 +52,20 @@
   let calibrationDelta = 0;         // azimuth correction in degrees
   let compassCalibrationDelta = 0;  // compass-specific correction
   let magneticDeclination = 0;
+  /** false: азимут из магнитного fusion (DeviceOrientation). true: гиро+аксель, без опоры на магнитометр. */
   let compassDisabled = false;
+
+  /** Углы инерциального контура (совместимы с ZXY DeviceOrientation), ° */
+  let inertialAlpha = 0;
+  let inertialBeta = 0;
+  let inertialGamma = 0;
+  let lastMotionTimestamp = 0;
+  let motionStateTimestamp = 0;
 
   /* ====== Дрейф ====== */
   let lastCalibrationTime = 0;
+  /** Успешная калибровка по небу в этой сессии (влияет на шкалу дрейфа и паузу до калибровки). */
+  let sessionCalibrated = false;
   let driftPaused = false;
 
   /* ====== Аудио ====== */
@@ -280,6 +292,34 @@
     orientationMatrix[8] = cb * cg;
   }
 
+  function refreshOrientationMatrix() {
+    if (compassDisabled) {
+      computeOrientationMatrix(
+        inertialAlpha - calibrationDelta,
+        inertialBeta,
+        inertialGamma
+      );
+    } else {
+      computeOrientationMatrix(
+        sensorState.alpha - calibrationDelta - magneticDeclination,
+        sensorState.beta,
+        sensorState.gamma
+      );
+    }
+  }
+
+  /** Наклон из нормализованного вектора гравитации (м/с² → углы в °, грубое соответствие beta/gamma). */
+  function tiltDegreesFromAccel(ax, ay, az) {
+    var norm = Math.sqrt(ax * ax + ay * ay + az * az);
+    if (norm < 0.5) return null;
+    ax /= norm;
+    ay /= norm;
+    az /= norm;
+    var beta = Math.atan2(-ax, Math.sqrt(ay * ay + az * az)) * RAD;
+    var gamma = Math.atan2(ay, az) * RAD;
+    return { beta: beta, gamma: gamma };
+  }
+
   /* ==========================================================================
      Камера
      ========================================================================== */
@@ -324,7 +364,7 @@
   }
 
   /* ==========================================================================
-     Сенсоры: DeviceOrientation
+     Сенсоры: DeviceOrientation (магнитный режим) + DeviceMotion (инерциальный)
      ========================================================================== */
   function onOrientation(evt) {
     if (evt.alpha == null) return;
@@ -334,11 +374,44 @@
     sensorState.absolute = !!evt.absolute;
     sensorState.timestamp = Date.now();
 
-    computeOrientationMatrix(
-      sensorState.alpha - calibrationDelta - magneticDeclination,
-      sensorState.beta,
-      sensorState.gamma
-    );
+    if (!compassDisabled) {
+      refreshOrientationMatrix();
+    }
+  }
+
+  function onDeviceMotion(evt) {
+    if (!active || !compassDisabled) return;
+    var rr = evt.rotationRate;
+    if (!rr) return;
+
+    var now = Date.now();
+    var dt = lastMotionTimestamp ? (now - lastMotionTimestamp) / 1000 : 0;
+    lastMotionTimestamp = now;
+    motionStateTimestamp = now;
+
+    if (dt <= 0 || dt > 0.25) return;
+
+    var da = (rr.alpha != null ? rr.alpha : 0) * dt;
+    var db = (rr.beta != null ? rr.beta : 0) * dt;
+    var dg = (rr.gamma != null ? rr.gamma : 0) * dt;
+
+    inertialAlpha = ((inertialAlpha + da) % 360 + 360) % 360;
+    inertialBeta += db;
+    inertialGamma += dg;
+    inertialBeta = Math.max(-180, Math.min(180, inertialBeta));
+    inertialGamma = Math.max(-90, Math.min(90, inertialGamma));
+
+    var acc = evt.accelerationIncludingGravity;
+    if (acc && acc.x != null) {
+      var tilt = tiltDegreesFromAccel(acc.x, acc.y, acc.z);
+      if (tilt) {
+        var b = ACCEL_TILT_BLEND;
+        inertialBeta += (tilt.beta - inertialBeta) * b;
+        inertialGamma += (tilt.gamma - inertialGamma) * b;
+      }
+    }
+
+    refreshOrientationMatrix();
   }
 
   async function startSensors() {
@@ -355,16 +428,31 @@
       }
     }
 
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        var permM = await DeviceMotionEvent.requestPermission();
+        if (permM !== 'granted') {
+          console.warn('ar.js: device motion permission denied');
+        }
+      } catch (e) {
+        console.warn('ar.js: device motion permission error', e);
+      }
+    }
+
     if ('ondeviceorientationabsolute' in window) {
       window.addEventListener('deviceorientationabsolute', onOrientation);
     } else {
       window.addEventListener('deviceorientation', onOrientation);
     }
+
+    window.addEventListener('devicemotion', onDeviceMotion);
   }
 
   function stopSensors() {
     window.removeEventListener('deviceorientationabsolute', onOrientation);
     window.removeEventListener('deviceorientation', onOrientation);
+    window.removeEventListener('devicemotion', onDeviceMotion);
   }
 
   /* ==========================================================================
@@ -475,25 +563,29 @@
 
   function updateDriftIndicator() {
     if (!elDrift) return;
-    var error = getDriftError();
+    var error = sessionCalibrated ? getDriftError() : MAX_DRIFT_ERROR_DEG;
     var ratio = Math.min(error / MAX_DRIFT_ERROR_DEG, 1);
     var hue = Math.round(120 * (1 - ratio));
     elDrift.style.setProperty('--drift-hue', hue);
     elDrift.style.setProperty('--drift-fill', Math.round((1 - ratio) * 100) + '%');
 
     var compassAvailable = !compassDisabled && sensorState.absolute;
-    if (error >= MAX_DRIFT_ERROR_DEG && !compassAvailable && !driftPaused) {
+    if (!sessionCalibrated) {
+      if (renderingStarted && !driftPaused) driftPaused = true;
+    } else if (error >= MAX_DRIFT_ERROR_DEG && !compassAvailable && !driftPaused) {
       driftPaused = true;
-    } else if ((error < MAX_DRIFT_ERROR_DEG || compassAvailable) && driftPaused) {
+    } else if (sessionCalibrated && (error < MAX_DRIFT_ERROR_DEG || compassAvailable) && driftPaused) {
       driftPaused = false;
     }
 
-    if (elDrift) {
-      if (error >= MAX_DRIFT_ERROR_DEG && compassAvailable) {
-        elDrift.title = '\u0420\u0435\u0436\u0438\u043C: \u043A\u043E\u043C\u043F\u0430\u0441';
-      } else {
-        elDrift.title = '\u0414\u0440\u0435\u0439\u0444 \u0433\u0438\u0440\u043E\u0441\u043A\u043E\u043F\u0430';
-      }
+    if (!sessionCalibrated) {
+      elDrift.title = '\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043A\u0430\u043B\u0438\u0431\u0440\u043E\u0432\u043A\u0430 \u043F\u043E \u043D\u0435\u0431\u0435\u0441\u043D\u043E\u043C\u0443 \u0442\u0435\u043B\u0443';
+    } else if (error >= MAX_DRIFT_ERROR_DEG && compassAvailable) {
+      elDrift.title = '\u0420\u0435\u0436\u0438\u043C: \u043A\u043E\u043C\u043F\u0430\u0441';
+    } else {
+      elDrift.title = compassDisabled
+        ? '\u0414\u0440\u0435\u0439\u0444: \u0438\u043D\u0435\u0440\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u0440\u0435\u0436\u0438\u043C (\u0433\u0438\u0440\u043E + \u0430\u043A\u0441\u0435\u043B\u044C)'
+        : '\u0414\u0440\u0435\u0439\u0444 \u0433\u0438\u0440\u043E\u0441\u043A\u043E\u043F\u0430';
     }
   }
 
@@ -513,21 +605,31 @@
 
     if (!truePos) return;
 
-    var rawAlpha = sensorState.alpha;
-    var sensorAz = ((360 - rawAlpha + magneticDeclination) % 360 + 360) % 360;
-    calibrationDelta = truePos.azimuth - sensorAz;
-    if (calibrationDelta > 180) calibrationDelta -= 360;
-    if (calibrationDelta < -180) calibrationDelta += 360;
+    if (compassDisabled) {
+      var rawInertial = inertialAlpha;
+      var sensorAzIn = ((360 - rawInertial) % 360 + 360) % 360;
+      calibrationDelta = truePos.azimuth - sensorAzIn;
+      if (calibrationDelta > 180) calibrationDelta -= 360;
+      if (calibrationDelta < -180) calibrationDelta += 360;
+    } else {
+      var rawAlpha = sensorState.alpha;
+      var sensorAz = ((360 - rawAlpha + magneticDeclination) % 360 + 360) % 360;
+      calibrationDelta = truePos.azimuth - sensorAz;
+      if (calibrationDelta > 180) calibrationDelta -= 360;
+      if (calibrationDelta < -180) calibrationDelta += 360;
 
-    if (!compassDisabled && sensorState.absolute) {
-      var rawCompassAz = ((360 - rawAlpha) % 360 + 360) % 360;
-      compassCalibrationDelta = truePos.azimuth - rawCompassAz - magneticDeclination;
-      if (compassCalibrationDelta > 180) compassCalibrationDelta -= 360;
-      if (compassCalibrationDelta < -180) compassCalibrationDelta += 360;
+      if (sensorState.absolute) {
+        var rawCompassAz = ((360 - rawAlpha) % 360 + 360) % 360;
+        compassCalibrationDelta = truePos.azimuth - rawCompassAz - magneticDeclination;
+        if (compassCalibrationDelta > 180) compassCalibrationDelta -= 360;
+        if (compassCalibrationDelta < -180) compassCalibrationDelta += 360;
+      }
     }
 
     lastCalibrationTime = Date.now();
+    sessionCalibrated = true;
     driftPaused = false;
+    refreshOrientationMatrix();
 
     if (!renderingStarted) {
       startRendering();
@@ -577,9 +679,7 @@
   function slowLoop() {
     if (!active) return;
 
-    if (renderingStarted) {
-      updateDriftIndicator();
-    }
+    updateDriftIndicator();
     updateHud();
     updateSensorStatus();
 
@@ -795,7 +895,9 @@
     setSensorClass(elSensorCamera, cameraStream ? 'ok' : 'off');
     var hasCompass = sensorState.absolute && !compassDisabled;
     setSensorClass(elSensorCompass, compassDisabled ? 'off' : hasCompass ? 'ok' : 'warn');
-    var gyroAlive = sensorState.timestamp && (Date.now() - sensorState.timestamp < 3000);
+    var orientFresh = sensorState.timestamp && (Date.now() - sensorState.timestamp < 3000);
+    var motionFresh = motionStateTimestamp && (Date.now() - motionStateTimestamp < 3000);
+    var gyroAlive = orientFresh || (compassDisabled && motionFresh);
     setSensorClass(elSensorGyro, gyroAlive ? 'ok' : 'off');
   }
 
@@ -861,11 +963,24 @@
     if (elCompassToggle) {
       elCompassToggle.classList.toggle('disabled', compassDisabled);
     }
+
+    sessionCalibrated = false;
+    lastCalibrationTime = 0;
+    calibrationDelta = 0;
+    compassCalibrationDelta = 0;
+    lastMotionTimestamp = 0;
+
     if (compassDisabled) {
-      if (!lastCalibrationTime && renderingStarted) {
-        driftPaused = true;
-      }
+      inertialAlpha = sensorState.alpha || 0;
+      inertialBeta = sensorState.beta || 0;
+      inertialGamma = sensorState.gamma || 0;
     }
+
+    refreshOrientationMatrix();
+    if (renderingStarted) {
+      driftPaused = true;
+    }
+    updateDriftIndicator();
   }
 
   function bindUi() {
@@ -942,8 +1057,14 @@
     magneticDeclination = 0;
     compassDisabled = false;
     lastCalibrationTime = 0;
+    sessionCalibrated = false;
     driftPaused = false;
     renderingStarted = false;
+    inertialAlpha = 0;
+    inertialBeta = 0;
+    inertialGamma = 0;
+    lastMotionTimestamp = 0;
+    motionStateTimestamp = 0;
     soundEnabled = false;
     visibleSatellites = [];
     allTrajectories = {};
@@ -968,6 +1089,7 @@
     if (!checkArCapabilities()) {
       showFallback();
       bindUi();
+      updateDriftIndicator();
       return;
     }
 
@@ -994,6 +1116,8 @@
     await waitForGps(15000);
     slowLoop();
 
+    updateDriftIndicator();
+
     // === ФАЗА 3 запускается из performCalibration() ===
   }
 
@@ -1019,6 +1143,12 @@
     showAllActive = false;
     compassDisabled = false;
     compassCalibrationDelta = 0;
+    sessionCalibrated = false;
+    inertialAlpha = 0;
+    inertialBeta = 0;
+    inertialGamma = 0;
+    lastMotionTimestamp = 0;
+    motionStateTimestamp = 0;
     visibleSatellites = [];
     allTrajectories = {};
     prevPositions = {};

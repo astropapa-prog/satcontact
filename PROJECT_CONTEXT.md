@@ -213,8 +213,8 @@ satcontact/
 
 ### 6.1 Назначение и файлы
 
-- **ar.js** — оркестратор: камера (`getUserMedia`, задняя), только аппаратный GPS, DeviceOrientation, WMM-коррекция магнитного склонения, калибровка по Солнцу/Луне/Полярной (формулы внутри ar.js), Web Audio (звуковой прицел в режиме фокуса), таймер дрейфа гироскопа, машина состояний **overview / focus** (UI: перекрестие, звук, скрытие прочих спутников при фокусе).
-- **ar-render.js** — **единый пайплайн Real 3D:** орбитные линии в **WebGL** (vertex: az/el → ориентация → перспектива → NDC; fragment: цвет + свечение), маркеры и подписи — **Canvas2D** поверх `#arCanvas`. При отсутствии WebGL — отрисовка линий на Canvas2D через `projectReal3D()`.
+- **ar.js** — оркестратор: камера (`getUserMedia`, задняя), только аппаратный GPS, DeviceOrientation, WMM-коррекция магнитного склонения, калибровка по Солнцу/Луне/Полярной (формулы внутри ar.js), Web Audio (звуковой прицел в режиме фокуса — угол наведения из **`SatContactArRender.computeAimingAngularErrorDeg`**, см. п. 6.5), таймер дрейфа гироскопа, машина состояний **overview / focus** (UI: перекрестие, звук, скрытие прочих спутников при фокусе).
+- **ar-render.js** — **единый пайплайн Real 3D:** орбитные линии в **WebGL** (vertex: az/el → ориентация → перспектива → NDC; fragment: цвет + свечение), маркеры и подписи — **Canvas2D** поверх `#arCanvas`. При отсутствии WebGL — отрисовка линий на Canvas2D через `projectReal3D()`. Публичный API: помимо `init` / `draw` / `hitTest` / `updateTrajectories` — **`computeAimingAngularErrorDeg(az, el, orientationMatrix)`** (угол между направлением на спутник и осью камеры; та же геометрия, что у маркеров и шейдера; используется звуковым прицелом в **ar.js**).
 - **index.html:** `#arView` — `<video>`, `<canvas id="arCanvasGL">`, `<canvas id="arCanvas">`; шапка, HUD, калибровка, заглушка для десктопа без камеры/гироскопа.
 - **tle.js / tle-worker.js:** помимо карты — **`requestArTrajectories(noradIds, observer, pointsPerSat)`** и сообщение Worker **`CALCULATE_AR_TRAJECTORIES`** → ответ **`AR_TRAJECTORIES_READY`** с траекториями `{ [noradId]: [{ az, el }, ...] }` (отсечение по элевации, ~120 точек на спутник). Синхронный fallback в основном потоке при недоступности Worker.
 - **app.js:** `openArView()` / `closeArView()`, кнопка «НАВЕСТИСЬ» (`data-action="track"`).
@@ -239,18 +239,20 @@ satcontact/
 ### 6.3 Геолокация и сенсоры
 
 - **GPS в AR:** только высокоточный аппаратный фикс; без IP, кэша и ручного ввода (в отличие от карты). Индикация: ТОЧНО / СЛАБО / ПОИСК…
-- **Камера, компас, гироскоп:** панель иконок; iOS — `DeviceOrientationEvent.requestPermission` по жесту.
+- **Камера, компас, гироскоп:** панель иконок; iOS — по жесту `DeviceOrientationEvent.requestPermission` и при необходимости `DeviceMotionEvent.requestPermission`.
 - **Десктоп:** если нет камеры/ориентации — заглушка с пояснением.
 
 ### 6.4 Компас, калибровка, дрейф
 
-- Встроенная упрощённая **WMM** для склонения по координатам GPS.
-- Режим **«без компаса»**; калибровка по **Солнцу / Луне / Полярной** (астрономия в ar.js).
-- **Дрейф:** таймер; при превышении порога без компаса — пауза рендера и предупреждение (`drawDriftWarning`).
+- Встроенная упрощённая **WMM** для склонения по координатам GPS (**только в магнитном режиме**, в матрицу ориентации).
+- **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **инерциальный** — `DeviceMotion` (`rotationRate` + `accelerationIncludingGravity`), азимут без магнитометра, WMM на yaw **не** накладывается; калибровка по небу задаёт `calibrationDelta` от `inertialAlpha`.
+- До **первой** калибровки в сессии шкала дрейфа показывает «исчерпано», подсказка «Требуется калибровка»; после смены режима компаса калибровку нужно выполнить снова.
+- **Дрейф:** таймер после калибровки; при превышении порога **без** доступного магнитного компаса (`absolute` в магнитном режиме) — пауза рендера (`drawDriftWarning`). Смена режима при уже запущенном рендере ставит паузу до новой калибровки.
 
 ### 6.5 Звук, «ВСЕ», события
 
-- **Звуковой прицел:** только в фокусе; Web Audio API.
+- **Звуковой прицел:** только в режиме **focus**; Web Audio API (`updateAudioPitch` в **ar.js**): частота **20–900 Гц** по величине углового отклонения **0°–90°** (константы `AUDIO_MIN_HZ` / `AUDIO_MAX_HZ` / `AUDIO_MAX_OFFSET_DEG`).
+- **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» — нормализованный **`M^T·(0,0,−1)`** для матрицы ориентации устройства. Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: магнитный режим — из `DeviceOrientation`, инерциальный — из `DeviceMotion`). Ранее использовался отдельный **`getCameraAzEl()`** — **удалён**; экспорт **`getCameraAzEl`** с **`window.SatContactAr`** снят.
 - **«ВСЕ» в AR:** как тумблер — все NORAD из `getSatContactFilteredEntries()` / возврат к набору при входе.
 - Событие **`satcontact:ar-focus`** — `{ detail: { focusedIds } }` для возможной синхронизации UI.
 
@@ -270,6 +272,7 @@ satcontact/
 | Траектории az/el | Worker `CALCULATE_AR_TRAJECTORIES`, ~120 точек, период ~1,3 с |
 | Линии орбит | WebGL `LINE_STRIP` + свечение в шейдере; fallback Canvas2D |
 | Маркеры / текст | Canvas2D, `drawSatelliteIcon`, палитра как на карте |
+| Звуковой прицел | `computeAimingAngularErrorDeg` + `updateAudioPitch`; та же матрица и соглашения, что у маркера |
 | Режимы | overview / focus — только UI и фильтрация отрисовки |
 
 ---
@@ -617,3 +620,13 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 
 - Первая версия: **ar.js** + **ar-render.js**, `#arView` в **index.html**, интеграция в **app.js** (`openArView` / «НАВЕСТИСЬ»), палитра и иконки как на карте, только аппаратный GPS, машина состояний overview/focus.
 - Эволюция рендера: единый **Real 3D** — орбиты в **WebGL**, маркеры/текст на **Canvas2D**; траектории az/el в **Worker** (`CALCULATE_AR_TRAJECTORIES` / `requestArTrajectories`), интерполяция позиций ~30 FPS, второй canvas `#arCanvasGL`. Подробности — в **разделе 6** выше.
+
+### Сессия: AR — единый пайплайн звукового прицела (март 2026)
+
+**Проблема:** маркеры спутников строились через **`orientationMatrix`**, **`projectReal3D()`** и WebGL-шейдер, а звуковой прицел в **focus** использовал отдельную модель **`getCameraAzEl()`** (комбинация `alpha`/`beta`, иная свёртка калибровки и `compassCalibrationDelta`), из‑за чего тон минимальной частоты (20 Гц при «нулевой» ошибке по той формуле) не совпадал с визуальным положением иконки.
+
+**Изменения в коде:**
+1. **ar-render.js** — функция **`computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`**: угол между направлением на спутник и оптической осью камеры; те же world-вектор (az/el) и соглашения, что в **`projectReal3D`** и вершинном шейдере. Экспорт: **`SatContactArRender.computeAimingAngularErrorDeg`**.
+2. **ar.js** — в цикле рендера (**`renderLoop`**, режим focus) **`updateAudioPitch`** получает результат **`computeAimingAngularErrorDeg`** для спутника в фокусе и текущей **`orientationMatrix`** (те же **`focSat.azimuth`/`elevation`**, что и для отрисовки). Функция **`getCameraAzEl`** удалена; с **`window.SatContactAr`** снят экспорт **`getCameraAzEl`**.
+
+**Итог:** звук и отрисовка маркера используют одну матрицу ориентации и один геометрический смысл «наведения»; калибровка по Солнцу/Луне/Полярной по-прежнему влияет на **`computeOrientationMatrix`** в **`onOrientation`**, без дублирования логики для аудио.
