@@ -374,12 +374,20 @@
     sensorState.absolute = !!evt.absolute;
     sensorState.timestamp = Date.now();
 
+    // #region agent log
+    if (compassDisabled && active) {
+      fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H5', location: 'ar.js:onOrientation:inertial', message: 'orientation while inertial (matrix not from this)', data: { alpha: evt.alpha, beta: evt.beta, gamma: evt.gamma }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+    }
+    // #endregion
     if (!compassDisabled) {
       refreshOrientationMatrix();
     }
   }
 
   function onDeviceMotion(evt) {
+    // #region agent log
+    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H1-H2', location: 'ar.js:onDeviceMotion:entry', message: 'devicemotion entry', data: { active: active, compassDisabled: compassDisabled, hasRR: !!evt.rotationRate, ra: evt.rotationRate ? evt.rotationRate.alpha : null, rb: evt.rotationRate ? evt.rotationRate.beta : null, rg: evt.rotationRate ? evt.rotationRate.gamma : null, ua: (typeof navigator !== 'undefined' && navigator.userAgent) ? String(navigator.userAgent).slice(0, 80) : '' }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+    // #endregion
     if (!active || !compassDisabled) return;
     var rr = evt.rotationRate;
     if (!rr) return;
@@ -389,6 +397,9 @@
     lastMotionTimestamp = now;
     motionStateTimestamp = now;
 
+    // #region agent log
+    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H2', location: 'ar.js:onDeviceMotion:dt', message: 'dt gate', data: { dt: dt, skip: dt <= 0 || dt > 0.25, iaBefore: inertialAlpha }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+    // #endregion
     if (dt <= 0 || dt > 0.25) return;
 
     var da = (rr.alpha != null ? rr.alpha : 0) * dt;
@@ -411,6 +422,9 @@
       }
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7594/ingest/65b21c31-2aa4-4d8d-899a-39a29feb41fe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fbe501' }, body: JSON.stringify({ sessionId: 'fbe501', hypothesisId: 'H3-H5', location: 'ar.js:onDeviceMotion:integrated', message: 'after gyro step', data: { da: da, db: db, dg: dg, inertialAlpha: inertialAlpha, inertialBeta: inertialBeta, inertialGamma: inertialGamma }, timestamp: Date.now(), runId: 'pre-fix' }) }).catch(function () {});
+    // #endregion
     refreshOrientationMatrix();
   }
 
