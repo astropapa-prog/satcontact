@@ -1170,22 +1170,130 @@ body {
   transform: translateX(-0.5px);
 }
 
-/* ---------- Левая панель: калибровка ---------- */
-.ar-view__panel-left {
+/* ---------- Калибровочные оверлеи ---------- */
+.ar-view__calib-overlay {
   position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
+  inset: 0;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.7);
   pointer-events: auto;
+  padding: 24px;
+  text-align: center;
+}
+
+.ar-view__calib-overlay[hidden] {
+  display: none !important;
+}
+
+.ar-view__calib-overlay-icon {
+  font-size: 2.5rem;
+  opacity: 0.6;
+}
+
+.ar-view__calib-overlay-text {
+  margin: 0;
+  font-size: 1.125rem;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+.ar-view__calib-overlay-sub {
+  margin: 0;
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.ar-view__calib-overlay-warn {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  color: #ffd54f;
+  max-width: 280px;
+  line-height: 1.4;
+}
+
+.ar-view__calib-overlay-warn[hidden] {
+  display: none !important;
+}
+
+/* --- Фаза 1: круговой прогресс --- */
+.ar-view__phase1-ring {
+  display: block;
+}
+
+.ar-view__phase1-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 8;
+}
+
+.ar-view__phase1-ring-fg {
+  fill: none;
+  stroke: hsl(0, 80%, 50%);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.15s ease, stroke 0.3s ease;
+}
+
+/* --- Фаза 2: кнопки небесных тел --- */
+.ar-view__phase2-bodies {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ar-view__phase2-body {
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  transition: border-color 0.2s, background 0.2s, opacity 0.2s;
+}
+
+.ar-view__phase2-body:hover,
+.ar-view__phase2-body:focus {
+  background: rgba(82, 136, 193, 0.3);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ar-view__phase2-body.selected {
+  background: rgba(82, 136, 193, 0.45);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(82, 136, 193, 0.5);
+}
+
+.ar-view__phase2-body:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  border-color: #555;
+}
+
+.ar-view__phase2-compass-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
 }
 
 .ar-view__compass-toggle {
-  padding: 6px 10px;
-  font-size: 0.6875rem;
+  padding: 8px 14px;
+  font-size: 0.75rem;
   font-family: var(--font-sans);
   color: rgba(255, 255, 255, 0.9);
   background: rgba(46, 204, 113, 0.35);
@@ -1193,7 +1301,6 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
   transition: background 0.2s, border-color 0.2s;
 }
 
@@ -1210,42 +1317,61 @@ body {
   opacity: 0.7;
 }
 
-.ar-view__calib-select {
-  padding: 6px 8px;
-  font-size: 0.6875rem;
+/* --- Фаза 2: кнопка «Зафиксировать» --- */
+.ar-view__phase2-fix-btn {
+  padding: 14px 36px;
+  font-size: 1rem;
   font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: background 0.2s, opacity 0.2s;
+  margin-top: 8px;
+}
+
+.ar-view__phase2-fix-btn:hover,
+.ar-view__phase2-fix-btn:focus {
+  background: var(--accent-hover);
+  outline: none;
+}
+
+.ar-view__phase2-fix-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* --- Кнопка рекалибровки (RENDERING) --- */
+.ar-view__recalib-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 0.625rem;
+  line-height: 1.1;
   color: rgba(255, 255, 255, 0.9);
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-sm);
-  backdrop-filter: blur(4px);
-  cursor: pointer;
-  appearance: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 12 12'%3E%3Cpath fill='%23ccc' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  padding-right: 20px;
-}
-
-.ar-view__calib-btn {
-  padding: 6px 10px;
-  font-size: 0.6875rem;
-  font-family: var(--font-sans);
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   cursor: pointer;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
-.ar-view__calib-btn:hover,
-.ar-view__calib-btn:focus {
+.ar-view__recalib-btn:hover,
+.ar-view__recalib-btn:focus {
   background: rgba(82, 136, 193, 0.4);
   border-color: var(--accent);
   outline: none;
+}
+
+.ar-view__recalib-btn[hidden] {
+  display: none !important;
 }
 
 /* ---------- Правая панель: звук + дрейф ---------- */

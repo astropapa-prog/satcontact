@@ -131,17 +131,41 @@
 
       <div id="arCrosshair" class="ar-view__crosshair"></div>
 
-      <div class="ar-view__panel-left">
-        <button type="button" id="arCompassToggle" class="ar-view__compass-toggle" title="Компас: магнитный к северу / режим гироскоп+акселерометр (без магнитометра)">&#129517; Компас</button>
-        <select id="arCalibSource" class="ar-view__calib-select">
-          <option value="sun">&#9728;&#65039; Солнце</option>
-          <option value="moon">&#127769; Луна</option>
-          <option value="polaris">&#11088; Полярная</option>
-        </select>
-        <button type="button" id="arCalibBtn" class="ar-view__calib-btn">Калибровать</button>
+      <!-- Оверлей: ожидание GPS -->
+      <div id="arCalibWaitGps" class="ar-view__calib-overlay" hidden>
+        <div class="ar-view__calib-overlay-icon">&#128225;</div>
+        <p class="ar-view__calib-overlay-text">Ожидание GPS&#8230;</p>
+      </div>
+
+      <!-- Оверлей: Фаза 1 — детекция гироскопа -->
+      <div id="arCalibPhase1" class="ar-view__calib-overlay" hidden>
+        <p class="ar-view__calib-overlay-text">Медленно поверните телефон</p>
+        <svg id="arPhase1Ring" class="ar-view__phase1-ring" viewBox="0 0 120 120" width="120" height="120">
+          <circle class="ar-view__phase1-ring-bg" cx="60" cy="60" r="54" />
+          <circle id="arPhase1Progress" class="ar-view__phase1-ring-fg" cx="60" cy="60" r="54"
+                  stroke-dasharray="339.292" stroke-dashoffset="339.292" />
+        </svg>
+        <p id="arPhase1Text" class="ar-view__calib-overlay-sub">0° / 15°</p>
+      </div>
+
+      <!-- Оверлей: Фаза 2 — наведение и фиксация -->
+      <div id="arCalibPhase2" class="ar-view__calib-overlay" hidden>
+        <p class="ar-view__calib-overlay-text">Выберите небесное тело</p>
+        <div class="ar-view__phase2-bodies">
+          <button type="button" id="arCalibSun" class="ar-view__phase2-body" data-body="sun">&#9728;&#65039; Солнце</button>
+          <button type="button" id="arCalibMoon" class="ar-view__phase2-body" data-body="moon">&#127769; Луна</button>
+          <button type="button" id="arCalibPolaris" class="ar-view__phase2-body" data-body="polaris">&#11088; Полярная</button>
+        </div>
+        <p id="arPhase2NoBodies" class="ar-view__calib-overlay-warn" hidden>Нет доступных небесных тел. Дождитесь восхода Солнца или Луны.</p>
+        <div class="ar-view__phase2-compass-row">
+          <button type="button" id="arPhase2CompassToggle" class="ar-view__compass-toggle" title="Компас: магнитный / инерциальный">&#129517; Компас</button>
+        </div>
+        <p id="arPhase2Instruction" class="ar-view__calib-overlay-sub">Направьте камеру на тело и нажмите «Зафиксировать»</p>
+        <button type="button" id="arCalibFixBtn" class="ar-view__phase2-fix-btn" disabled>Зафиксировать</button>
       </div>
 
       <div class="ar-view__panel-right">
+        <button type="button" id="arRecalibBtn" class="ar-view__recalib-btn" hidden aria-label="Калибровка">&#8635; Калиб.</button>
         <button type="button" id="arSoundToggle" class="ar-view__sound-btn" aria-label="Звук">&#128264;</button>
         <div id="arDriftIndicator" class="ar-view__drift" title="Дрейф гироскопа"></div>
       </div>
