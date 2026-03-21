@@ -215,7 +215,7 @@ satcontact/
 
 - **ar.js** — оркестратор: камера (`getUserMedia`, задняя), только аппаратный GPS, DeviceOrientation, WMM-коррекция магнитного склонения, калибровка по Солнцу/Луне/Полярной (формулы внутри ar.js), Web Audio (звуковой прицел в режиме фокуса — угол наведения из **`SatContactArRender.computeAimingAngularErrorDeg`**, см. п. 6.5), таймер дрейфа гироскопа, машина состояний **overview / focus** (UI: перекрестие, звук, скрытие прочих спутников при фокусе).
 - **ar-render.js** — **единый пайплайн Real 3D:** орбитные линии в **WebGL** (vertex: az/el → ориентация → перспектива → NDC; fragment: цвет + свечение), маркеры и подписи — **Canvas2D** поверх `#arCanvas`. При отсутствии WebGL — отрисовка линий на Canvas2D через `projectReal3D()`. Публичный API: помимо `init` / `draw` / `hitTest` / `updateTrajectories` — **`computeAimingAngularErrorDeg(az, el, orientationMatrix)`** (угол между направлением на спутник и осью камеры; та же геометрия, что у маркеров и шейдера; используется звуковым прицелом в **ar.js**).
-- **index.html:** `#arView` — `<video>`, `<canvas id="arCanvasGL">`, `<canvas id="arCanvas">`; шапка, HUD, калибровка, заглушка для десктопа без камеры/гироскопа.
+- **index.html:** `#arView` — `<video>`, `<canvas id="arCanvasGL">`, `<canvas id="arCanvas">`; шапка, HUD, три калибровочных оверлея (`#arCalibWaitGps`, `#arCalibPhase1`, `#arCalibPhase2`), кнопка рекалибровки (`#arRecalibBtn`), заглушка для десктопа без камеры/гироскопа.
 - **tle.js / tle-worker.js:** помимо карты — **`requestArTrajectories(noradIds, observer, pointsPerSat)`** и сообщение Worker **`CALCULATE_AR_TRAJECTORIES`** → ответ **`AR_TRAJECTORIES_READY`** с траекториями `{ [noradId]: [{ az, el }, ...] }` (отсечение по элевации, ~120 точек на спутник). Синхронный fallback в основном потоке при недоступности Worker.
 - **app.js:** `openArView()` / `closeArView()`, кнопка «НАВЕСТИСЬ» (`data-action="track"`).
 - **Палитра:** `window.SatContactOrbitPalette` (как в map-render.js, `ORBIT_PALETTE`).
@@ -246,12 +246,25 @@ satcontact/
 
 - Встроенная упрощённая **WMM** для склонения по координатам GPS (**только в магнитном режиме**, в матрицу ориентации).
 - **Матрица ориентации (`orientationMatrix[9]`):** `computeOrientationMatrix(α, β, γ)` вычисляет ZXY Euler R = Rz(α)·Rx(β)·Ry(γ) (device→world), хранит **R^T** (world→device) row-major. Все потребители (`projectReal3D`, WebGL-шейдер, `computeAimingAngularErrorDeg`) используют `m[row]·v_world` — это `(R^T · v_world)[row]`, координаты в системе устройства. Forward камеры в мире = `R·(0,0,−1)` = `−(Row2 of R^T)` = `−(m6, m7, m8)`. WebGL-upload: данные row-major с `transpose=false` → GLSL column-major автоматически даёт R, и `dot(R[col_i], world)` = `(R^T · world)[i]`.
-- **Два режима азимута** (тумблер «Компас»): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **heading-based инерциальный** — мировой heading (азимут камеры) из интеграла world yaw rate гироскопа, pitch/roll из OS fusion (`sensorState.beta/gamma`), WMM **не** накладывается; калибровка по небу задаёт `calibrationDelta` (heading-коррекция).
+- **Два режима азимута** (тумблер «Компас» в Фазе 2): **магнитный** — `DeviceOrientation` / `deviceorientationabsolute`, поправка `calibrationDelta` + WMM на `alpha`; **heading-based инерциальный** — мировой heading (азимут камеры) из интеграла world yaw rate гироскопа, pitch/roll из OS fusion (`sensorState.beta/gamma`), WMM **не** накладывается; калибровка по небу задаёт `calibrationDelta` (heading-коррекция).
 - **Heading-based инерциальный контур:** `onDeviceMotion` интегрирует world yaw rate (`yawRate = cosβ·(ra·cosγ − rb·sinγ) + sinβ·rg`) в **`inertialHeading`** (мировой азимут). Формула точная, без сингулярностей при любом β. Pitch/roll (`sensorState.beta/gamma`) из OS sensor fusion — не зависят от магнитометра. Вспомогательные функции **`alphaToHeading`** / **`headingToAlpha`** конвертируют между heading и Euler α без gimbal lock.
 - **`refreshOrientationMatrix()`** — в магнитном режиме: `computeOrientationMatrix(sensorState.alpha − calibrationDelta − magneticDeclination, ...)`. В инерциальном: `correctedHeading = inertialHeading − calibrationDelta`, затем `alpha = headingToAlpha(correctedHeading, beta, gamma)`, затем `computeOrientationMatrix(alpha, ...)`.
-- **`onOrientation()`** вызывает `refreshOrientationMatrix()` **всегда** (не только в магнитном режиме) — обновляет pitch/roll для инерциального контура при каждом событии OS fusion.
-- До **первой** калибровки в сессии шкала дрейфа показывает «исчерпано», подсказка «Требуется калибровка»; после смены режима компаса калибровку нужно выполнить снова.
-- **Дрейф:** таймер после калибровки; при превышении порога **без** доступного магнитного компаса (`absolute` в магнитном режиме) — пауза рендера (`drawDriftWarning`). Смена режима при уже запущенном рендере ставит паузу до новой калибровки.
+- **`onOrientation()`** вызывает `refreshOrientationMatrix()` **всегда** (не только в магнитном режиме) — обновляет pitch/roll для инерциального контура при каждом событии OS fusion. Также обновляет прогресс-кольцо в Фазе 1 (`updatePhase1Progress`).
+
+#### Формальная машина состояний калибровки (`calibState`)
+
+Четыре состояния: `'waiting_gps'` → `'phase1'` → `'phase2'` → `'rendering'`.
+
+- **`waiting_gps`**: камера и сенсоры работают, рендеринг и детекция не идут. Оверлей `#arCalibWaitGps` с текстом «Ожидание GPS…». Автопереход в `phase1` при получении GPS (проверяется в `slowLoop`).
+- **`phase1`** (детекция гироскопа): `gyroCorrection` сбрасывается к 1.0, `startGyroDetection()` запускает фазу детекции. SVG-кольцо `#arPhase1Progress` показывает прогресс поворота (0°→15°, цвет red→green). Автопереход в `phase2` мгновенно при `|osDelta| ≥ 15°` через `finalizeGyroDetection()` → `transitionToPhase2()`. Таймаута нет. Потеря GPS → `waiting_gps`.
+- **`phase2`** (наведение + фиксация): оверлей `#arCalibPhase2` с тремя кнопками небесных тел (Солнце/Луна/Полярная), тумблером компаса (`#arPhase2CompassToggle`), кнопкой «Зафиксировать» (`#arCalibFixBtn`). Доступность тел определяется по elevation > 5° (`updateCelestialBodiesAvailability`, обновляется каждые 10 с). При `compassDisabled = true` (инерциальный): `gyroCorrection` сохраняется в localStorage. При `compassDisabled = false` (магнитный): `gyroCorrection` не трогается. Потеря GPS → `waiting_gps`.
+- **`rendering`**: рендеринг спутников (запуск или возобновление). Кнопка `#arRecalibBtn` в правой панели. Таймер дрейфа (`updateDriftIndicator`): при `error ≥ MAX_DRIFT_ERROR_DEG` автоматически вызывает `triggerRecalibration()` → переход в `phase1` (GPS есть) или `waiting_gps` (GPS нет). Ручная рекалибровка через ту же `triggerRecalibration()`.
+
+**Удалённые переменные:** `sessionCalibrated`, `driftPaused`, `compassCalibrationDelta`, `GYRO_DETECT_TIMEOUT_MS`.
+**Удалённые функции:** `performCalibration()`, `onCompassToggleClick()`, `waitForGps()`, `loadGyroCorrection()`.
+**Новые функции:** `showCalibOverlay()`, `updatePhase1Progress()`, `transitionToPhase2()`, `updateCelestialBodiesAvailability()`, `syncBodySelection()`, `onSelectCelestialBody()`, `updatePhase2FixButton()`, `updatePhase2Instruction()`, `onPhase2CompassToggle()`, `onFixCalibration()`, `enterRendering()`, `triggerRecalibration()`, `clearCelestialAvailTimer()`.
+
+**Дрейф:** таймер после калибровки; при превышении порога — автоматический вход в рекалибровку (`triggerRecalibration`), без промежуточного `drawDriftWarning`. Режим компаса выбирается заново при каждой калибровке.
 
 ### 6.5 Звук, «ВСЕ», события
 
@@ -272,6 +285,7 @@ satcontact/
 | Аспект | Решение |
 |--------|---------|
 | Вход | «НАВЕСТИСЬ» → `openArView` |
+| Калибровка | Формальная машина: `waiting_gps` → `phase1` (gyro detect) → `phase2` (aim + fix) → `rendering` |
 | Позиции спутников | 1 Гц, `computeSatellite`, интерполяция под ~30 FPS |
 | Траектории az/el | Worker `CALCULATE_AR_TRAJECTORIES`, ~120 точек, период ~1,3 с |
 | Линии орбит | WebGL `LINE_STRIP` + свечение в шейдере; fallback Canvas2D |
@@ -775,20 +789,112 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 
 3. **Применение**: `inertialHeading -= yawRate · gyroCorrection · dt` (строка 494 ar.js)
 
-4. **Жизненный цикл**:
-   - `initAr` → `loadGyroCorrection()` из localStorage
-   - `onCompassToggleClick` (→ inertial) → `startGyroDetection()`
-   - `onCompassToggleClick` (→ magnetic) → `detectPhase = false`
-   - `onOrientation` → `finalizeGyroDetection(false)` (проверка при каждом событии OS fusion)
-   - `performCalibration` → `finalizeGyroDetection(true)` + force stop (пониженный порог 5°)
-   - `cleanupAr` → `detectPhase = false`
+4. **Жизненный цикл** (после внедрения машины состояний):
+   - `initAr` → `gyroCorrection = 1.0` (не из кеша) → `calibState = 'phase1'` (если GPS есть) → `startGyroDetection()`
+   - `finalizeGyroDetection` (|osDelta| ≥ 15°) → `transitionToPhase2()` — автопереход к Фазе 2
+   - `onPhase2CompassToggle` (→ inertial) → `inertialHeading = alphaToHeading(...)`; начинается интеграция heading
+   - `onFixCalibration` (инерциальный) → `saveGyroCorrection(gyroCorrection)` в localStorage
+   - `onFixCalibration` (магнитный) → gyroCorrection не трогается, не сохраняется
+   - `triggerRecalibration` / таймер дрейфа → `calibState = 'phase1'` (gyroCorrection = 1.0, детекция заново)
+   - `cleanupAr` → `calibState = 'waiting_gps'`, `detectPhase = false`
 
 **Константы (ar.js):**
 - `GYRO_DETECT_MIN_DEG = 15` — порог OS heading delta для надёжной детекции
 - `GYRO_DETECT_FORCE_MIN_DEG = 5` — пониженный порог при force (калибровка)
-- `GYRO_DETECT_TIMEOUT_MS = 8000` — таймаут детекции (используется кеш)
 - `GYRO_CORRECTION_KEY = 'satcontact_gyro_correction'` — ключ localStorage
+- `CELESTIAL_ELEVATION_THRESHOLD = 5` — минимальная elevation тела (°) для калибровки
+- `CELESTIAL_AVAILABILITY_INTERVAL_MS = 10000` — частота обновления доступности тел в Фазе 2
+- (Константа `GYRO_DETECT_TIMEOUT_MS` **удалена** — Фаза 1 без таймаута, см. сессию «Формальная машина состояний»)
 
 **Не изменено:** `computeOrientationMatrix`, ar-render.js, WebGL-шейдер, `computeAimingAngularErrorDeg`, калибровка обоих режимов (только вызов `finalizeGyroDetection(true)` добавлен перед калибровкой), таймер дрейфа, звуковой прицел.
 
 **Итог:** инерциальный режим автоматически определяет единицы (deg/s vs rad/s) и знак `rotationRate` на конкретном устройстве/браузере. Коррекция кэшируется и переопределяется при каждом входе в инерциальный режим. Нет хардкоженных устройство-специфичных обходов.
+
+### Сессия: Формальная машина состояний «Режим калибровки» (март 2026)
+
+**Проблемы, которые решает данная реализация:**
+
+В предыдущем коде ar.js не было формального состояния калибровки. «Режим калибровки» был реализован неявно через комбинацию флагов `renderingStarted`, `sessionCalibrated`, `driftPaused`, `detectPhase`. Это приводило к трём багам:
+1. **Баг 1**: Фаза автодетекции `gyroCorrection` могла быть прервана преждевременным нажатием кнопки калибровки. При чистом кеше `gyroCorrection` оставался 1.0 (default), и при устройстве с rad/s — heading менялся ~57x медленнее реальности.
+2. **Баг 2**: Пользователь мог пропустить детекцию, нажав «Калибровать» сразу после переключения в инерциальный режим.
+3. **Баг 3**: Переключение режима компаса во время рендеринга приводило к неконсистентному состоянию — `sessionCalibrated` сбрасывался, `driftPaused` включался, но детекция не гарантировалась.
+
+**Решение — формальная машина с четырьмя состояниями:**
+
+`calibState: 'waiting_gps' | 'phase1' | 'phase2' | 'rendering'`
+
+Граф переходов:
+```
+initAr() → GPS есть → PHASE_1; GPS нет → WAITING_GPS
+WAITING_GPS + GPS получен → PHASE_1 (авто, в slowLoop)
+PHASE_1 + |osDelta| ≥ 15° → PHASE_2 (авто, в onOrientation → finalizeGyroDetection → transitionToPhase2)
+PHASE_1 + GPS потерян → WAITING_GPS (в slowLoop)
+PHASE_2 + «Зафиксировать» → RENDERING (onFixCalibration → enterRendering)
+PHASE_2 + GPS потерян → WAITING_GPS (в slowLoop)
+RENDERING + дрейф ≥ порога / «Калибровка» → PHASE_1 или WAITING_GPS (triggerRecalibration)
+Любое + «Назад» → EXIT_AR (cleanupAr)
+```
+
+**Изменения в ar.js:**
+
+1. **Удалённые переменные:** `sessionCalibrated`, `driftPaused`, `compassCalibrationDelta`, `GYRO_DETECT_TIMEOUT_MS`.
+2. **Новые переменные:** `calibState` (строка), `selectedCalibBody` (`'sun'|'moon'|'polaris'|null`), `celestialAvailTimerId`.
+3. **Новые константы:** `CELESTIAL_ELEVATION_THRESHOLD = 5`, `CELESTIAL_AVAILABILITY_INTERVAL_MS = 10000`.
+4. **Удалённые функции:** `performCalibration()`, `onCompassToggleClick()`, `waitForGps()`, `loadGyroCorrection()`.
+5. **Новые функции (13 штук):**
+   - `showCalibOverlay(state)` — управление видимостью трёх оверлеев и кнопки рекалибровки
+   - `updatePhase1Progress(absDeg)` — обновление SVG-кольца и текста «X° / 15°», цвет red→green через hsl
+   - `transitionToPhase2()` — переход из Фазы 1: calibState → 'phase2', compassDisabled → false, запуск таймера доступности тел
+   - `clearCelestialAvailTimer()` — очистка таймера обновления доступности
+   - `updateCelestialBodiesAvailability()` — вычисление elevation Солнца/Луны/Полярной через getSunAzEl/getMoonAzEl/getPolarisAzEl, enabled/disabled кнопок
+   - `syncBodySelection()` — визуальное состояние 'selected' на кнопках тел
+   - `onSelectCelestialBody(evt)` — обработчик клика по кнопке тела (toggle выбора)
+   - `updatePhase2FixButton()` — disabled/enabled кнопки «Зафиксировать» (тело выбрано + GPS есть)
+   - `updatePhase2Instruction()` — текст инструкции в зависимости от выбранного тела
+   - `onPhase2CompassToggle()` — toggle compassDisabled, при включении инерциального — инициализация inertialHeading из OS fusion
+   - `onFixCalibration()` — замена performCalibration: калибровка по выбранному телу, saveGyroCorrection только для инерциального; вызов enterRendering
+   - `enterRendering()` — transition to rendering: showCalibOverlay, start/resume renderer, restore focus
+   - `triggerRecalibration()` — stop renderer, mute audio, reset compassDisabled, переход в phase1 или waiting_gps по GPS
+6. **Рефакторинг `onDeviceMotion()`:** убран guard `!compassDisabled` — накопление `detectGyroAccum` теперь идёт в Фазе 1 независимо от режима компаса (compassDisabled ещё false). Интеграция `inertialHeading` по-прежнему только при `compassDisabled`.
+7. **Рефакторинг `onOrientation()`:** убран `compassDisabled` из guard-а `finalizeGyroDetection`. Добавлено обновление прогресса Фазы 1 (`updatePhase1Progress`).
+8. **Рефакторинг `finalizeGyroDetection()`:** убран таймаут `GYRO_DETECT_TIMEOUT_MS`, убран `saveGyroCorrection` (перенесён в `onFixCalibration`). При успехе вызывает `transitionToPhase2()`.
+9. **Рефакторинг `initAr()`:** убраны `loadGyroCorrection()`, `waitForGps()`, инициализация `sessionCalibrated`/`driftPaused`/`compassCalibrationDelta`. `gyroCorrection` всегда начинается с 1.0. После готовности сенсоров — проверка GPS → `calibState = 'phase1'` + `startGyroDetection()` или `calibState = 'waiting_gps'`.
+10. **Рефакторинг `renderLoop()`:** `if (!active || calibState !== 'rendering') return;` вместо проверок `driftPaused`.
+11. **Рефакторинг `updateDriftIndicator()`:** при `calibState !== 'rendering'` — скрытие индикатора. При `error ≥ MAX_DRIFT_ERROR_DEG` — вызов `triggerRecalibration()`.
+12. **Рефакторинг `slowLoop()`:** добавлена GPS-мониторинг: `waiting_gps` + GPS → `phase1` (авто); `phase1`/`phase2` + GPS lost → `waiting_gps`.
+13. **Рефакторинг `bindUi()`/`unbindUi()`:** привязка/отвязка новых обработчиков (recalibBtn, celestial body buttons, phase2 compass toggle, fix button). Удалён `onCompassToggleClick`.
+14. **Рефакторинг `cleanupAr()`:** `calibState = 'waiting_gps'`, `clearCelestialAvailTimer()`, удалены сбросы `sessionCalibrated`/`driftPaused`/`compassCalibrationDelta`.
+15. **Новые DOM-ссылки в `cacheDom()`:** `elCalibWaitGps`, `elCalibPhase1`, `elCalibPhase2`, `elPhase1Progress`, `elPhase1Text`, `elCalibSun`, `elCalibMoon`, `elCalibPolaris`, `elPhase2CompassToggle`, `elCalibFixBtn`, `elPhase2Instruction`, `elPhase2NoBodies`, `elRecalibBtn`. Удалены: `elCalibSource`, `elCalibBtn`, `elCompassToggle`.
+
+**Изменения в index.html:**
+
+- **Удалён** весь блок `<div class="ar-view__panel-left">` (содержал `#arCompassToggle`, `#arCalibSource`, `#arCalibBtn`).
+- **Добавлены** три оверлея после `#arCrosshair`, перед `.ar-view__panel-right`:
+  - `#arCalibWaitGps` — текст «Ожидание GPS…»
+  - `#arCalibPhase1` — инструкция «Медленно поверните телефон», SVG-кольцо прогресса (`#arPhase1Ring` + `#arPhase1Progress`, r=54, `stroke-dasharray=339.292`), текст «0° / 15°` (`#arPhase1Text`)
+  - `#arCalibPhase2` — три кнопки тел (`#arCalibSun`, `#arCalibMoon`, `#arCalibPolaris`), предупреждение «Нет доступных тел» (`#arPhase2NoBodies`), тумблер компаса (`#arPhase2CompassToggle`), инструкция (`#arPhase2Instruction`), кнопка «Зафиксировать» (`#arCalibFixBtn`, disabled по умолчанию)
+- **Добавлена** кнопка `#arRecalibBtn` в `.ar-view__panel-right` (первая в ряду, hidden по умолчанию)
+
+**Изменения в style.css:**
+
+- **Удалены** стили: `.ar-view__panel-left`, старый `.ar-view__compass-toggle` (из panel-left), `.ar-view__calib-select`, `.ar-view__calib-btn`.
+- **Новые стили:**
+  - `.ar-view__calib-overlay` — `position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,0.7); flex center`
+  - `.ar-view__calib-overlay-icon`, `-text`, `-sub`, `-warn` — типографика оверлеев
+  - `.ar-view__phase1-ring`, `-bg`, `-fg` — SVG-кольцо (stroke: #333 фон, fg динамический через атрибут)
+  - `.ar-view__phase2-bodies`, `.ar-view__phase2-body` — кнопки тел (accent #5288c1, disabled: #555 / opacity 0.4, selected: яркая обводка)
+  - `.ar-view__phase2-compass-row` — layout тумблера в Фазе 2
+  - `.ar-view__compass-toggle` (переиспользован) — стили для тумблера в Фазе 2 (`.disabled` — визуально OFF)
+  - `.ar-view__phase2-fix-btn` — крупная кнопка (accent, disabled state)
+  - `.ar-view__recalib-btn` — круглая кнопка в правой панели AR HUD
+
+**Файлы НЕ изменены:** ar-render.js, tle.js, tle-worker.js, map.js, map-render.js, app.js.
+
+**Итог поведения после сессии:**
+- Калибровка AR теперь проходит через формальные фазы: GPS → детекция гиро → наведение на тело → фиксация → рендеринг.
+- Пользователь не может пропустить детекцию gyroCorrection — Фаза 1 блокирует до поворота ≥ 15°.
+- Пользователь не может прервать детекцию преждевременно — кнопки калибровки нет в Фазе 1.
+- Переключение режима компаса доступно только в Фазе 2 (не во время рендеринга).
+- Рекалибровка (ручная или по дрейфу) всегда проходит полный цикл phase1 → phase2 → rendering.
+- Фокус спутника и звук сохраняются через рекалибровку.
+- UI: три полупрозрачных оверлея поверх видео камеры для каждой фазы, SVG-кольцо прогресса, кнопки небесных тел с авто-доступностью.
