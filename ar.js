@@ -23,6 +23,8 @@
   const GYRO_CORRECTION_KEY = 'satcontact_gyro_correction';
   const CELESTIAL_ELEVATION_THRESHOLD = 5;
   const CELESTIAL_AVAILABILITY_INTERVAL_MS = 10000;
+  const BETA_MIN_FOR_HEADING = 15;
+  const GYRO_DETECT_MIN_TIME_MS = 500;
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
@@ -57,6 +59,7 @@
 
   /* ====== Сенсоры ====== */
   let sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };
+  let sensorReady = false;
   let orientationMatrix = new Float64Array(9); // 3x3 rotation matrix
   let calibrationDelta = 0;         // azimuth correction in degrees
   let magneticDeclination = 0;
@@ -72,7 +75,9 @@
   /* ====== Автодетекция единиц/знака rotationRate ====== */
   let gyroCorrection = 1.0;
   let detectPhase = false;
-  let detectStartHeading = 0;
+  let detectPrevHeading = 0;
+  let detectPrevHeadingValid = false;
+  let detectOsAccum = 0;
   let detectGyroAccum = 0;
   let detectStartTime = 0;
 
@@ -348,8 +353,8 @@
   function startGyroDetection() {
     detectPhase = true;
     detectGyroAccum = 0;
-    detectStartHeading = alphaToHeading(
-      sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
+    detectOsAccum = 0;
+    detectPrevHeadingValid = false;
     detectStartTime = Date.now();
   }
 
@@ -363,11 +368,10 @@
 
   function finalizeGyroDetection(force) {
     if (!detectPhase) return;
-    var currentH = alphaToHeading(
-      sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
-    var osDelta = currentH - detectStartHeading;
-    if (osDelta > 180) osDelta -= 360;
-    if (osDelta < -180) osDelta += 360;
+
+    var osDelta = detectOsAccum;
+    var elapsed = Date.now() - detectStartTime;
+    if (!force && elapsed < GYRO_DETECT_MIN_TIME_MS) return;
 
     var minDeg = force ? GYRO_DETECT_FORCE_MIN_DEG : GYRO_DETECT_MIN_DEG;
     if (Math.abs(osDelta) < minDeg || Math.abs(detectGyroAccum) < 0.01) {
@@ -377,11 +381,11 @@
 
     var ratio = -osDelta / detectGyroAccum;
     var correction = classifyGyroRatio(ratio);
-    if (correction !== gyroCorrection) {
-      console.log('ar.js: gyro correction: ' + correction.toFixed(4) +
-        ' (ratio=' + ratio.toFixed(3) + ' osDelta=' + osDelta.toFixed(1) +
-        ' gyroAccum=' + detectGyroAccum.toFixed(3) + ')');
-    }
+    console.log('[ar.js] finalizeGyroDetection: osDelta=' + osDelta.toFixed(2) +
+      ' gyroAccum=' + detectGyroAccum.toFixed(4) +
+      ' ratio=' + ratio.toFixed(3) +
+      ' correction=' + correction.toFixed(4) +
+      ' elapsed=' + elapsed + 'ms');
     gyroCorrection = correction;
     detectPhase = false;
 
@@ -455,14 +459,32 @@
     sensorState.timestamp = Date.now();
     refreshOrientationMatrix();
 
-    if (detectPhase) finalizeGyroDetection(false);
+    if (!sensorReady) {
+      sensorReady = true;
+      if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching') {
+        calibState = 'phase1';
+        gyroCorrection = 1.0;
+        startGyroDetection();
+        showCalibOverlay('phase1');
+        updatePhase1Progress(0);
+      }
+    }
+
+    if (detectPhase && Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
+      var currentH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
+      if (detectPrevHeadingValid) {
+        var hDelta = currentH - detectPrevHeading;
+        if (hDelta > 180) hDelta -= 360;
+        if (hDelta < -180) hDelta += 360;
+        detectOsAccum += hDelta;
+      }
+      detectPrevHeading = currentH;
+      detectPrevHeadingValid = true;
+      finalizeGyroDetection(false);
+    }
 
     if (calibState === 'phase1' && detectPhase) {
-      var currentH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
-      var osDelta = currentH - detectStartHeading;
-      if (osDelta > 180) osDelta -= 360;
-      if (osDelta < -180) osDelta += 360;
-      updatePhase1Progress(Math.abs(osDelta));
+      updatePhase1Progress(Math.abs(detectOsAccum));
     }
   }
 
@@ -491,7 +513,9 @@
 
     var yawRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
 
-    if (detectPhase) detectGyroAccum += yawRate * dt;
+    if (detectPhase && sensorReady && Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
+      detectGyroAccum += yawRate * dt;
+    }
 
     if (compassDisabled) {
       inertialHeading = ((inertialHeading - yawRate * gyroCorrection * dt) % 360 + 360) % 360;
@@ -827,7 +851,7 @@
     calibrationDelta = 0;
     lastMotionTimestamp = 0;
 
-    if (gpsCoords && gpsQuality !== 'searching') {
+    if (gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
       gyroCorrection = 1.0;
       startGyroDetection();
@@ -886,7 +910,7 @@
     updateHud();
     updateSensorStatus();
 
-    if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching') {
+    if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
       gyroCorrection = 1.0;
       startGyroDetection();
@@ -1273,6 +1297,8 @@
     motionStateTimestamp = 0;
     detectPhase = false;
     gyroCorrection = 1.0;
+    sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };
+    sensorReady = false;
     selectedCalibBody = null;
     soundEnabled = false;
     visibleSatellites = [];
@@ -1316,7 +1342,7 @@
 
     slowLoopId = setInterval(slowLoop, SLOW_LOOP_MS);
 
-    if (gpsCoords && gpsQuality !== 'searching') {
+    if (gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
       gyroCorrection = 1.0;
       startGyroDetection();
@@ -1358,6 +1384,7 @@
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     detectPhase = false;
+    sensorReady = false;
     visibleSatellites = [];
     allTrajectories = {};
     prevPositions = {};
