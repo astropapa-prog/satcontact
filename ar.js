@@ -25,6 +25,8 @@
   const CELESTIAL_AVAILABILITY_INTERVAL_MS = 10000;
   const BETA_MIN_FOR_HEADING = 15;
   const GYRO_DETECT_MIN_TIME_MS = 500;
+  const VERIFY_INTERVAL_MS = 3000;
+  const VERIFY_MIN_OS_DEG = 8;
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
@@ -80,6 +82,13 @@
   let detectOsAccum = 0;
   let detectGyroAccum = 0;
   let detectStartTime = 0;
+
+  /* ====== Непрерывная верификация gyroCorrection при рендеринге ====== */
+  let verifyOsAccum = 0;
+  let verifyGyroRawAccum = 0;
+  let verifyPrevHeading = 0;
+  let verifyPrevHeadingValid = false;
+  let verifyLastCheckTime = 0;
 
   /* ====== Калибровочная машина состояний ====== */
   let calibState = 'waiting_gps';  // 'waiting_gps' | 'phase1' | 'phase2' | 'rendering'
@@ -361,9 +370,40 @@
   function classifyGyroRatio(raw) {
     var absRaw = Math.abs(raw);
     if (absRaw < 0.3) return gyroCorrection;
-    if (absRaw < 5) return raw > 0 ? 1.0 : -1.0;
-    if (absRaw > 15) return raw > 0 ? RAD : -RAD;
-    return gyroCorrection;
+    var sign = raw > 0 ? 1 : -1;
+    // Граница — геометрическое среднее 1.0 и RAD(≈57.3) ≈ 7.57
+    if (absRaw < 7.57) return sign * 1.0;
+    return sign * RAD;
+  }
+
+  function resetVerifyState() {
+    verifyOsAccum = 0;
+    verifyGyroRawAccum = 0;
+    verifyPrevHeadingValid = false;
+    verifyLastCheckTime = Date.now();
+  }
+
+  function checkGyroCorrection() {
+    if (calibState !== 'rendering' || !compassDisabled) return;
+    var now = Date.now();
+    if (now - verifyLastCheckTime < VERIFY_INTERVAL_MS) return;
+    verifyLastCheckTime = now;
+
+    if (Math.abs(verifyOsAccum) < VERIFY_MIN_OS_DEG ||
+        Math.abs(verifyGyroRawAccum) < 0.01) {
+      return;
+    }
+
+    var ratio = -verifyOsAccum / verifyGyroRawAccum;
+    var newCorrection = classifyGyroRatio(ratio);
+
+    if (Math.abs(newCorrection - gyroCorrection) > 0.5) {
+      gyroCorrection = newCorrection;
+      saveGyroCorrection(gyroCorrection);
+    }
+
+    verifyOsAccum = 0;
+    verifyGyroRawAccum = 0;
   }
 
   function finalizeGyroDetection(force) {
@@ -481,6 +521,19 @@
     if (calibState === 'phase1' && detectPhase) {
       updatePhase1Progress(Math.abs(detectOsAccum));
     }
+
+    if (calibState === 'rendering' && compassDisabled &&
+        Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
+      var vH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
+      if (verifyPrevHeadingValid) {
+        var vDelta = vH - verifyPrevHeading;
+        if (vDelta > 180) vDelta -= 360;
+        if (vDelta < -180) vDelta += 360;
+        verifyOsAccum += vDelta;
+      }
+      verifyPrevHeading = vH;
+      verifyPrevHeadingValid = true;
+    }
   }
 
   function onDeviceMotion(evt) {
@@ -510,6 +563,11 @@
 
     if (detectPhase && sensorReady && Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
       detectGyroAccum += yawRate * dt;
+    }
+
+    if (calibState === 'rendering' && compassDisabled &&
+        Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
+      verifyGyroRawAccum += yawRate * dt;
     }
 
     if (compassDisabled) {
@@ -782,6 +840,7 @@
         sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
       lastMotionTimestamp = 0;
     }
+    resetVerifyState();
   }
 
   function onFixCalibration() {
@@ -815,6 +874,7 @@
   function enterRendering() {
     calibState = 'rendering';
     showCalibOverlay('rendering');
+    resetVerifyState();
 
     if (!renderingStarted) {
       startRendering();
@@ -845,6 +905,7 @@
     compassDisabled = false;
     calibrationDelta = 0;
     lastMotionTimestamp = 0;
+    resetVerifyState();
 
     if (gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
@@ -904,6 +965,7 @@
     updateDriftIndicator();
     updateHud();
     updateSensorStatus();
+    checkGyroCorrection();
 
     if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
@@ -1379,6 +1441,9 @@
     motionStateTimestamp = 0;
     detectPhase = false;
     sensorReady = false;
+    verifyOsAccum = 0;
+    verifyGyroRawAccum = 0;
+    verifyPrevHeadingValid = false;
     visibleSatellites = [];
     allTrajectories = {};
     prevPositions = {};
