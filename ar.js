@@ -27,6 +27,9 @@
   const GYRO_DETECT_MIN_TIME_MS = 500;
   const VERIFY_INTERVAL_MS = 3000;
   const VERIFY_MIN_OS_DEG = 8;
+  const DETECT_PITCH_ROLL_MIN_DEG = 10;
+  const RATE_BOUNDARY_LOW = 3;
+  const RATE_BOUNDARY_HIGH = 10;
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
@@ -35,7 +38,7 @@
   let elFallback, elFallbackBack, elCrosshair;
   let elSensorGps, elSensorCamera, elSensorCompass, elSensorGyro;
   let elCalibWaitGps, elCalibPhase1, elCalibPhase2;
-  let elPhase1Progress, elPhase1Text;
+  let elPhase1Progress, elPhase1Text, elPhase1Step1, elPhase1Step2;
   let elCalibSun, elCalibMoon, elCalibPolaris;
   let elPhase2CompassToggle, elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
   let elRecalibBtn;
@@ -82,6 +85,14 @@
   let detectOsAccum = 0;
   let detectGyroAccum = 0;
   let detectStartTime = 0;
+  let detectBetaOs = 0;
+  let detectBetaGyro = 0;
+  let detectGammaOs = 0;
+  let detectGammaGyro = 0;
+  let detectPrevBeta = 0;
+  let detectPrevGamma = 0;
+  let detectPrevBetaGammaValid = false;
+  let detectMaxAbsRate = 0;
 
   /* ====== Непрерывная верификация gyroCorrection при рендеринге ====== */
   let verifyOsAccum = 0;
@@ -89,6 +100,13 @@
   let verifyPrevHeading = 0;
   let verifyPrevHeadingValid = false;
   let verifyLastCheckTime = 0;
+  let verifyBetaOs = 0;
+  let verifyBetaGyro = 0;
+  let verifyGammaOs = 0;
+  let verifyGammaGyro = 0;
+  let verifyPrevBeta = 0;
+  let verifyPrevGamma = 0;
+  let verifyPrevBetaGammaValid = false;
 
   /* ====== Калибровочная машина состояний ====== */
   let calibState = 'waiting_gps';  // 'waiting_gps' | 'phase1' | 'phase2' | 'rendering'
@@ -352,11 +370,15 @@
        - инверсию знака
      Результат кэшируется в localStorage.
      ========================================================================== */
-  /* loadGyroCorrection removed — gyroCorrection starts at 1.0 each session,
-     detection runs fresh in Phase 1 */
+  /* gyroCorrection loaded from cache as fallback; Phase 1 detection overwrites it */
 
   function saveGyroCorrection(val) {
     try { localStorage.setItem(GYRO_CORRECTION_KEY, String(val)); } catch (_) {}
+  }
+
+  function loadGyroCorrection() {
+    try { var v = localStorage.getItem(GYRO_CORRECTION_KEY); if (v != null) return parseFloat(v) || 1.0; } catch (_) {}
+    return 1.0;
   }
 
   function startGyroDetection() {
@@ -365,6 +387,12 @@
     detectOsAccum = 0;
     detectPrevHeadingValid = false;
     detectStartTime = Date.now();
+    detectBetaOs = 0;
+    detectBetaGyro = 0;
+    detectGammaOs = 0;
+    detectGammaGyro = 0;
+    detectPrevBetaGammaValid = false;
+    detectMaxAbsRate = 0;
   }
 
   function classifyGyroRatio(raw) {
@@ -381,6 +409,11 @@
     verifyGyroRawAccum = 0;
     verifyPrevHeadingValid = false;
     verifyLastCheckTime = Date.now();
+    verifyBetaOs = 0;
+    verifyBetaGyro = 0;
+    verifyGammaOs = 0;
+    verifyGammaGyro = 0;
+    verifyPrevBetaGammaValid = false;
   }
 
   function checkGyroCorrection() {
@@ -389,41 +422,99 @@
     if (now - verifyLastCheckTime < VERIFY_INTERVAL_MS) return;
     verifyLastCheckTime = now;
 
-    if (Math.abs(verifyOsAccum) < VERIFY_MIN_OS_DEG ||
-        Math.abs(verifyGyroRawAccum) < 0.01) {
-      return;
+    var newCorrection = null;
+
+    // Primary: compass-free pitch/roll pair
+    var absBetaOs = Math.abs(verifyBetaOs);
+    var absGammaOs = Math.abs(verifyGammaOs);
+    var bestOs = 0, bestGyro = 0;
+    if (absBetaOs >= absGammaOs && absBetaOs >= VERIFY_MIN_OS_DEG) {
+      bestOs = verifyBetaOs;
+      bestGyro = verifyBetaGyro;
+    } else if (absGammaOs >= VERIFY_MIN_OS_DEG) {
+      bestOs = verifyGammaOs;
+      bestGyro = verifyGammaGyro;
+    }
+    if (bestOs !== 0 && Math.abs(bestGyro) >= 0.01) {
+      newCorrection = classifyGyroRatio(bestOs / bestGyro);
     }
 
-    var ratio = -verifyOsAccum / verifyGyroRawAccum;
-    var newCorrection = classifyGyroRatio(ratio);
+    // Fallback: heading pair
+    if (newCorrection === null &&
+        Math.abs(verifyOsAccum) >= VERIFY_MIN_OS_DEG &&
+        Math.abs(verifyGyroRawAccum) >= 0.01) {
+      newCorrection = classifyGyroRatio(-verifyOsAccum / verifyGyroRawAccum);
+    }
 
-    if (Math.abs(newCorrection - gyroCorrection) > 0.5) {
+    if (newCorrection !== null && Math.abs(newCorrection - gyroCorrection) > 0.5) {
       gyroCorrection = newCorrection;
       saveGyroCorrection(gyroCorrection);
     }
 
     verifyOsAccum = 0;
     verifyGyroRawAccum = 0;
+    verifyBetaOs = 0;
+    verifyBetaGyro = 0;
+    verifyGammaOs = 0;
+    verifyGammaGyro = 0;
+    verifyPrevBetaGammaValid = false;
   }
 
   function finalizeGyroDetection(force) {
     if (!detectPhase) return;
 
-    var osDelta = detectOsAccum;
     var elapsed = Date.now() - detectStartTime;
     if (!force && elapsed < GYRO_DETECT_MIN_TIME_MS) return;
 
-    var minDeg = force ? GYRO_DETECT_FORCE_MIN_DEG : GYRO_DETECT_MIN_DEG;
-    if (Math.abs(osDelta) < minDeg || Math.abs(detectGyroAccum) < 0.01) {
+    var absBetaOs = Math.abs(detectBetaOs);
+    var absGammaOs = Math.abs(detectGammaOs);
+    var absOsHeading = Math.abs(detectOsAccum);
+    var minPR = force ? GYRO_DETECT_FORCE_MIN_DEG : DETECT_PITCH_ROLL_MIN_DEG;
+    var minH = force ? GYRO_DETECT_FORCE_MIN_DEG : GYRO_DETECT_MIN_DEG;
+
+    var correction = null;
+
+    // Step 1+2: best compass-free pair (pitch or roll)
+    var bestOs = 0, bestGyro = 0;
+    if (absBetaOs >= absGammaOs && absBetaOs >= minPR) {
+      bestOs = detectBetaOs;
+      bestGyro = detectBetaGyro;
+    } else if (absGammaOs >= minPR) {
+      bestOs = detectGammaOs;
+      bestGyro = detectGammaGyro;
+    }
+    if (bestOs !== 0 && Math.abs(bestGyro) >= 0.01) {
+      var ratio = bestOs / bestGyro;
+      correction = classifyGyroRatio(ratio);
+    }
+
+    // Step 3: Fallback D — maxRate heuristic
+    if (correction === null && detectMaxAbsRate > 0) {
+      var scale = null;
+      if (detectMaxAbsRate < RATE_BOUNDARY_LOW) scale = RAD;
+      else if (detectMaxAbsRate > RATE_BOUNDARY_HIGH) scale = 1.0;
+      if (scale !== null) {
+        var sign = 1;
+        if (Math.abs(detectOsAccum) >= 5 && Math.abs(detectGyroAccum) >= 0.01) {
+          sign = (-detectOsAccum / detectGyroAccum) > 0 ? 1 : -1;
+        }
+        correction = sign * scale;
+      }
+    }
+
+    // Step 4: Fallback heading pair (existing method)
+    if (correction === null && absOsHeading >= minH && Math.abs(detectGyroAccum) >= 0.01) {
+      var hRatio = -detectOsAccum / detectGyroAccum;
+      correction = classifyGyroRatio(hRatio);
+    }
+
+    if (correction === null) {
       if (force) detectPhase = false;
       return;
     }
 
-    var ratio = -osDelta / detectGyroAccum;
-    var correction = classifyGyroRatio(ratio);
     gyroCorrection = correction;
     detectPhase = false;
-
     transitionToPhase2();
   }
 
@@ -498,41 +589,70 @@
       sensorReady = true;
       if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching') {
         calibState = 'phase1';
-        gyroCorrection = 1.0;
+        gyroCorrection = loadGyroCorrection();
         startGyroDetection();
         showCalibOverlay('phase1');
         updatePhase1Progress(0);
       }
     }
 
-    if (detectPhase && Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
-      var currentH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
-      if (detectPrevHeadingValid) {
-        var hDelta = currentH - detectPrevHeading;
-        if (hDelta > 180) hDelta -= 360;
-        if (hDelta < -180) hDelta += 360;
-        detectOsAccum += hDelta;
+    if (detectPhase) {
+      // Compass-free: beta/gamma deltas (no beta guard — always valid)
+      if (detectPrevBetaGammaValid) {
+        detectBetaOs += sensorState.beta - detectPrevBeta;
+        detectGammaOs += sensorState.gamma - detectPrevGamma;
       }
-      detectPrevHeading = currentH;
-      detectPrevHeadingValid = true;
+      detectPrevBeta = sensorState.beta;
+      detectPrevGamma = sensorState.gamma;
+      detectPrevBetaGammaValid = true;
+
+      // Heading pair (existing, with beta guard)
+      if (Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
+        var currentH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
+        if (detectPrevHeadingValid) {
+          var hDelta = currentH - detectPrevHeading;
+          if (hDelta > 180) hDelta -= 360;
+          if (hDelta < -180) hDelta += 360;
+          detectOsAccum += hDelta;
+        }
+        detectPrevHeading = currentH;
+        detectPrevHeadingValid = true;
+      }
+
       finalizeGyroDetection(false);
     }
 
     if (calibState === 'phase1' && detectPhase) {
-      updatePhase1Progress(Math.abs(detectOsAccum));
+      var bestProgress = Math.max(
+        Math.abs(detectBetaOs), Math.abs(detectGammaOs), Math.abs(detectOsAccum));
+      updatePhase1Progress(bestProgress);
+      if (elPhase1Step2 && Math.abs(detectBetaOs) >= 5) {
+        elPhase1Step2.hidden = false;
+      }
     }
 
-    if (calibState === 'rendering' && compassDisabled &&
-        Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
-      var vH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
-      if (verifyPrevHeadingValid) {
-        var vDelta = vH - verifyPrevHeading;
-        if (vDelta > 180) vDelta -= 360;
-        if (vDelta < -180) vDelta += 360;
-        verifyOsAccum += vDelta;
+    if (calibState === 'rendering' && compassDisabled) {
+      // Compass-free verify: beta/gamma deltas
+      if (verifyPrevBetaGammaValid) {
+        verifyBetaOs += sensorState.beta - verifyPrevBeta;
+        verifyGammaOs += sensorState.gamma - verifyPrevGamma;
       }
-      verifyPrevHeading = vH;
-      verifyPrevHeadingValid = true;
+      verifyPrevBeta = sensorState.beta;
+      verifyPrevGamma = sensorState.gamma;
+      verifyPrevBetaGammaValid = true;
+
+      // Heading pair verify (with beta guard)
+      if (Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
+        var vH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
+        if (verifyPrevHeadingValid) {
+          var vDelta = vH - verifyPrevHeading;
+          if (vDelta > 180) vDelta -= 360;
+          if (vDelta < -180) vDelta += 360;
+          verifyOsAccum += vDelta;
+        }
+        verifyPrevHeading = vH;
+        verifyPrevHeadingValid = true;
+      }
     }
   }
 
@@ -561,13 +681,27 @@
 
     var yawRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
 
-    if (detectPhase && sensorReady && Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
-      detectGyroAccum += yawRate * dt;
+    if (detectPhase && sensorReady) {
+      // Compass-free: raw device-frame pitch/roll rates (no beta guard)
+      detectBetaGyro += rb * dt;
+      detectGammaGyro += rg * dt;
+      detectMaxAbsRate = Math.max(detectMaxAbsRate, Math.abs(ra), Math.abs(rb), Math.abs(rg));
+
+      // Heading pair (with beta guard)
+      if (Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
+        detectGyroAccum += yawRate * dt;
+      }
     }
 
-    if (calibState === 'rendering' && compassDisabled &&
-        Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
-      verifyGyroRawAccum += yawRate * dt;
+    if (calibState === 'rendering' && compassDisabled) {
+      // Compass-free verify: raw device-frame pitch/roll rates
+      verifyBetaGyro += rb * dt;
+      verifyGammaGyro += rg * dt;
+
+      // Heading pair verify (with beta guard)
+      if (Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
+        verifyGyroRawAccum += yawRate * dt;
+      }
     }
 
     if (compassDisabled) {
@@ -740,10 +874,16 @@
     if (elCalibPhase1)  elCalibPhase1.hidden  = (st !== 'phase1');
     if (elCalibPhase2)  elCalibPhase2.hidden  = (st !== 'phase2');
     if (elRecalibBtn)   elRecalibBtn.hidden   = (st !== 'rendering');
+    if (st === 'phase1' && elPhase1Step2) elPhase1Step2.hidden = true;
   }
 
   function updatePhase1Progress(absDeg) {
-    var progress = Math.min(absDeg / GYRO_DETECT_MIN_DEG, 1.0);
+    var absBeta = Math.abs(detectBetaOs);
+    var absGamma = Math.abs(detectGammaOs);
+    var pitchRollLeading = (absBeta >= Math.abs(detectOsAccum)) ||
+                           (absGamma >= Math.abs(detectOsAccum));
+    var target = pitchRollLeading ? DETECT_PITCH_ROLL_MIN_DEG : GYRO_DETECT_MIN_DEG;
+    var progress = Math.min(absDeg / target, 1.0);
     if (elPhase1Progress) {
       var offset = PHASE1_CIRCUMFERENCE * (1 - progress);
       elPhase1Progress.setAttribute('stroke-dashoffset', offset.toFixed(1));
@@ -751,7 +891,7 @@
       elPhase1Progress.setAttribute('stroke', 'hsl(' + hue + ', 80%, 50%)');
     }
     if (elPhase1Text) {
-      elPhase1Text.textContent = Math.round(absDeg) + '\u00B0 / ' + GYRO_DETECT_MIN_DEG + '\u00B0';
+      elPhase1Text.textContent = Math.round(absDeg) + '\u00B0 / ' + target + '\u00B0';
     }
   }
 
@@ -909,7 +1049,7 @@
 
     if (gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
-      gyroCorrection = 1.0;
+      gyroCorrection = loadGyroCorrection();
       startGyroDetection();
       showCalibOverlay('phase1');
       updatePhase1Progress(0);
@@ -969,7 +1109,7 @@
 
     if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
-      gyroCorrection = 1.0;
+      gyroCorrection = loadGyroCorrection();
       startGyroDetection();
       showCalibOverlay('phase1');
       updatePhase1Progress(0);
@@ -1314,6 +1454,8 @@
     elCalibPhase2 = document.getElementById('arCalibPhase2');
     elPhase1Progress = document.getElementById('arPhase1Progress');
     elPhase1Text = document.getElementById('arPhase1Text');
+    elPhase1Step1 = document.getElementById('arPhase1Step1');
+    elPhase1Step2 = document.getElementById('arPhase1Step2');
     elCalibSun = document.getElementById('arCalibSun');
     elCalibMoon = document.getElementById('arCalibMoon');
     elCalibPolaris = document.getElementById('arCalibPolaris');
@@ -1353,7 +1495,7 @@
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
     detectPhase = false;
-    gyroCorrection = 1.0;
+    gyroCorrection = loadGyroCorrection();
     sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };
     sensorReady = false;
     selectedCalibBody = null;
@@ -1401,7 +1543,7 @@
 
     if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
-      gyroCorrection = 1.0;
+      gyroCorrection = loadGyroCorrection();
       startGyroDetection();
       showCalibOverlay('phase1');
       updatePhase1Progress(0);
@@ -1444,6 +1586,17 @@
     verifyOsAccum = 0;
     verifyGyroRawAccum = 0;
     verifyPrevHeadingValid = false;
+    verifyBetaOs = 0;
+    verifyBetaGyro = 0;
+    verifyGammaOs = 0;
+    verifyGammaGyro = 0;
+    verifyPrevBetaGammaValid = false;
+    detectBetaOs = 0;
+    detectBetaGyro = 0;
+    detectGammaOs = 0;
+    detectGammaGyro = 0;
+    detectPrevBetaGammaValid = false;
+    detectMaxAbsRate = 0;
     visibleSatellites = [];
     allTrajectories = {};
     prevPositions = {};

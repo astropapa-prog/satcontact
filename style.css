@@ -1245,6 +1245,32 @@ body {
   transition: stroke-dashoffset 0.15s ease, stroke 0.3s ease;
 }
 
+/* --- Фаза 1: шаги и анимация наклона --- */
+.ar-view__phase1-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ar-view__phase1-step[hidden] {
+  display: none !important;
+}
+
+.ar-view__phase1-anim--tilt {
+  animation: tiltPhone 2s ease-in-out infinite;
+}
+
+.ar-view__tilt-icon {
+  display: block;
+}
+
+@keyframes tiltPhone {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(15deg); }
+  75%      { transform: rotate(-15deg); }
+}
+
 /* --- Фаза 2: кнопки небесных тел --- */
 .ar-view__phase2-bodies {
   display: flex;
