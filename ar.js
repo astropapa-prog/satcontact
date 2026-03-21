@@ -381,11 +381,6 @@
 
     var ratio = -osDelta / detectGyroAccum;
     var correction = classifyGyroRatio(ratio);
-    console.log('[ar.js] finalizeGyroDetection: osDelta=' + osDelta.toFixed(2) +
-      ' gyroAccum=' + detectGyroAccum.toFixed(4) +
-      ' ratio=' + ratio.toFixed(3) +
-      ' correction=' + correction.toFixed(4) +
-      ' elapsed=' + elapsed + 'ms');
     gyroCorrection = correction;
     detectPhase = false;
 
@@ -1342,14 +1337,13 @@
 
     slowLoopId = setInterval(slowLoop, SLOW_LOOP_MS);
 
-    if (gpsCoords && gpsQuality !== 'searching' && sensorReady) {
+    if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
       calibState = 'phase1';
       gyroCorrection = 1.0;
       startGyroDetection();
       showCalibOverlay('phase1');
       updatePhase1Progress(0);
-    } else {
-      calibState = 'waiting_gps';
+    } else if (calibState === 'waiting_gps') {
       showCalibOverlay('waiting_gps');
     }
 
