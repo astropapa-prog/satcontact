@@ -18,6 +18,10 @@
   const AUDIO_MAX_OFFSET_DEG = 90;
   const DEFAULT_FOV_H = 60;
   const DEFAULT_FOV_V = 45;
+  const GYRO_DETECT_MIN_DEG = 15;
+  const GYRO_DETECT_FORCE_MIN_DEG = 5;
+  const GYRO_DETECT_TIMEOUT_MS = 8000;
+  const GYRO_CORRECTION_KEY = 'satcontact_gyro_correction';
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll, elCalibSource, elCalibBtn;
@@ -59,6 +63,13 @@
   let inertialHeading = 0;
   let lastMotionTimestamp = 0;
   let motionStateTimestamp = 0;
+
+  /* ====== Автодетекция единиц/знака rotationRate ====== */
+  let gyroCorrection = 1.0;
+  let detectPhase = false;
+  let detectStartHeading = 0;
+  let detectGyroAccum = 0;
+  let detectStartTime = 0;
 
   /* ====== Дрейф ====== */
   let lastCalibrationTime = 0;
@@ -314,6 +325,75 @@
     return ((Math.atan2(y, x) * RAD) % 360 + 360) % 360;
   }
 
+  /* ==========================================================================
+     Автодетекция единиц/знака rotationRate.
+     Сравниваем интеграл сырого gyro yawRate с изменением OS heading
+     (DeviceOrientation alpha) за короткий период. Это позволяет определить:
+       - rad/s vs deg/s (масштаб ~57x)
+       - инверсию знака
+     Результат кэшируется в localStorage.
+     ========================================================================== */
+  function loadGyroCorrection() {
+    try {
+      var stored = localStorage.getItem(GYRO_CORRECTION_KEY);
+      if (stored != null) {
+        var val = parseFloat(stored);
+        if (isFinite(val) && val !== 0) gyroCorrection = val;
+      }
+    } catch (_) {}
+  }
+
+  function saveGyroCorrection(val) {
+    try { localStorage.setItem(GYRO_CORRECTION_KEY, String(val)); } catch (_) {}
+  }
+
+  function startGyroDetection() {
+    detectPhase = true;
+    detectGyroAccum = 0;
+    detectStartHeading = alphaToHeading(
+      sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
+    detectStartTime = Date.now();
+  }
+
+  function classifyGyroRatio(raw) {
+    var absRaw = Math.abs(raw);
+    if (absRaw < 0.3) return gyroCorrection;
+    if (absRaw < 5) return raw > 0 ? 1.0 : -1.0;
+    if (absRaw > 15) return raw > 0 ? RAD : -RAD;
+    return gyroCorrection;
+  }
+
+  function finalizeGyroDetection(force) {
+    if (!detectPhase) return;
+    var currentH = alphaToHeading(
+      sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
+    var osDelta = currentH - detectStartHeading;
+    if (osDelta > 180) osDelta -= 360;
+    if (osDelta < -180) osDelta += 360;
+
+    if (Date.now() - detectStartTime > GYRO_DETECT_TIMEOUT_MS) {
+      detectPhase = false;
+      return;
+    }
+
+    var minDeg = force ? GYRO_DETECT_FORCE_MIN_DEG : GYRO_DETECT_MIN_DEG;
+    if (Math.abs(osDelta) < minDeg || Math.abs(detectGyroAccum) < 0.01) {
+      if (force) detectPhase = false;
+      return;
+    }
+
+    var ratio = -osDelta / detectGyroAccum;
+    var correction = classifyGyroRatio(ratio);
+    if (correction !== gyroCorrection) {
+      console.log('ar.js: gyro correction: ' + correction.toFixed(4) +
+        ' (ratio=' + ratio.toFixed(3) + ' osDelta=' + osDelta.toFixed(1) +
+        ' gyroAccum=' + detectGyroAccum.toFixed(3) + ')');
+    }
+    gyroCorrection = correction;
+    saveGyroCorrection(correction);
+    detectPhase = false;
+  }
+
   function refreshOrientationMatrix() {
     var alpha;
     if (compassDisabled) {
@@ -380,6 +460,7 @@
     sensorState.absolute = !!evt.absolute;
     sensorState.timestamp = Date.now();
     refreshOrientationMatrix();
+    if (detectPhase && compassDisabled) finalizeGyroDetection(false);
   }
 
   function onDeviceMotion(evt) {
@@ -409,7 +490,8 @@
        Exact, no singularities, no γ̇ estimation needed.
        Heading (CW from North) increases when yaw_rate is negative. */
     var yawRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
-    inertialHeading = ((inertialHeading - yawRate * dt) % 360 + 360) % 360;
+    if (detectPhase) detectGyroAccum += yawRate * dt;
+    inertialHeading = ((inertialHeading - yawRate * gyroCorrection * dt) % 360 + 360) % 360;
     refreshOrientationMatrix();
   }
 
@@ -593,6 +675,12 @@
      ========================================================================== */
   function performCalibration() {
     if (!gpsCoords) return;
+
+    if (detectPhase) {
+      finalizeGyroDetection(true);
+      detectPhase = false;
+    }
+
     var source = elCalibSource ? elCalibSource.value : 'sun';
     var now = new Date();
     var obs = { latitude: gpsCoords.latitude, longitude: gpsCoords.longitude };
@@ -970,6 +1058,9 @@
     if (compassDisabled) {
       inertialHeading = alphaToHeading(
         sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
+      startGyroDetection();
+    } else {
+      detectPhase = false;
     }
 
     refreshOrientationMatrix();
@@ -1059,6 +1150,8 @@
     inertialHeading = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
+    detectPhase = false;
+    loadGyroCorrection();
     soundEnabled = false;
     visibleSatellites = [];
     allTrajectories = {};
@@ -1141,6 +1234,7 @@
     inertialHeading = 0;
     lastMotionTimestamp = 0;
     motionStateTimestamp = 0;
+    detectPhase = false;
     visibleSatellites = [];
     allTrajectories = {};
     prevPositions = {};

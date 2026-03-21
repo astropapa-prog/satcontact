@@ -747,3 +747,48 @@ GitHub Actions (TLE) → UI карты, GPS, HUD → tle.js + satellite.js → l
 - При β = 90° (портретная): heading rate = rg (rotation around Y). Heading интегрируется корректно. Затем `headingToAlpha` вычисляет α с учётом текущего γ — без двойного счёта.
 - При β = 0° (ландшафтная): heading rate = ra·cos(γ) − rb·sin(γ). При γ = 0: heading rate = ra. Работает как прежде.
 - Переходные β: формула непрерывна и точна при любых углах.
+
+### Сессия: Автодетекция единиц/знака rotationRate (март 2026)
+
+**Проблема:** в инерциальном режиме при очищенном кеше браузера спутники реагировали на горизонтальное движение камеры **медленно** (нужно несколько полных оборотов) и **в неправильном направлении** (поворот влево двигал западные спутники к центру вместо восточных). Элевация и вертикальное движение работали корректно. Если до этого использовался магнитный режим с калибровкой — инерциальный режим начинал работать правильно.
+
+**Корневая причина:** W3C спецификация требует `DeviceMotionEvent.rotationRate` в **deg/s** с правилом правой руки, однако реальные устройства/браузеры могут возвращать:
+- **rad/s** вместо deg/s → heading меняется ~57x медленнее
+- **инвертированный знак** → heading идёт в противоположном направлении
+- Комбинацию обоих ошибок
+
+Магнитный режим не страдал, т.к. **не использует `rotationRate`** вообще (`onDeviceMotion` выходит при `!compassDisabled`). После использования магнитного режима браузер/ОС выполняли внутреннюю калибровку sensor fusion (коррекция bias гироскопа), что исправляло проблему до очистки кеша.
+
+**Решение — автодетекция единиц/знака при каждом переключении в инерциальный режим:**
+
+1. **Фаза детекции** (`startGyroDetection`): при переключении в инерциальный режим (между toggle и калибровкой) параллельно накапливаются:
+   - `detectGyroAccum` — сумма `yawRate · dt` из **сырого** гироскопа (без коррекции)
+   - `osDelta` — изменение heading из OS fusion `alphaToHeading(sensorState.alpha, β, γ)` (через `DeviceOrientationEvent`)
+
+2. **Финализация** (`finalizeGyroDetection`): когда OS heading изменился на ≥15° (≥5° при force):
+   - Вычисляется `ratio = −osDelta / detectGyroAccum`
+   - Классификация (`classifyGyroRatio`):
+     - `|ratio| < 5` → единицы deg/s; знак из ratio → коррекция `±1.0`
+     - `|ratio| > 15` → единицы rad/s; знак из ratio → коррекция `±(180/π)`
+     - Амбигуозный диапазон → оставить текущее значение
+   - Результат сохраняется в `localStorage` (`satcontact_gyro_correction`)
+
+3. **Применение**: `inertialHeading -= yawRate · gyroCorrection · dt` (строка 494 ar.js)
+
+4. **Жизненный цикл**:
+   - `initAr` → `loadGyroCorrection()` из localStorage
+   - `onCompassToggleClick` (→ inertial) → `startGyroDetection()`
+   - `onCompassToggleClick` (→ magnetic) → `detectPhase = false`
+   - `onOrientation` → `finalizeGyroDetection(false)` (проверка при каждом событии OS fusion)
+   - `performCalibration` → `finalizeGyroDetection(true)` + force stop (пониженный порог 5°)
+   - `cleanupAr` → `detectPhase = false`
+
+**Константы (ar.js):**
+- `GYRO_DETECT_MIN_DEG = 15` — порог OS heading delta для надёжной детекции
+- `GYRO_DETECT_FORCE_MIN_DEG = 5` — пониженный порог при force (калибровка)
+- `GYRO_DETECT_TIMEOUT_MS = 8000` — таймаут детекции (используется кеш)
+- `GYRO_CORRECTION_KEY = 'satcontact_gyro_correction'` — ключ localStorage
+
+**Не изменено:** `computeOrientationMatrix`, ar-render.js, WebGL-шейдер, `computeAimingAngularErrorDeg`, калибровка обоих режимов (только вызов `finalizeGyroDetection(true)` добавлен перед калибровкой), таймер дрейфа, звуковой прицел.
+
+**Итог:** инерциальный режим автоматически определяет единицы (deg/s vs rad/s) и знак `rotationRate` на конкретном устройстве/браузере. Коррекция кэшируется и переопределяется при каждом входе в инерциальный режим. Нет хардкоженных устройство-специфичных обходов.
