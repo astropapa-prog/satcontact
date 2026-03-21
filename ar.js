@@ -502,8 +502,9 @@
       correction = classifyGyroRatio(bestOs / bestGyro);
     }
 
-    // Step 3: Fallback D — maxRate heuristic
-    if (correction === null && detectMaxAbsRate > 0) {
+    // Step 3: Fallback D — maxRate heuristic (range gate: require real movement)
+    var maxRange = Math.max(betaRange, gammaRange);
+    if (correction === null && detectMaxAbsRate > 0 && maxRange >= minPR) {
       var scale = null;
       if (detectMaxAbsRate < RATE_BOUNDARY_LOW) scale = RAD;
       else if (detectMaxAbsRate > RATE_BOUNDARY_HIGH) scale = 1.0;
@@ -715,10 +716,9 @@
     var yawRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
 
     if (detectPhase && sensorReady) {
-      detectMaxAbsRate = Math.max(detectMaxAbsRate, Math.abs(ra), Math.abs(rb), Math.abs(rg));
-
       var warmupOk = (Date.now() - detectStartTime) >= GYRO_DETECT_MIN_TIME_MS;
       if (warmupOk) {
+        detectMaxAbsRate = Math.max(detectMaxAbsRate, Math.abs(ra), Math.abs(rb), Math.abs(rg));
         detectBetaGyro += rb * dt;
         detectGammaGyro += rg * dt;
         if (Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
