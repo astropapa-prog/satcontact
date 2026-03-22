@@ -431,36 +431,6 @@
   }
 
   /* ==========================================================================
-     Drift Warning overlay
-     ========================================================================== */
-  function drawDriftWarning() {
-    if (!ctx) return;
-    ctx.clearRect(0, 0, width, height);
-    if (webglAvailable && gl) {
-      gl.viewport(0, 0, canvasGL.width, canvasGL.height);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 200, 50, 0.95)';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)';
-    ctx.shadowBlur = 6;
-    ctx.fillText('\u26A0 \u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043A\u0430\u043B\u0438\u0431\u0440\u043E\u0432\u043A\u0430', width / 2, height / 2 - 14);
-
-    ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillText('\u041D\u0430\u0432\u0435\u0434\u0438\u0442\u0435 \u043A\u0430\u043C\u0435\u0440\u0443 \u043D\u0430 \u0421\u043E\u043B\u043D\u0446\u0435, \u041B\u0443\u043D\u0443 \u0438\u043B\u0438 \u041F\u043E\u043B\u044F\u0440\u043D\u0443\u044E \u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u00AB\u041A\u0430\u043B\u0438\u0431\u0440\u043E\u0432\u0430\u0442\u044C\u00BB', width / 2, height / 2 + 14);
-    ctx.restore();
-  }
-
-  /* ==========================================================================
      Hit-test
      ========================================================================== */
   function hitTest(x, y) {
@@ -532,11 +502,6 @@
   function draw(params) {
     if (!params) return;
 
-    if (params.driftPaused) {
-      drawDriftWarning();
-      return;
-    }
-
     if (webglAvailable) {
       drawGLOrbits(params);
     }
@@ -547,7 +512,6 @@
     init: init,
     destroy: destroy,
     draw: draw,
-    drawDriftWarning: drawDriftWarning,
     hitTest: hitTest,
     updateTrajectories: updateTrajectories,
     computeAimingAngularErrorDeg: computeAimingAngularErrorDeg

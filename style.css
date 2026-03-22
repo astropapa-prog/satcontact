@@ -1093,40 +1093,6 @@ body {
   border-color: var(--accent);
 }
 
-/* ---------- Панель статуса сенсоров ---------- */
-.ar-view__sensors {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border-radius: var(--radius-sm);
-  backdrop-filter: blur(4px);
-}
-
-.ar-view__sensor {
-  font-size: 0.8125rem;
-  line-height: 1;
-  opacity: 0.4;
-  filter: grayscale(1);
-  transition: opacity 0.3s, filter 0.3s;
-}
-
-.ar-view__sensor.ok {
-  opacity: 1;
-  filter: none;
-}
-
-.ar-view__sensor.warn {
-  opacity: 0.8;
-  filter: hue-rotate(40deg) saturate(2);
-}
-
-.ar-view__sensor.off {
-  opacity: 0.35;
-  filter: grayscale(1) brightness(0.6);
-}
-
 /* ---------- Перекрестие (только в режиме слежения) ---------- */
 .ar-view__crosshair {
   position: absolute;
@@ -1170,32 +1136,31 @@ body {
   transform: translateX(-0.5px);
 }
 
-/* ---------- Калибровочные оверлеи ---------- */
-.ar-view__calib-overlay {
+/* ---------- Калибровочная панель ---------- */
+.ar-view__calib-panel {
   position: absolute;
-  inset: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  padding: 16px 24px;
+  padding-bottom: calc(16px + var(--safe-bottom));
+  border-radius: 16px 16px 0 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: rgba(0, 0, 0, 0.7);
+  gap: 12px;
   pointer-events: auto;
-  padding: 24px;
   text-align: center;
 }
 
-.ar-view__calib-overlay[hidden] {
+.ar-view__calib-panel[hidden] {
   display: none !important;
 }
 
-.ar-view__calib-overlay-icon {
-  font-size: 2.5rem;
-  opacity: 0.6;
-}
-
-.ar-view__calib-overlay-text {
+.ar-view__calib-panel-text {
   margin: 0;
   font-size: 1.125rem;
   font-family: var(--font-sans);
@@ -1203,7 +1168,7 @@ body {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
-.ar-view__calib-overlay-sub {
+.ar-view__calib-panel-sub {
   margin: 0;
   font-size: 0.875rem;
   font-family: var(--font-mono);
@@ -1211,7 +1176,7 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-.ar-view__calib-overlay-warn {
+.ar-view__calib-panel-warn {
   margin: 0;
   font-size: 0.8125rem;
   font-family: var(--font-sans);
@@ -1220,58 +1185,56 @@ body {
   line-height: 1.4;
 }
 
-.ar-view__calib-overlay-warn[hidden] {
+.ar-view__calib-panel-warn[hidden] {
   display: none !important;
 }
 
-/* --- Фаза 1: круговой прогресс --- */
-.ar-view__phase1-ring {
-  display: block;
-}
-
-.ar-view__phase1-ring-bg {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.12);
-  stroke-width: 8;
-}
-
-.ar-view__phase1-ring-fg {
-  fill: none;
-  stroke: hsl(0, 80%, 50%);
-  stroke-width: 8;
-  stroke-linecap: round;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-  transition: stroke-dashoffset 0.15s ease, stroke 0.3s ease;
-}
-
-/* --- Фаза 1: шаги и анимация наклона --- */
-.ar-view__phase1-step {
+.ar-view__calib-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  gap: 12px;
+  width: 100%;
 }
 
-.ar-view__phase1-step[hidden] {
+.ar-view__calib-actions > button {
+  flex: 1;
+}
+
+.ar-view__calib-skip-btn {
+  padding: 14px 36px;
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.ar-view__calib-skip-btn:hover,
+.ar-view__calib-skip-btn:focus {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.ar-view__calib-skip-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ar-view__calib-sensor-status {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  color: #ffd54f;
+}
+
+.ar-view__calib-sensor-status[hidden] {
   display: none !important;
 }
 
-.ar-view__phase1-anim--tilt {
-  animation: tiltPhone 2s ease-in-out infinite;
-}
-
-.ar-view__tilt-icon {
-  display: block;
-}
-
-@keyframes tiltPhone {
-  0%, 100% { transform: rotate(0deg); }
-  25%      { transform: rotate(15deg); }
-  75%      { transform: rotate(-15deg); }
-}
-
-/* --- Фаза 2: кнопки небесных тел --- */
+/* --- Кнопки небесных тел --- */
 .ar-view__phase2-bodies {
   display: flex;
   gap: 10px;
@@ -1311,39 +1274,7 @@ body {
   border-color: #555;
 }
 
-.ar-view__phase2-compass-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 4px;
-}
-
-.ar-view__compass-toggle {
-  padding: 8px 14px;
-  font-size: 0.75rem;
-  font-family: var(--font-sans);
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(46, 204, 113, 0.35);
-  border: 1px solid rgba(46, 204, 113, 0.4);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.ar-view__compass-toggle:hover,
-.ar-view__compass-toggle:focus {
-  background: rgba(46, 204, 113, 0.5);
-  outline: none;
-}
-
-.ar-view__compass-toggle.disabled {
-  background: rgba(231, 76, 60, 0.35);
-  border-color: rgba(231, 76, 60, 0.4);
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-
-/* --- Фаза 2: кнопка «Зафиксировать» --- */
+/* --- Кнопка «Зафиксировать» --- */
 .ar-view__phase2-fix-btn {
   padding: 14px 36px;
   font-size: 1rem;

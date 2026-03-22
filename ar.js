@@ -1,7 +1,7 @@
 /**
  * SatContact — Модуль 3: AR-трекер (Оркестратор)
- * Камера, сенсоры: магнитный режим (DeviceOrientation + WMM) и гибридный инерциальный
- * (OS pitch/roll + гиро yaw), GPS, калибровка, аудио-прицел, таймер дрейфа.
+ * Камера, сенсоры: компасный режим (DeviceOrientation + WMM),
+ * GPS, калибровка по небесным телам, аудио-прицел, таймер дрейфа.
  */
 (function () {
   'use strict';
@@ -18,30 +18,18 @@
   const AUDIO_MAX_OFFSET_DEG = 90;
   const DEFAULT_FOV_H = 60;
   const DEFAULT_FOV_V = 45;
-  const GYRO_DETECT_MIN_DEG = 15;
-  const GYRO_DETECT_FORCE_MIN_DEG = 5;
-  const GYRO_CORRECTION_KEY = 'satcontact_gyro_correction';
   const CELESTIAL_ELEVATION_THRESHOLD = 5;
   const CELESTIAL_AVAILABILITY_INTERVAL_MS = 10000;
-  const BETA_MIN_FOR_HEADING = 15;
-  const GYRO_DETECT_MIN_TIME_MS = 2000;
-  const VERIFY_INTERVAL_MS = 3000;
-  const VERIFY_MIN_OS_DEG = 8;
-  const DETECT_PITCH_ROLL_MIN_DEG = 10;
-  const RATE_BOUNDARY_LOW = 3;
-  const RATE_BOUNDARY_HIGH = 10;
-  const DETECT_DELTA_NOISE_DEG = 0.3;
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
   let elSoundToggle, elDrift, elHud, elGpsStatus, elCoords;
   let elTelemetryRow, elTelAz, elTelEl, elTelDist;
   let elFallback, elFallbackBack, elCrosshair;
-  let elSensorGps, elSensorCamera, elSensorCompass, elSensorGyro;
-  let elCalibWaitGps, elCalibPhase1, elCalibPhase2;
-  let elPhase1Progress, elPhase1Text, elPhase1Step1, elPhase1Step2;
+  let elCalibPhase2;
   let elCalibSun, elCalibMoon, elCalibPolaris;
-  let elPhase2CompassToggle, elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
+  let elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
+  let elCalibSkipBtn, elCalibSensorStatus;
   let elRecalibBtn;
 
   /* ====== Состояние ====== */
@@ -69,52 +57,9 @@
   let orientationMatrix = new Float64Array(9); // 3x3 rotation matrix
   let calibrationDelta = 0;         // azimuth correction in degrees
   let magneticDeclination = 0;
-  /** false: полный OS fusion (DeviceOrientation). true: yaw из гироскопа, pitch/roll из OS fusion. */
-  let compassDisabled = false;
-
-  /** Мировой heading (азимут направления камеры) инерциального контура, ° [0, 360).
-   *  Интегрируется из gyro world-yaw-rate; не страдает от gimbal lock в отличие от Euler α. */
-  let inertialHeading = 0;
-  let lastMotionTimestamp = 0;
-  let motionStateTimestamp = 0;
-
-  /* ====== Автодетекция единиц/знака rotationRate ====== */
-  let gyroCorrection = 1.0;
-  let detectPhase = false;
-  let detectPrevHeading = 0;
-  let detectPrevHeadingValid = false;
-  let detectOsAccum = 0;
-  let detectGyroAccum = 0;
-  let detectStartTime = 0;
-  let detectBetaOs = 0;
-  let detectBetaGyro = 0;
-  let detectGammaOs = 0;
-  let detectGammaGyro = 0;
-  let detectPrevBeta = 0;
-  let detectPrevGamma = 0;
-  let detectPrevBetaGammaValid = false;
-  let detectMaxAbsRate = 0;
-  let detectBetaMin = 0, detectBetaMax = 0;
-  let detectGammaMin = 0, detectGammaMax = 0;
-
-  /* ====== Непрерывная верификация gyroCorrection при рендеринге ====== */
-  let verifyOsAccum = 0;
-  let verifyGyroRawAccum = 0;
-  let verifyPrevHeading = 0;
-  let verifyPrevHeadingValid = false;
-  let verifyLastCheckTime = 0;
-  let verifyBetaOs = 0;
-  let verifyBetaGyro = 0;
-  let verifyGammaOs = 0;
-  let verifyGammaGyro = 0;
-  let verifyPrevBeta = 0;
-  let verifyPrevGamma = 0;
-  let verifyPrevBetaGammaValid = false;
-  let verifyBetaMin = 0, verifyBetaMax = 0;
-  let verifyGammaMin = 0, verifyGammaMax = 0;
 
   /* ====== Калибровочная машина состояний ====== */
-  let calibState = 'waiting_gps';  // 'waiting_gps' | 'phase1' | 'phase2' | 'rendering'
+  let calibState = 'calibrating';  // 'calibrating' | 'rendering'
   let lastCalibrationTime = 0;
   let selectedCalibBody = null;    // 'sun' | 'moon' | 'polaris'
   let celestialAvailTimerId = null;
@@ -345,202 +290,9 @@
     orientationMatrix[8] =  cb * cg;
   }
 
-  /** Heading (азимут камеры) из Euler (α, β, γ).
-   *  forward = -(m6, m7, m8) of R^T → heading = atan2(forward_x, forward_y). */
-  function alphaToHeading(alphaDeg, betaDeg, gammaDeg) {
-    var a = alphaDeg * DEG, b = betaDeg * DEG, g = gammaDeg * DEG;
-    var ca = Math.cos(a), sa = Math.sin(a);
-    var sb = Math.sin(b), cg = Math.cos(g), sg = Math.sin(g);
-    var fx = -(ca * sg + sa * sb * cg);
-    var fy = ca * sb * cg - sa * sg;
-    return ((Math.atan2(fx, fy) * RAD) % 360 + 360) % 360;
-  }
-
-  /** Euler α из heading (H) и OS beta/gamma. Singularity-free.
-   *  Обратная к alphaToHeading: headingToAlpha(alphaToHeading(α,β,γ), β, γ) = α. */
-  function headingToAlpha(headingDeg, betaDeg, gammaDeg) {
-    var h = headingDeg * DEG;
-    var sb = Math.sin(betaDeg * DEG), cg = Math.cos(gammaDeg * DEG), sg = Math.sin(gammaDeg * DEG);
-    var sh = Math.sin(h), ch = Math.cos(h);
-    var y = -(sb * cg * sh + sg * ch);
-    var x = sb * cg * ch - sg * sh;
-    return ((Math.atan2(y, x) * RAD) % 360 + 360) % 360;
-  }
-
-  /* ==========================================================================
-     Автодетекция единиц/знака rotationRate.
-     Сравниваем интеграл сырого gyro yawRate с изменением OS heading
-     (DeviceOrientation alpha) за короткий период. Это позволяет определить:
-       - rad/s vs deg/s (масштаб ~57x)
-       - инверсию знака
-     Результат кэшируется в localStorage.
-     ========================================================================== */
-  /* gyroCorrection loaded from cache as fallback; Phase 1 detection overwrites it */
-
-  function saveGyroCorrection(val) {
-    try { localStorage.setItem(GYRO_CORRECTION_KEY, String(val)); } catch (_) {}
-  }
-
-  function loadGyroCorrection() {
-    try { var v = localStorage.getItem(GYRO_CORRECTION_KEY); if (v != null) return parseFloat(v) || 1.0; } catch (_) {}
-    return 1.0;
-  }
-
-  function startGyroDetection() {
-    detectPhase = true;
-    detectGyroAccum = 0;
-    detectOsAccum = 0;
-    detectPrevHeadingValid = false;
-    detectStartTime = Date.now();
-    detectBetaOs = 0;
-    detectBetaGyro = 0;
-    detectGammaOs = 0;
-    detectGammaGyro = 0;
-    detectPrevBetaGammaValid = false;
-    detectMaxAbsRate = 0;
-    detectBetaMin = detectBetaMax = sensorState.beta;
-    detectGammaMin = detectGammaMax = sensorState.gamma;
-  }
-
-  function classifyGyroRatio(raw) {
-    var absRaw = Math.abs(raw);
-    if (absRaw < 0.3) return gyroCorrection;
-    var sign = raw > 0 ? 1 : -1;
-    // Граница — геометрическое среднее 1.0 и RAD(≈57.3) ≈ 7.57
-    if (absRaw < 7.57) return sign * 1.0;
-    return sign * RAD;
-  }
-
-  function resetVerifyState() {
-    verifyOsAccum = 0;
-    verifyGyroRawAccum = 0;
-    verifyPrevHeadingValid = false;
-    verifyLastCheckTime = Date.now();
-    verifyBetaOs = 0;
-    verifyBetaGyro = 0;
-    verifyGammaOs = 0;
-    verifyGammaGyro = 0;
-    verifyPrevBetaGammaValid = false;
-    verifyBetaMin = verifyBetaMax = sensorState.beta;
-    verifyGammaMin = verifyGammaMax = sensorState.gamma;
-  }
-
-  function checkGyroCorrection() {
-    if (calibState !== 'rendering' || !compassDisabled) return;
-    var now = Date.now();
-    if (now - verifyLastCheckTime < VERIFY_INTERVAL_MS) return;
-    verifyLastCheckTime = now;
-
-    var newCorrection = null;
-
-    // Primary: compass-free pitch/roll pair — range gate
-    var vBetaRange = verifyBetaMax - verifyBetaMin;
-    var vGammaRange = verifyGammaMax - verifyGammaMin;
-    var bestOs = 0, bestGyro = 0;
-    if (vBetaRange >= vGammaRange && vBetaRange >= VERIFY_MIN_OS_DEG &&
-        Math.abs(verifyBetaOs) >= 3 && Math.abs(verifyBetaGyro) >= 0.1) {
-      bestOs = verifyBetaOs;
-      bestGyro = verifyBetaGyro;
-    } else if (vGammaRange >= VERIFY_MIN_OS_DEG &&
-               Math.abs(verifyGammaOs) >= 3 && Math.abs(verifyGammaGyro) >= 0.1) {
-      bestOs = verifyGammaOs;
-      bestGyro = verifyGammaGyro;
-    }
-    if (bestOs !== 0) {
-      newCorrection = classifyGyroRatio(bestOs / bestGyro);
-    }
-
-    // Fallback: heading pair
-    if (newCorrection === null &&
-        Math.abs(verifyOsAccum) >= VERIFY_MIN_OS_DEG &&
-        Math.abs(verifyGyroRawAccum) >= 0.01) {
-      newCorrection = classifyGyroRatio(-verifyOsAccum / verifyGyroRawAccum);
-    }
-
-    if (newCorrection !== null && Math.abs(newCorrection - gyroCorrection) > 0.5) {
-      gyroCorrection = newCorrection;
-      saveGyroCorrection(gyroCorrection);
-    }
-
-    verifyOsAccum = 0;
-    verifyGyroRawAccum = 0;
-    verifyBetaOs = 0;
-    verifyBetaGyro = 0;
-    verifyGammaOs = 0;
-    verifyGammaGyro = 0;
-    verifyPrevBetaGammaValid = false;
-    verifyBetaMin = verifyBetaMax = sensorState.beta;
-    verifyGammaMin = verifyGammaMax = sensorState.gamma;
-  }
-
-  function finalizeGyroDetection(force) {
-    if (!detectPhase) return;
-
-    var elapsed = Date.now() - detectStartTime;
-    if (!force && elapsed < GYRO_DETECT_MIN_TIME_MS) return;
-
-    var betaRange = detectBetaMax - detectBetaMin;
-    var gammaRange = detectGammaMax - detectGammaMin;
-    var absOsHeading = Math.abs(detectOsAccum);
-    var minPR = force ? GYRO_DETECT_FORCE_MIN_DEG : DETECT_PITCH_ROLL_MIN_DEG;
-    var minH = force ? GYRO_DETECT_FORCE_MIN_DEG : GYRO_DETECT_MIN_DEG;
-
-    var correction = null;
-
-    // Step 1+2: best compass-free pair — range gate prevents noise finalization
-    var bestOs = 0, bestGyro = 0;
-    if (betaRange >= gammaRange && betaRange >= minPR &&
-        Math.abs(detectBetaOs) >= 3 && Math.abs(detectBetaGyro) >= 0.1) {
-      bestOs = detectBetaOs;
-      bestGyro = detectBetaGyro;
-    } else if (gammaRange >= minPR &&
-               Math.abs(detectGammaOs) >= 3 && Math.abs(detectGammaGyro) >= 0.1) {
-      bestOs = detectGammaOs;
-      bestGyro = detectGammaGyro;
-    }
-    if (bestOs !== 0) {
-      correction = classifyGyroRatio(bestOs / bestGyro);
-    }
-
-    // Step 3: Fallback D — maxRate heuristic (range gate: require real movement)
-    var maxRange = Math.max(betaRange, gammaRange);
-    if (correction === null && detectMaxAbsRate > 0 && maxRange >= minPR) {
-      var scale = null;
-      if (detectMaxAbsRate < RATE_BOUNDARY_LOW) scale = RAD;
-      else if (detectMaxAbsRate > RATE_BOUNDARY_HIGH) scale = 1.0;
-      if (scale !== null) {
-        var sign = 1;
-        if (Math.abs(detectOsAccum) >= 5 && Math.abs(detectGyroAccum) >= 0.01) {
-          sign = (-detectOsAccum / detectGyroAccum) > 0 ? 1 : -1;
-        }
-        correction = sign * scale;
-      }
-    }
-
-    // Step 4: Fallback heading pair (existing method)
-    if (correction === null && absOsHeading >= minH && Math.abs(detectGyroAccum) >= 0.01) {
-      var hRatio = -detectOsAccum / detectGyroAccum;
-      correction = classifyGyroRatio(hRatio);
-    }
-
-    if (correction === null) {
-      if (force) detectPhase = false;
-      return;
-    }
-
-    gyroCorrection = correction;
-    detectPhase = false;
-    transitionToPhase2();
-  }
 
   function refreshOrientationMatrix() {
-    var alpha;
-    if (compassDisabled) {
-      var corrH = ((inertialHeading - calibrationDelta) % 360 + 360) % 360;
-      alpha = headingToAlpha(corrH, sensorState.beta || 0, sensorState.gamma || 0);
-    } else {
-      alpha = sensorState.alpha - calibrationDelta - magneticDeclination;
-    }
+    var alpha = sensorState.alpha - calibrationDelta - magneticDeclination;
     computeOrientationMatrix(alpha, sensorState.beta, sensorState.gamma);
   }
 
@@ -588,8 +340,7 @@
   }
 
   /* ==========================================================================
-     Сенсоры: DeviceOrientation (оба режима: pitch/roll всегда из OS fusion)
-              + DeviceMotion (инерциальный: yaw из гироскопа)
+     Сенсоры: DeviceOrientation (компасный режим)
      ========================================================================== */
   function onOrientation(evt) {
     if (evt.alpha == null) return;
@@ -602,145 +353,7 @@
 
     if (!sensorReady) {
       sensorReady = true;
-      if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching') {
-        calibState = 'phase1';
-        gyroCorrection = loadGyroCorrection();
-        startGyroDetection();
-        showCalibOverlay('phase1');
-        updatePhase1Progress(0);
-      }
-    }
-
-    if (detectPhase) {
-      var warmupOk = (Date.now() - detectStartTime) >= GYRO_DETECT_MIN_TIME_MS;
-
-      if (warmupOk) {
-        if (detectPrevBetaGammaValid) {
-          if (sensorState.beta < detectBetaMin) detectBetaMin = sensorState.beta;
-          if (sensorState.beta > detectBetaMax) detectBetaMax = sensorState.beta;
-          if (sensorState.gamma < detectGammaMin) detectGammaMin = sensorState.gamma;
-          if (sensorState.gamma > detectGammaMax) detectGammaMax = sensorState.gamma;
-
-          var dBeta = sensorState.beta - detectPrevBeta;
-          var dGamma = sensorState.gamma - detectPrevGamma;
-          if (Math.abs(dBeta) > DETECT_DELTA_NOISE_DEG) detectBetaOs += dBeta;
-          if (Math.abs(dGamma) > DETECT_DELTA_NOISE_DEG) detectGammaOs += dGamma;
-        } else {
-          detectBetaMin = detectBetaMax = sensorState.beta;
-          detectGammaMin = detectGammaMax = sensorState.gamma;
-        }
-        detectPrevBeta = sensorState.beta;
-        detectPrevGamma = sensorState.gamma;
-        detectPrevBetaGammaValid = true;
-      }
-
-      if (warmupOk && Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
-        var currentH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
-        if (detectPrevHeadingValid) {
-          var hDelta = currentH - detectPrevHeading;
-          if (hDelta > 180) hDelta -= 360;
-          if (hDelta < -180) hDelta += 360;
-          detectOsAccum += hDelta;
-        }
-        detectPrevHeading = currentH;
-        detectPrevHeadingValid = true;
-      }
-
-      if (warmupOk) finalizeGyroDetection(false);
-    }
-
-    if (calibState === 'phase1' && detectPhase) {
-      var betaRange = detectBetaMax - detectBetaMin;
-      var gammaRange = detectGammaMax - detectGammaMin;
-      var bestProgress = Math.max(betaRange, gammaRange, Math.abs(detectOsAccum));
-      updatePhase1Progress(bestProgress);
-      if (elPhase1Step2 && betaRange >= 5) {
-        elPhase1Step2.hidden = false;
-      }
-    }
-
-    if (calibState === 'rendering' && compassDisabled) {
-      if (verifyPrevBetaGammaValid) {
-        if (sensorState.beta < verifyBetaMin) verifyBetaMin = sensorState.beta;
-        if (sensorState.beta > verifyBetaMax) verifyBetaMax = sensorState.beta;
-        if (sensorState.gamma < verifyGammaMin) verifyGammaMin = sensorState.gamma;
-        if (sensorState.gamma > verifyGammaMax) verifyGammaMax = sensorState.gamma;
-
-        var vdBeta = sensorState.beta - verifyPrevBeta;
-        var vdGamma = sensorState.gamma - verifyPrevGamma;
-        if (Math.abs(vdBeta) > DETECT_DELTA_NOISE_DEG) verifyBetaOs += vdBeta;
-        if (Math.abs(vdGamma) > DETECT_DELTA_NOISE_DEG) verifyGammaOs += vdGamma;
-      }
-      verifyPrevBeta = sensorState.beta;
-      verifyPrevGamma = sensorState.gamma;
-      verifyPrevBetaGammaValid = true;
-
-      // Heading pair verify (with beta guard)
-      if (Math.abs(sensorState.beta) >= BETA_MIN_FOR_HEADING) {
-        var vH = alphaToHeading(sensorState.alpha, sensorState.beta, sensorState.gamma);
-        if (verifyPrevHeadingValid) {
-          var vDelta = vH - verifyPrevHeading;
-          if (vDelta > 180) vDelta -= 360;
-          if (vDelta < -180) vDelta += 360;
-          verifyOsAccum += vDelta;
-        }
-        verifyPrevHeading = vH;
-        verifyPrevHeadingValid = true;
-      }
-    }
-  }
-
-  function onDeviceMotion(evt) {
-    if (!active) return;
-    var rr = evt.rotationRate;
-    if (!rr) return;
-
-    var now = Date.now();
-    var dt = lastMotionTimestamp ? (now - lastMotionTimestamp) / 1000 : 0;
-    lastMotionTimestamp = now;
-    motionStateTimestamp = now;
-
-    if (dt <= 0 || dt > 0.25) return;
-
-    var ra = rr.alpha != null ? rr.alpha : 0;
-    var rb = rr.beta  != null ? rr.beta  : 0;
-    var rg = rr.gamma != null ? rr.gamma : 0;
-
-    var betaRad  = (sensorState.beta  || 0) * DEG;
-    var gammaRad = (sensorState.gamma || 0) * DEG;
-    var cosB = Math.cos(betaRad);
-    var sinB = Math.sin(betaRad);
-    var cosG = Math.cos(gammaRad);
-    var sinG = Math.sin(gammaRad);
-
-    var yawRate = cosB * (ra * cosG - rb * sinG) + sinB * rg;
-
-    if (detectPhase && sensorReady) {
-      var warmupOk = (Date.now() - detectStartTime) >= GYRO_DETECT_MIN_TIME_MS;
-      if (warmupOk) {
-        detectMaxAbsRate = Math.max(detectMaxAbsRate, Math.abs(ra), Math.abs(rb), Math.abs(rg));
-        detectBetaGyro += rb * dt;
-        detectGammaGyro += rg * dt;
-        if (Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
-          detectGyroAccum += yawRate * dt;
-        }
-      }
-    }
-
-    if (calibState === 'rendering' && compassDisabled) {
-      // Compass-free verify: raw device-frame pitch/roll rates
-      verifyBetaGyro += rb * dt;
-      verifyGammaGyro += rg * dt;
-
-      // Heading pair verify (with beta guard)
-      if (Math.abs(sensorState.beta || 0) >= BETA_MIN_FOR_HEADING) {
-        verifyGyroRawAccum += yawRate * dt;
-      }
-    }
-
-    if (compassDisabled) {
-      inertialHeading = ((inertialHeading - yawRate * gyroCorrection * dt) % 360 + 360) % 360;
-      refreshOrientationMatrix();
+      if (calibState === 'calibrating') updateCalibButtons();
     }
   }
 
@@ -758,31 +371,16 @@
       }
     }
 
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
-      try {
-        var permM = await DeviceMotionEvent.requestPermission();
-        if (permM !== 'granted') {
-          console.warn('ar.js: device motion permission denied');
-        }
-      } catch (e) {
-        console.warn('ar.js: device motion permission error', e);
-      }
-    }
-
     if ('ondeviceorientationabsolute' in window) {
       window.addEventListener('deviceorientationabsolute', onOrientation);
     } else {
       window.addEventListener('deviceorientation', onOrientation);
     }
-
-    window.addEventListener('devicemotion', onDeviceMotion);
   }
 
   function stopSensors() {
     window.removeEventListener('deviceorientationabsolute', onOrientation);
     window.removeEventListener('deviceorientation', onOrientation);
-    window.removeEventListener('devicemotion', onDeviceMotion);
   }
 
   /* ==========================================================================
@@ -889,9 +487,7 @@
     elDrift.style.setProperty('--drift-hue', hue);
     elDrift.style.setProperty('--drift-fill', Math.round((1 - ratio) * 100) + '%');
 
-    elDrift.title = compassDisabled
-      ? '\u0414\u0440\u0435\u0439\u0444: \u0438\u043D\u0435\u0440\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u0440\u0435\u0436\u0438\u043C'
-      : '\u0414\u0440\u0435\u0439\u0444 \u0433\u0438\u0440\u043E\u0441\u043A\u043E\u043F\u0430';
+    elDrift.title = '\u0414\u0440\u0435\u0439\u0444';
 
     if (error >= MAX_DRIFT_ERROR_DEG) {
       triggerRecalibration();
@@ -901,45 +497,31 @@
   /* ==========================================================================
      Калибровочная машина состояний: переходы
      ========================================================================== */
-  var PHASE1_CIRCUMFERENCE = 2 * Math.PI * 54; // SVG circle r=54
-
-  function showCalibOverlay(st) {
-    if (elCalibWaitGps) elCalibWaitGps.hidden = (st !== 'waiting_gps');
-    if (elCalibPhase1)  elCalibPhase1.hidden  = (st !== 'phase1');
-    if (elCalibPhase2)  elCalibPhase2.hidden  = (st !== 'phase2');
-    if (elRecalibBtn)   elRecalibBtn.hidden   = (st !== 'rendering');
-    if (st === 'phase1' && elPhase1Step2) elPhase1Step2.hidden = true;
+  function areSensorsReady() {
+    return gpsCoords && gpsQuality !== 'searching' && sensorReady && cameraStream;
   }
 
-  function updatePhase1Progress(absDeg) {
-    var absBeta = Math.abs(detectBetaOs);
-    var absGamma = Math.abs(detectGammaOs);
-    var pitchRollLeading = (absBeta >= Math.abs(detectOsAccum)) ||
-                           (absGamma >= Math.abs(detectOsAccum));
-    var target = pitchRollLeading ? DETECT_PITCH_ROLL_MIN_DEG : GYRO_DETECT_MIN_DEG;
-    var progress = Math.min(absDeg / target, 1.0);
-    if (elPhase1Progress) {
-      var offset = PHASE1_CIRCUMFERENCE * (1 - progress);
-      elPhase1Progress.setAttribute('stroke-dashoffset', offset.toFixed(1));
-      var hue = Math.round(progress * 120);
-      elPhase1Progress.setAttribute('stroke', 'hsl(' + hue + ', 80%, 50%)');
+  function updateCalibButtons() {
+    var ready = areSensorsReady();
+    if (elCalibSkipBtn) elCalibSkipBtn.disabled = !ready;
+    if (elCalibFixBtn) elCalibFixBtn.disabled = !ready || !selectedCalibBody;
+    if (elCalibSensorStatus) {
+      if (!ready) {
+        var msg = (!gpsCoords || gpsQuality === 'searching') ? '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 GPS\u2026'
+          : !sensorReady ? '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0441\u0435\u043D\u0441\u043E\u0440\u043E\u0432\u2026'
+          : !cameraStream ? '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u043A\u0430\u043C\u0435\u0440\u044B\u2026' : '';
+        elCalibSensorStatus.textContent = msg;
+        elCalibSensorStatus.hidden = false;
+      } else {
+        elCalibSensorStatus.hidden = true;
+      }
     }
-    if (elPhase1Text) {
-      elPhase1Text.textContent = Math.round(absDeg) + '\u00B0 / ' + target + '\u00B0';
-    }
+    if (gpsCoords) updateCelestialBodiesAvailability();
   }
 
-  function transitionToPhase2() {
-    calibState = 'phase2';
-    compassDisabled = false;
-    selectedCalibBody = null;
-    showCalibOverlay('phase2');
-    if (elPhase2CompassToggle) elPhase2CompassToggle.classList.remove('disabled');
-    updateCelestialBodiesAvailability();
-    updatePhase2FixButton();
-    updatePhase2Instruction();
-    clearCelestialAvailTimer();
-    celestialAvailTimerId = setInterval(updateCelestialBodiesAvailability, CELESTIAL_AVAILABILITY_INTERVAL_MS);
+  function showCalibPanel(visible) {
+    if (elCalibPhase2) elCalibPhase2.hidden = !visible;
+    if (elRecalibBtn) elRecalibBtn.hidden = visible;
   }
 
   function clearCelestialAvailTimer() {
@@ -990,7 +572,7 @@
 
   function updatePhase2FixButton() {
     if (!elCalibFixBtn) return;
-    elCalibFixBtn.disabled = !selectedCalibBody || !gpsCoords;
+    elCalibFixBtn.disabled = !selectedCalibBody || !areSensorsReady();
   }
 
   function updatePhase2Instruction() {
@@ -1004,21 +586,8 @@
     }
   }
 
-  function onPhase2CompassToggle() {
-    compassDisabled = !compassDisabled;
-    if (elPhase2CompassToggle) {
-      elPhase2CompassToggle.classList.toggle('disabled', compassDisabled);
-    }
-    if (compassDisabled) {
-      inertialHeading = alphaToHeading(
-        sensorState.alpha || 0, sensorState.beta || 0, sensorState.gamma || 0);
-      lastMotionTimestamp = 0;
-    }
-    resetVerifyState();
-  }
-
   function onFixCalibration() {
-    if (!gpsCoords || !selectedCalibBody) return;
+    if (!areSensorsReady() || !selectedCalibBody) return;
     var now = new Date();
     var obs = { latitude: gpsCoords.latitude, longitude: gpsCoords.longitude };
     var truePos;
@@ -1027,17 +596,10 @@
     else truePos = getPolarisAzEl(obs, now);
     if (!truePos) return;
 
-    if (compassDisabled) {
-      calibrationDelta = inertialHeading - truePos.azimuth;
-      if (calibrationDelta > 180) calibrationDelta -= 360;
-      if (calibrationDelta < -180) calibrationDelta += 360;
-      saveGyroCorrection(gyroCorrection);
-    } else {
-      var sensorAz = ((360 - sensorState.alpha + magneticDeclination) % 360 + 360) % 360;
-      calibrationDelta = truePos.azimuth - sensorAz;
-      if (calibrationDelta > 180) calibrationDelta -= 360;
-      if (calibrationDelta < -180) calibrationDelta += 360;
-    }
+    var sensorAz = ((360 - sensorState.alpha + magneticDeclination) % 360 + 360) % 360;
+    calibrationDelta = truePos.azimuth - sensorAz;
+    if (calibrationDelta > 180) calibrationDelta -= 360;
+    if (calibrationDelta < -180) calibrationDelta += 360;
 
     lastCalibrationTime = Date.now();
     refreshOrientationMatrix();
@@ -1045,10 +607,17 @@
     enterRendering();
   }
 
+  function onSkipCalibration() {
+    if (!areSensorsReady()) return;
+    calibrationDelta = 0;
+    lastCalibrationTime = Date.now();
+    clearCelestialAvailTimer();
+    enterRendering();
+  }
+
   function enterRendering() {
     calibState = 'rendering';
-    showCalibOverlay('rendering');
-    resetVerifyState();
+    showCalibPanel(false);
 
     if (!renderingStarted) {
       startRendering();
@@ -1076,21 +645,14 @@
       gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
     }
 
-    compassDisabled = false;
     calibrationDelta = 0;
-    lastMotionTimestamp = 0;
-    resetVerifyState();
-
-    if (gpsCoords && gpsQuality !== 'searching' && sensorReady) {
-      calibState = 'phase1';
-      gyroCorrection = loadGyroCorrection();
-      startGyroDetection();
-      showCalibOverlay('phase1');
-      updatePhase1Progress(0);
-    } else {
-      calibState = 'waiting_gps';
-      showCalibOverlay('waiting_gps');
-    }
+    calibState = 'calibrating';
+    selectedCalibBody = null;
+    showCalibPanel(true);
+    updateCelestialBodiesAvailability();
+    updateCalibButtons();
+    clearCelestialAvailTimer();
+    celestialAvailTimerId = setInterval(updateCelestialBodiesAvailability, CELESTIAL_AVAILABILITY_INTERVAL_MS);
   }
 
   /* ==========================================================================
@@ -1138,23 +700,14 @@
 
     updateDriftIndicator();
     updateHud();
-    updateSensorStatus();
-    checkGyroCorrection();
 
-    if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
-      calibState = 'phase1';
-      gyroCorrection = loadGyroCorrection();
-      startGyroDetection();
-      showCalibOverlay('phase1');
-      updatePhase1Progress(0);
+    if (calibState === 'calibrating') {
+      updateCalibButtons();
     }
 
-    if ((calibState === 'phase1' || calibState === 'phase2') &&
-        (!gpsCoords || gpsQuality === 'searching')) {
-      detectPhase = false;
-      clearCelestialAvailTimer();
-      calibState = 'waiting_gps';
-      showCalibOverlay('waiting_gps');
+    if (calibState === 'rendering' && (!gpsCoords || gpsQuality === 'searching')) {
+      triggerRecalibration();
+      return;
     }
 
     if (!gpsCoords || gpsQuality === 'searching') return;
@@ -1288,8 +841,7 @@
         focusedId: focusedNoradId,
         fovH: fovH,
         fovV: fovV,
-        noradIdToFreq: currentNoradIdToFreq,
-        driftPaused: false
+        noradIdToFreq: currentNoradIdToFreq
       });
     }
 
@@ -1353,24 +905,6 @@
         if (elTelDist) elTelDist.textContent = 'ДИСТ: ' + Math.round(focSat.distance) + ' км';
       }
     }
-  }
-
-  function setSensorClass(el, cls) {
-    if (!el) return;
-    el.classList.remove('ok', 'warn', 'off');
-    if (cls) el.classList.add(cls);
-  }
-
-  function updateSensorStatus() {
-    setSensorClass(elSensorGps,
-      gpsQuality === 'excellent' ? 'ok' : gpsQuality === 'moderate' ? 'warn' : 'off');
-    setSensorClass(elSensorCamera, cameraStream ? 'ok' : 'off');
-    var hasCompass = sensorState.absolute && !compassDisabled;
-    setSensorClass(elSensorCompass, compassDisabled ? 'off' : hasCompass ? 'ok' : 'warn');
-    var orientFresh = sensorState.timestamp && (Date.now() - sensorState.timestamp < 3000);
-    var motionFresh = motionStateTimestamp && (Date.now() - motionStateTimestamp < 3000);
-    var gyroAlive = orientFresh || (compassDisabled && motionFresh);
-    setSensorClass(elSensorGyro, gyroAlive ? 'ok' : 'off');
   }
 
   /* ==========================================================================
@@ -1437,7 +971,7 @@
     if (elShowAll) elShowAll.addEventListener('click', onShowAllClick);
     if (elSoundToggle) elSoundToggle.addEventListener('click', onSoundToggleClick);
     if (elCalibFixBtn) elCalibFixBtn.addEventListener('click', onFixCalibration);
-    if (elPhase2CompassToggle) elPhase2CompassToggle.addEventListener('click', onPhase2CompassToggle);
+    if (elCalibSkipBtn) elCalibSkipBtn.addEventListener('click', onSkipCalibration);
     if (elRecalibBtn) elRecalibBtn.addEventListener('click', triggerRecalibration);
     if (elCalibSun) elCalibSun.addEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.addEventListener('click', onSelectCelestialBody);
@@ -1451,7 +985,7 @@
     if (elShowAll) elShowAll.removeEventListener('click', onShowAllClick);
     if (elSoundToggle) elSoundToggle.removeEventListener('click', onSoundToggleClick);
     if (elCalibFixBtn) elCalibFixBtn.removeEventListener('click', onFixCalibration);
-    if (elPhase2CompassToggle) elPhase2CompassToggle.removeEventListener('click', onPhase2CompassToggle);
+    if (elCalibSkipBtn) elCalibSkipBtn.removeEventListener('click', onSkipCalibration);
     if (elRecalibBtn) elRecalibBtn.removeEventListener('click', triggerRecalibration);
     if (elCalibSun) elCalibSun.removeEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.removeEventListener('click', onSelectCelestialBody);
@@ -1479,22 +1013,13 @@
     elFallback = document.getElementById('arDesktopFallback');
     elFallbackBack = document.getElementById('arFallbackBack');
     elCrosshair = document.getElementById('arCrosshair');
-    elSensorGps = document.getElementById('arSensorGps');
-    elSensorCamera = document.getElementById('arSensorCamera');
-    elSensorCompass = document.getElementById('arSensorCompass');
-    elSensorGyro = document.getElementById('arSensorGyro');
-    elCalibWaitGps = document.getElementById('arCalibWaitGps');
-    elCalibPhase1 = document.getElementById('arCalibPhase1');
-    elCalibPhase2 = document.getElementById('arCalibPhase2');
-    elPhase1Progress = document.getElementById('arPhase1Progress');
-    elPhase1Text = document.getElementById('arPhase1Text');
-    elPhase1Step1 = document.getElementById('arPhase1Step1');
-    elPhase1Step2 = document.getElementById('arPhase1Step2');
+    elCalibPhase2 = document.getElementById('arCalibPanel');
     elCalibSun = document.getElementById('arCalibSun');
     elCalibMoon = document.getElementById('arCalibMoon');
     elCalibPolaris = document.getElementById('arCalibPolaris');
-    elPhase2CompassToggle = document.getElementById('arPhase2CompassToggle');
     elCalibFixBtn = document.getElementById('arCalibFixBtn');
+    elCalibSkipBtn = document.getElementById('arCalibSkipBtn');
+    elCalibSensorStatus = document.getElementById('arCalibSensorStatus');
     elPhase2Instruction = document.getElementById('arPhase2Instruction');
     elPhase2NoBodies = document.getElementById('arPhase2NoBodies');
     elRecalibBtn = document.getElementById('arRecalibBtn');
@@ -1521,15 +1046,9 @@
     focusedNoradId = null;
     calibrationDelta = 0;
     magneticDeclination = 0;
-    compassDisabled = false;
     lastCalibrationTime = 0;
-    calibState = 'waiting_gps';
+    calibState = 'calibrating';
     renderingStarted = false;
-    inertialHeading = 0;
-    lastMotionTimestamp = 0;
-    motionStateTimestamp = 0;
-    detectPhase = false;
-    gyroCorrection = loadGyroCorrection();
     sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };
     sensorReady = false;
     selectedCalibBody = null;
@@ -1575,15 +1094,10 @@
 
     slowLoopId = setInterval(slowLoop, SLOW_LOOP_MS);
 
-    if (calibState === 'waiting_gps' && gpsCoords && gpsQuality !== 'searching' && sensorReady) {
-      calibState = 'phase1';
-      gyroCorrection = loadGyroCorrection();
-      startGyroDetection();
-      showCalibOverlay('phase1');
-      updatePhase1Progress(0);
-    } else if (calibState === 'waiting_gps') {
-      showCalibOverlay('waiting_gps');
-    }
+    showCalibPanel(true);
+    updateCalibButtons();
+    clearCelestialAvailTimer();
+    celestialAvailTimerId = setInterval(updateCelestialBodiesAvailability, CELESTIAL_AVAILABILITY_INTERVAL_MS);
 
     slowLoop();
   }
@@ -1609,32 +1123,9 @@
     focusedNoradId = null;
     renderingStarted = false;
     showAllActive = false;
-    compassDisabled = false;
-    calibState = 'waiting_gps';
+    calibState = 'calibrating';
     selectedCalibBody = null;
-    inertialHeading = 0;
-    lastMotionTimestamp = 0;
-    motionStateTimestamp = 0;
-    detectPhase = false;
     sensorReady = false;
-    verifyOsAccum = 0;
-    verifyGyroRawAccum = 0;
-    verifyPrevHeadingValid = false;
-    verifyBetaOs = 0;
-    verifyBetaGyro = 0;
-    verifyGammaOs = 0;
-    verifyGammaGyro = 0;
-    verifyPrevBetaGammaValid = false;
-    verifyBetaMin = verifyBetaMax = 0;
-    verifyGammaMin = verifyGammaMax = 0;
-    detectBetaOs = 0;
-    detectBetaGyro = 0;
-    detectGammaOs = 0;
-    detectGammaGyro = 0;
-    detectPrevBetaGammaValid = false;
-    detectMaxAbsRate = 0;
-    detectBetaMin = detectBetaMax = 0;
-    detectGammaMin = detectGammaMax = 0;
     visibleSatellites = [];
     allTrajectories = {};
     prevPositions = {};
