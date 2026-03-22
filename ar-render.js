@@ -13,7 +13,19 @@
   var width = 0, height = 0, dpr = 1;
   var webglAvailable = false;
 
-  /* ====== Палитра ====== */
+  /* ====== AR-палитра: неоновые цвета, alpha=1.0 для контраста на любом фоне ====== */
+  var AR_PALETTE = [
+    { orbit: 'rgb(180, 255, 0)',   marker: '#b4ff00' },   // неоново-зелёный
+    { orbit: 'rgb(255, 0, 200)',   marker: '#ff00c8' },   // фуксия
+    { orbit: 'rgb(255, 165, 0)',   marker: '#ffa500' },   // электрик-оранжевый
+    { orbit: 'rgb(0, 255, 255)',   marker: '#00ffff' },   // циан
+    { orbit: 'rgb(190, 50, 255)',  marker: '#be32ff' },   // неоновый фиолет
+    { orbit: 'rgb(255, 255, 0)',   marker: '#ffff00' },   // жёлтый
+    { orbit: 'rgb(255, 80, 80)',   marker: '#ff5050' },   // ярко-красный
+    { orbit: 'rgb(0, 220, 140)',   marker: '#00dc8c' },   // изумрудный
+    { orbit: 'rgb(0, 160, 255)',   marker: '#00a0ff' },   // ярко-голубой
+    { orbit: 'rgb(255, 105, 180)', marker: '#ff69b4' }    // ярко-розовый
+  ];
   var PALETTE = [];
 
   /* ====== Константы отрисовки ====== */
@@ -306,7 +318,7 @@
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 1.0;
 
     ctx.beginPath();
     var started = false;
@@ -361,14 +373,14 @@
       var pal = PALETTE[seg.colorIdx % PALETTE.length] || PALETTE[0];
       var rgb = parseColor(pal.orbit);
 
-      // Pass 1: wide glow line
+      // Pass 1: glow
       gl.lineWidth(1);
-      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 0.3);
+      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 0.5);
       gl.uniform1f(uAlpha, 1.0);
       gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
 
       // Pass 2: bright core
-      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 0.85);
+      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
       gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
     }
 
@@ -475,9 +487,7 @@
       ctx = canvas2D.getContext('2d');
     }
 
-    PALETTE = window.SatContactOrbitPalette || [
-      { orbit: 'rgba(82, 136, 193, 0.75)', marker: '#5288c1' }
-    ];
+    PALETTE = AR_PALETTE;
 
     webglAvailable = initGL(canvasGLEl);
     if (!webglAvailable) {
