@@ -1,7 +1,7 @@
 /**
  * SatContact — Модуль 3: AR-трекер (Оркестратор)
  * Камера, сенсоры: компасный режим (DeviceOrientation + WMM),
- * координаты из SatContactGps, калибровка по небесным телам, аудио-прицел, таймер дрейфа.
+ * координаты из SatContactGps, калибровка по небесным телам, аудио-прицел.
  */
 (function () {
   'use strict';
@@ -10,8 +10,6 @@
   const DEG = Math.PI / 180;
   const RAD = 180 / Math.PI;
   const SLOW_LOOP_MS = 1000;
-  const DRIFT_RATE_DEG_PER_MIN = 2;
-  const MAX_DRIFT_ERROR_DEG = 5;
   const AUDIO_MIN_HZ = 20;
   const AUDIO_MAX_HZ = 900;
   const AUDIO_MAX_OFFSET_DEG = 90;
@@ -22,7 +20,7 @@
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
-  let elSoundToggle, elDrift, elHud;
+  let elSoundToggle, elHud;
   let elTelemetryRow, elTelAz, elTelEl, elTelDist;
   let elFallback, elFallbackBack, elCrosshair, elCalibCrosshair;
   let elCalibPhase2;
@@ -55,7 +53,6 @@
 
   /* ====== Калибровочная машина состояний ====== */
   let calibState = 'calibrating';  // 'calibrating' | 'rendering'
-  let lastCalibrationTime = 0;
   let selectedCalibBody = null;    // 'sun' | 'moon' | 'polaris'
   let celestialAvailTimerId = null;
 
@@ -420,34 +417,6 @@
   }
 
   /* ==========================================================================
-     Таймер дрейфа
-     ========================================================================== */
-  function getDriftError() {
-    if (!lastCalibrationTime) return MAX_DRIFT_ERROR_DEG;
-    return ((Date.now() - lastCalibrationTime) / 60000) * DRIFT_RATE_DEG_PER_MIN;
-  }
-
-  function updateDriftIndicator() {
-    if (!elDrift) return;
-    if (calibState !== 'rendering') {
-      elDrift.style.setProperty('--drift-fill', '0%');
-      elDrift.title = '\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043A\u0430\u043B\u0438\u0431\u0440\u043E\u0432\u043A\u0430';
-      return;
-    }
-    var error = getDriftError();
-    var ratio = Math.min(error / MAX_DRIFT_ERROR_DEG, 1);
-    var hue = Math.round(120 * (1 - ratio));
-    elDrift.style.setProperty('--drift-hue', hue);
-    elDrift.style.setProperty('--drift-fill', Math.round((1 - ratio) * 100) + '%');
-
-    elDrift.title = '\u0414\u0440\u0435\u0439\u0444';
-
-    if (error >= MAX_DRIFT_ERROR_DEG) {
-      triggerRecalibration();
-    }
-  }
-
-  /* ==========================================================================
      GPS-сервис: чтение координат из кеша
      ========================================================================== */
   function getGpsCoords() {
@@ -578,7 +547,6 @@
     if (calibrationDelta > 180) calibrationDelta -= 360;
     if (calibrationDelta < -180) calibrationDelta += 360;
 
-    lastCalibrationTime = Date.now();
     refreshOrientationMatrix();
     clearCelestialAvailTimer();
     enterRendering();
@@ -673,7 +641,6 @@
   function slowLoop() {
     if (!active) return;
 
-    updateDriftIndicator();
     updateHud();
     updateArGpsStatusRow();
 
@@ -1041,7 +1008,6 @@
     elBack = document.getElementById('arBack');
     elShowAll = document.getElementById('arShowAll');
     elSoundToggle = document.getElementById('arSoundToggle');
-    elDrift = document.getElementById('arDriftIndicator');
     elHud = document.getElementById('arHud');
     elTelemetryRow = document.getElementById('arTelemetryRow');
     elTelAz = document.getElementById('arTelAz');
@@ -1087,7 +1053,6 @@
     focusedNoradId = null;
     calibrationDelta = 0;
     magneticDeclination = 0;
-    lastCalibrationTime = 0;
     calibState = 'calibrating';
     renderingStarted = false;
     sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };

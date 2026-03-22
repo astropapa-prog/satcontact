@@ -1370,28 +1370,6 @@ body {
   opacity: 0.5;
 }
 
-.ar-view__drift {
-  width: 6px;
-  height: 80px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-  position: relative;
-}
-
-.ar-view__drift::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--drift-fill, 0%);
-  background: hsl(var(--drift-hue, 0), 80%, 50%);
-  border-radius: 2px;
-  transition: height 0.3s ease, background 0.3s ease;
-}
-
 /* ---------- Нижний HUD ---------- */
 .ar-view__hud {
   position: absolute;
