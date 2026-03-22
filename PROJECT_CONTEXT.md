@@ -289,7 +289,7 @@ satcontact/
 
 - **Звуковой прицел:** только в режиме **focus**; Web Audio API (`updateAudioPitch` в **ar.js**): частота **20–900 Гц** по величине углового отклонения **0°–90°** (константы `AUDIO_MIN_HZ` / `AUDIO_MAX_HZ` / `AUDIO_MAX_OFFSET_DEG`).
 - **Единая геометрия с рендером:** угол наведения не считается из отдельных «азимут/элевация камеры» по сенсору. Вызов **`SatContactArRender.computeAimingAngularErrorDeg(satAz, satEl, orientationMatrix)`** в **ar-render.js**: тот же unit-вектор на спутник в мировых осях, что в **`projectReal3D()`** и в вершинном шейдере; ось «вперёд» в мире = **`R·(0,0,−1)`** = `−(m6, m7, m8)` (Row2 хранимой R^T). Так звук и положение иконки опираются на одну **`orientationMatrix`** (калибровка задаётся в **`refreshOrientationMatrix`**: Euler α из `DeviceOrientation` после `calibrationDelta` и WMM, beta/gamma из OS fusion).
-- **«ВСЕ» в AR:** как тумблер — все NORAD из `getSatContactFilteredEntries()` / возврат к набору при входе.
+- **«ВСЕ» в AR:** как тумблер — при включении: все NORAD из `getSatContactFilteredEntries()`; при выключении: если есть спутник в фокусе — остаётся только он (фокус сохраняется), если фокуса нет — откат к `initialNoradIds`. Логика аналогична кнопке «ВСЕ» на карте (Модуль 2).
 - Событие **`satcontact:ar-focus`** — `{ detail: { focusedIds } }` для возможной синхронизации UI.
 
 ### 6.6 Что намеренно не делается в Модуле 3

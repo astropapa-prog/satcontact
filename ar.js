@@ -967,11 +967,20 @@
       currentNoradIds = allIds;
       currentNoradIdToName = nameMap;
     } else {
-      currentNoradIds = initialNoradIds.slice();
-      currentNoradIdToName = Object.assign({}, initialNoradIdToName);
+      if (focusedNoradId && currentNoradIdToName[focusedNoradId]) {
+        var keepId = focusedNoradId;
+        var keepName = currentNoradIdToName[keepId];
+        currentNoradIds = [keepId];
+        currentNoradIdToName = {};
+        currentNoradIdToName[keepId] = keepName;
+      } else {
+        currentNoradIds = initialNoradIds.slice();
+        currentNoradIdToName = Object.assign({}, initialNoradIdToName);
+      }
     }
 
-    setFocus(null);
+    var keepFocus = !showAllActive && focusedNoradId && currentNoradIds.indexOf(String(focusedNoradId)) !== -1;
+    if (!keepFocus) setFocus(null);
     allTrajectories = {};
     prevPositions = {};
     currentPositions = {};
