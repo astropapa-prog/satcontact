@@ -39,7 +39,7 @@
   /* ====== WebGL: шейдеры, программа, буферы ====== */
   var glProgram = null;
   var glVBO = null;
-  var uOrientation, uFocal, uResolution, uColor, uAlpha;
+  var uOrientation, uFocal, uResolution, uColor, uAlpha, uPixelOffset;
   var aAzEl;
   var MAX_POINTS = 30 * 130;
   var orbitSegments = [];
@@ -52,6 +52,7 @@
     'uniform mat3 u_orientation;',
     'uniform vec2 u_focal;',
     'uniform vec2 u_resolution;',
+    'uniform vec2 u_pixelOffset;',
     'varying float v_behind;',
     'void main() {',
     '  float az = a_azEl.x * 0.017453292519943295;',
@@ -69,7 +70,8 @@
     '  }',
     '  float ndcX = (cam.x / cz) * u_focal.x / (u_resolution.x * 0.5);',
     '  float ndcY = (cam.y / cz) * u_focal.y / (u_resolution.y * 0.5);',
-    '  gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);',
+    '  gl_Position = vec4(ndcX + u_pixelOffset.x / u_resolution.x * 2.0,',
+    '                     ndcY + u_pixelOffset.y / u_resolution.y * 2.0, 0.0, 1.0);',
     '}'
   ].join('\n');
 
@@ -128,6 +130,7 @@
     uResolution = gl.getUniformLocation(glProgram, 'u_resolution');
     uColor = gl.getUniformLocation(glProgram, 'u_color');
     uAlpha = gl.getUniformLocation(glProgram, 'u_alpha');
+    uPixelOffset = gl.getUniformLocation(glProgram, 'u_pixelOffset');
 
     glVBO = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, glVBO);
@@ -366,6 +369,11 @@
     var focusedId = params.focusedId;
     var isFocusMode = params.mode === 'focus' && focusedId;
 
+    var OUTLINE_OFFSETS = [
+      [-1, 0], [1, 0], [0, -1], [0, 1],
+      [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]
+    ];
+
     for (var i = 0; i < orbitSegments.length; i++) {
       var seg = orbitSegments[i];
       if (isFocusMode && seg.noradId !== focusedId) continue;
@@ -373,13 +381,16 @@
       var pal = PALETTE[seg.colorIdx % PALETTE.length] || PALETTE[0];
       var rgb = parseColor(pal.orbit);
 
-      // Pass 1: glow
       gl.lineWidth(1);
-      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 0.5);
       gl.uniform1f(uAlpha, 1.0);
-      gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
 
-      // Pass 2: bright core
+      for (var k = 0; k < OUTLINE_OFFSETS.length; k++) {
+        gl.uniform2f(uPixelOffset, OUTLINE_OFFSETS[k][0], OUTLINE_OFFSETS[k][1]);
+        gl.uniform4f(uColor, 0, 0, 0, 0.6);
+        gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
+      }
+
+      gl.uniform2f(uPixelOffset, 0, 0);
       gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
       gl.drawArrays(gl.LINE_STRIP, seg.offset, seg.count);
     }
