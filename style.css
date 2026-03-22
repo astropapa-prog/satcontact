@@ -1019,6 +1019,144 @@ body {
   transform: translateX(-0.5px);
 }
 
+/* ---------- Калибровочный прицел (режим калибровки) ---------- */
+.ar-view__calib-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  z-index: 10;
+  pointer-events: none;
+  display: none;
+  box-sizing: border-box;
+}
+
+.ar-view__calib-crosshair.visible {
+  display: block;
+}
+
+.ar-view__calib-crosshair__inner {
+  display: none;
+  position: absolute;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.ar-view__calib-crosshair::before,
+.ar-view__calib-crosshair::after {
+  content: '';
+  position: absolute;
+}
+
+/* --- Солнце: чёрный прицел на фоне яркого диска --- */
+.ar-view__calib-crosshair--sun {
+  width: 80px;
+  height: 80px;
+  transform: translate(-50%, -50%);
+  border: 2.5px solid rgba(0, 0, 0, 0.75);
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.75) 2.5px, transparent 2.5px);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.15);
+}
+
+.ar-view__calib-crosshair--sun::before,
+.ar-view__calib-crosshair--sun::after {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.ar-view__calib-crosshair--sun::before {
+  top: 50%;
+  left: -12px;
+  right: -12px;
+  height: 1.5px;
+  transform: translateY(-0.75px);
+}
+
+.ar-view__calib-crosshair--sun::after {
+  left: 50%;
+  top: -12px;
+  bottom: -12px;
+  width: 1.5px;
+  transform: translateX(-0.75px);
+}
+
+/* --- Луна: зелёный прицел, контрастен и днём, и ночью --- */
+.ar-view__calib-crosshair--moon {
+  width: 80px;
+  height: 80px;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(0, 230, 118, 0.85);
+  background: radial-gradient(circle at center, rgba(0, 230, 118, 0.85) 1.5px, transparent 1.5px);
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6));
+}
+
+.ar-view__calib-crosshair--moon::before,
+.ar-view__calib-crosshair--moon::after {
+  background: rgba(0, 230, 118, 0.75);
+}
+
+.ar-view__calib-crosshair--moon::before {
+  top: 50%;
+  left: -10px;
+  right: -10px;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.ar-view__calib-crosshair--moon::after {
+  left: 50%;
+  top: -10px;
+  bottom: -10px;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
+/* --- Полярная: белый прицел с внутренним кольцом и пульсацией --- */
+.ar-view__calib-crosshair--polaris {
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8) 1.5px, transparent 1.5px);
+  filter: drop-shadow(0 0 6px rgba(180, 220, 255, 0.35));
+  animation: calibCrosshairPulse 2.5s ease-in-out infinite;
+}
+
+.ar-view__calib-crosshair--polaris .ar-view__calib-crosshair__inner {
+  display: block;
+  width: 40px;
+  height: 40px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+}
+
+.ar-view__calib-crosshair--polaris::before,
+.ar-view__calib-crosshair--polaris::after {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ar-view__calib-crosshair--polaris::before {
+  top: 50%;
+  left: -12px;
+  right: -12px;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.ar-view__calib-crosshair--polaris::after {
+  left: 50%;
+  top: -12px;
+  bottom: -12px;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
+@keyframes calibCrosshairPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 /* ---------- Калибровочная панель ---------- */
 .ar-view__calib-panel {
   position: absolute;

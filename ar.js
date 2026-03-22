@@ -24,7 +24,7 @@
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
   let elSoundToggle, elDrift, elHud;
   let elTelemetryRow, elTelAz, elTelEl, elTelDist;
-  let elFallback, elFallbackBack, elCrosshair;
+  let elFallback, elFallbackBack, elCrosshair, elCalibCrosshair;
   let elCalibPhase2;
   let elCalibSun, elCalibMoon, elCalibPolaris;
   let elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
@@ -512,6 +512,7 @@
     if (selectedCalibBody === 'moon' && !moonOk) selectedCalibBody = null;
     if (selectedCalibBody === 'polaris' && !polarisOk) selectedCalibBody = null;
     syncBodySelection();
+    updateCalibCrosshair();
 
     var noneAvailable = !sunOk && !moonOk && !polarisOk;
     if (elPhase2NoBodies) elPhase2NoBodies.hidden = !noneAvailable;
@@ -532,6 +533,7 @@
     syncBodySelection();
     updatePhase2FixButton();
     updatePhase2Instruction();
+    updateCalibCrosshair();
   }
 
   function updatePhase2FixButton() {
@@ -548,6 +550,16 @@
     } else {
       elPhase2Instruction.textContent = 'Выберите тело и нажмите \u00ABЗафиксировать\u00BB';
     }
+  }
+
+  function updateCalibCrosshair() {
+    if (!elCalibCrosshair) return;
+    if (calibState !== 'calibrating' || !selectedCalibBody) {
+      elCalibCrosshair.classList.remove('visible');
+      return;
+    }
+    elCalibCrosshair.className =
+      'ar-view__calib-crosshair visible ar-view__calib-crosshair--' + selectedCalibBody;
   }
 
   function onFixCalibration() {
@@ -584,6 +596,7 @@
   function enterRendering() {
     calibState = 'rendering';
     showCalibPanel(false);
+    updateCalibCrosshair();
 
     if (!renderingStarted) {
       startRendering();
@@ -618,6 +631,7 @@
     calibrationDelta = 0;
     calibState = 'calibrating';
     selectedCalibBody = null;
+    updateCalibCrosshair();
     showCalibPanel(true);
     updateCelestialBodiesAvailability();
     updateCalibButtons();
@@ -1047,6 +1061,7 @@
     elFallback = document.getElementById('arDesktopFallback');
     elFallbackBack = document.getElementById('arFallbackBack');
     elCrosshair = document.getElementById('arCrosshair');
+    elCalibCrosshair = document.getElementById('arCalibCrosshair');
     elCalibPhase2 = document.getElementById('arCalibPanel');
     elCalibSun = document.getElementById('arCalibSun');
     elCalibMoon = document.getElementById('arCalibMoon');
@@ -1179,6 +1194,7 @@
     showAllActive = false;
     calibState = 'calibrating';
     selectedCalibBody = null;
+    updateCalibCrosshair();
     sensorReady = false;
     visibleSatellites = [];
     allTrajectories = {};
