@@ -1220,30 +1220,6 @@ body {
   flex: 1;
 }
 
-.ar-view__calib-skip-btn {
-  padding: 14px 36px;
-  font-size: 1rem;
-  font-family: var(--font-sans);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
-}
-
-.ar-view__calib-skip-btn:hover,
-.ar-view__calib-skip-btn:focus {
-  background: rgba(255, 255, 255, 0.1);
-  outline: none;
-}
-
-.ar-view__calib-skip-btn:disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
 .ar-view__calib-sensor-status {
   margin: 0;
   font-size: 0.8125rem;

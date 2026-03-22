@@ -28,7 +28,7 @@
   let elCalibPhase2;
   let elCalibSun, elCalibMoon, elCalibPolaris;
   let elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
-  let elCalibSkipBtn, elCalibSensorStatus;
+  let elCalibSensorStatus;
   let elRecalibBtn;
   let elArGpsIndicator, elArGpsCoords, elArGpsAge, elArGpsNetBtn;
 
@@ -463,7 +463,6 @@
 
   function updateCalibButtons() {
     var ready = areSensorsReady();
-    if (elCalibSkipBtn) elCalibSkipBtn.disabled = !ready;
     if (elCalibFixBtn) elCalibFixBtn.disabled = !ready || !selectedCalibBody;
     if (elCalibSensorStatus) {
       if (!ready) {
@@ -581,14 +580,6 @@
 
     lastCalibrationTime = Date.now();
     refreshOrientationMatrix();
-    clearCelestialAvailTimer();
-    enterRendering();
-  }
-
-  function onSkipCalibration() {
-    if (!areSensorsReady()) return;
-    calibrationDelta = 0;
-    lastCalibrationTime = Date.now();
     clearCelestialAvailTimer();
     enterRendering();
   }
@@ -1019,7 +1010,6 @@
     if (elShowAll) elShowAll.addEventListener('click', onShowAllClick);
     if (elSoundToggle) elSoundToggle.addEventListener('click', onSoundToggleClick);
     if (elCalibFixBtn) elCalibFixBtn.addEventListener('click', onFixCalibration);
-    if (elCalibSkipBtn) elCalibSkipBtn.addEventListener('click', onSkipCalibration);
     if (elRecalibBtn) elRecalibBtn.addEventListener('click', triggerRecalibration);
     if (elCalibSun) elCalibSun.addEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.addEventListener('click', onSelectCelestialBody);
@@ -1034,7 +1024,6 @@
     if (elShowAll) elShowAll.removeEventListener('click', onShowAllClick);
     if (elSoundToggle) elSoundToggle.removeEventListener('click', onSoundToggleClick);
     if (elCalibFixBtn) elCalibFixBtn.removeEventListener('click', onFixCalibration);
-    if (elCalibSkipBtn) elCalibSkipBtn.removeEventListener('click', onSkipCalibration);
     if (elRecalibBtn) elRecalibBtn.removeEventListener('click', triggerRecalibration);
     if (elCalibSun) elCalibSun.removeEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.removeEventListener('click', onSelectCelestialBody);
@@ -1067,7 +1056,6 @@
     elCalibMoon = document.getElementById('arCalibMoon');
     elCalibPolaris = document.getElementById('arCalibPolaris');
     elCalibFixBtn = document.getElementById('arCalibFixBtn');
-    elCalibSkipBtn = document.getElementById('arCalibSkipBtn');
     elCalibSensorStatus = document.getElementById('arCalibSensorStatus');
     elPhase2Instruction = document.getElementById('arPhase2Instruction');
     elPhase2NoBodies = document.getElementById('arPhase2NoBodies');
