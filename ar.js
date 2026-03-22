@@ -534,6 +534,7 @@
     if (!areSensorsReady() || !selectedCalibBody) return;
     var coords = getGpsCoords();
     if (!coords) return;
+    if (navigator.vibrate) navigator.vibrate(50);
     var now = new Date();
     var obs = { latitude: coords.latitude, longitude: coords.longitude };
     var truePos;

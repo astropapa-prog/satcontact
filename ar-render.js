@@ -278,8 +278,7 @@
     var dist = sat.distance ? Math.round(sat.distance) + ' \u043A\u043C' : '';
     var text;
     if (isFocused) {
-      var freqStr = freqMhz ? freqMhz + ' MHz' : '';
-      text = '[' + label + ']' + (freqStr ? ' ' + freqStr : '') + (dist ? ' (' + dist + ')' : '');
+      text = '[' + label + ']' + (dist ? ' (' + dist + ')' : '');
     } else {
       text = label + (dist ? '  (' + dist + ')' : '');
     }
