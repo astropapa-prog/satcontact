@@ -611,6 +611,10 @@
       gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
     }
 
+    var renderer = window.SatContactArRender;
+    if (renderer && renderer.clear) renderer.clear();
+    if (elCrosshair) elCrosshair.classList.remove('visible');
+
     calibrationDelta = 0;
     calibState = 'calibrating';
     selectedCalibBody = null;

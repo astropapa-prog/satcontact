@@ -508,10 +508,23 @@
     drawOverlay(params);
   }
 
+  function clear() {
+    if (gl) {
+      gl.viewport(0, 0, canvasGL.width, canvasGL.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    if (ctx) {
+      ctx.clearRect(0, 0, width, height);
+    }
+    lastMarkerPositions = [];
+  }
+
   window.SatContactArRender = {
     init: init,
     destroy: destroy,
     draw: draw,
+    clear: clear,
     hitTest: hitTest,
     updateTrajectories: updateTrajectories,
     computeAimingAngularErrorDeg: computeAimingAngularErrorDeg
