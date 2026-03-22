@@ -25,9 +25,10 @@ satcontact/
 ├── index.html           # SPA, шапка + список карточек + mapView + arView
 ├── style.css            # Telegram Dark, mobile-first, стили карты и AR
 ├── app.js               # Парсинг XML, фильтры, рендер, openMapView/closeMapView, openArView/closeArView
-├── map.js               # Модуль 2: GPS, localStorage, HUD, initMap/cleanupMap
+├── gps-service.js       # Централизованный GPS-сервис: watchPosition, IP-геолокация, ручной ввод, RAM/localStorage кеш
+├── map.js               # Модуль 2: HUD, телеметрия, NORAD-фокус, initMap/cleanupMap (координаты из SatContactGps)
 ├── map-render.js        # Canvas-картография: карта день/ночь, терминатор, огни городов, орбиты, footprint, маркеры
-├── ar.js                # Модуль 3: камера, GPS, сенсоры, калибровка, Worker-траектории, initAr/cleanupAr
+├── ar.js                # Модуль 3: камера, сенсоры, калибровка, Worker-траектории, initAr/cleanupAr (координаты из SatContactGps)
 ├── ar-render.js         # Модуль 3: WebGL орбиты + Canvas2D маркеры поверх видео
 ├── tle.js               # TLE парсер, satellite.js, requestTrajectories + requestArTrajectories (Worker)
 ├── tle-worker.js        # Web Worker: SGP4, getTrajectory24h, CALCULATE_AR_TRAJECTORIES
@@ -48,7 +49,7 @@ satcontact/
 └── README.md
 ```
 
-**Порядок скриптов в index.html:** utils.js → satellite.min.js → d3.min.js → topojson.min.js → tle.js → map.js → map-render.js → ar-render.js → ar.js → app.js
+**Порядок скриптов в index.html:** utils.js → satellite.min.js → d3.min.js → topojson.min.js → tle.js → **gps-service.js** → map.js → map-render.js → ar-render.js → ar.js → app.js
 
 **lib/:** локальные копии (PWA/офлайн). См. lib/README.md. **data/countries-50m.json:** скачать из world-atlas.
 
@@ -144,31 +145,53 @@ satcontact/
 
 ### 5.2 Шаг 2: Базовый UI карты и SPA-маршрутизация
 
-- **index.html:** `<div id="mapView" class="map-view" hidden>` — шапка (Назад, Название, ВСЕ), #mapCanvas, оверлей загрузки, плашка GPS denied, HUD (азимут, элевация, дистанция, координаты, кнопка ↻).
+- **index.html:** `<div id="mapView" class="map-view" hidden>` — шапка (Назад, Название, ВСЕ), #mapCanvas, HUD (азимут, дистанция, GPS-строка статуса с индикатором/координатами/возрастом кеша/кнопкой «↻ Сеть», строка ручного ввода с полем и кнопкой «Записать»).
 - **app.js:** `openMapView(noradIds, satelliteName, noradIdToName?)` — скрывает .header/.main, показывает mapView, вызывает `window.initMap({ noradIds, satelliteName, noradIdToName })`. `closeMapView()` — возврат, вызывает `window.cleanupMap()`. Кнопка «посмотреть на карте» — data-norad, data-clean-name. Кнопка «ВСЕ» на карте — все NORAD IDs из filteredEntries + noradIdToName из filteredEntries.
-- **style.css:** .map-view (fixed, fullscreen), .map-view__header, .map-view__hud (#212d3b), .map-view__gps-denied.
+- **style.css:** .map-view (fixed, fullscreen), .map-view__header, .map-view__hud (#212d3b), .gps-status (единый компонент для Модуля 2 и 3).
 
-### 5.3 Шаг 3: Сервис геолокации (map.js)
+### 5.3 Централизованный GPS-сервис (gps-service.js)
 
-- **GPS:** запрос с таймаутом 6 с, `navigator.permissions` (при denied — показ плашки без спама).
-- **Классификация источника:** `normalizeCoords()` делит источник на `gps`/`network` по `accuracy` (порог `PRECISE_GPS_MAX_ACCURACY_M = 100` м). Бейдж в HUD: `GPS`, `СЕТЬ`, `НЕТ GPS`, `РУЧН`.
-- **IP fallback (без ключа):** `requestIpLocation()` с таймаутом 5 с и каскадом провайдеров:
-  - `https://ipwhois.app/json/`
-  - `https://geolocation-db.com/json/`
-  При успехе координаты нормализуются и сохраняются как `source: 'network'`, `accuracy: 5000`.
-- **Поведение при denied/timeout/unavailable/unsupported:**
-  - при denied показывается плашка `GPS заблокирован`, затем пробуется IP, затем `localStorage`;
-  - при timeout/unavailable/unsupported сначала пробуется IP, затем `localStorage`.
-- **localStorage:** ключ `satcontact_observer`, поля `lat`, `lon`, `altitude`, `accuracy`, `source`, `timestamp`.
-- **Плашка «GPS заблокирован»:** «Проверить снова» / «Продолжить без GPS».
-- **Фоновый опрос:** 1 раз в час (GPS → IP fallback, без алертов).
-- **Кнопка [↻]:** ручной запрос GPS, фидбек-строка в HUD (`Обновляем GPS…`, `GPS обновлен`, `...позиция по IP`, `...загружен кэш`).
-- **Manual override (высший приоритет):** поле ручного ввода `lat, lon` + чекбокс «Применить».
-  - при включённом чекбоксе координаты становятся `source: 'manual'`, поле `readonly`;
-  - пока override включён, auto-обновления (GPS/IP/cache) не перезаписывают активную точку;
-  - при выключении — мгновенный откат к auto-источнику;
-  - состояние хранится в `satcontact_manual_observer`.
-- **API:** `window.getMapObserver()` — текущие координаты.
+Вся логика геолокации сосредоточена в **gps-service.js**. Ни map.js, ни ar.js не обращаются к `navigator.geolocation` напрямую.
+
+**Двухуровневый кеш:**
+- **RAM-кеш** — переменная в JS, обновляется мгновенно. Модули читают только из RAM-кеша через `SatContactGps.getCoords()`.
+- **Персистентный кеш** — `localStorage`, ключ `satcontact_observer`. Формат: `{ latitude, longitude, altitude, accuracy, source, timestamp }`.
+
+**Правила записи в localStorage:**
+- Первый запуск (localStorage пуст) → немедленно при получении первых данных.
+- Ручной ввод (кнопка «Записать») → немедленно.
+- Обновление по сети (кнопка «↻ Сеть») → немедленно.
+- GPS авто-обновление → каждые 5 минут (не чаще).
+- Переход приёмника в cooldown/off → немедленно.
+- `beforeunload` / `visibilitychange(hidden)` → немедленно.
+
+**Приоритет источников:** нет жёсткого приоритета. Кто последний записал — тот актуален.
+
+**Состояния GPS-приёмника (state machine):**
+- `off` → watchPosition не запущен.
+- `active` → watchPosition работает (пользователь в Модуле 2 или 3).
+- `cooldown` → пользователь вышел в Модуль 1; если GPS обновлял кеш → off сразу; иначе watchPosition работает до 15 мин или первого фикса.
+- `denied` → пользователь запретил геолокацию в браузере.
+
+**IP-геолокация** (`updateFromNetwork`): каскад ipwhois.app → geolocation-db.com, таймаут 5 с. Вызывается только по кнопке «↻ Сеть».
+
+**Ручной ввод** (`updateManual`): парсинг координат, запись в кеш с `source: 'manual'`.
+
+**Публичный API (`window.SatContactGps`):**
+- Чтение: `getCoords()`, `getReceiverStatus()` → `'off'|'searching'|'fix'|'denied'`, `getCacheAgeMs()`, `hasFix()`.
+- Управление: `start()`, `enterCooldown()`.
+- Обновление: `updateFromNetwork()` → Promise, `updateManual(lat, lon)` → boolean.
+- Подписка: `onChange(cb)`, `offChange(cb)`.
+
+**UI — единая GPS-строка статуса** (отображается в обоих модулях):
+- Индикатор приёмника: 🟢 GPS / 🟡 ПОИСК / 🔴 ЗАПРЕЩЁН / ⚪ ВЫКЛ.
+- Координаты из кеша (всегда если кеш не пуст).
+- Возраст кеша: `0:42`, `2ч`, `1д`.
+- Кнопка «↻ Сеть».
+- Модуль 2 дополнительно: строка ручного ввода с полем и кнопкой «Записать».
+
+**map.js** — теперь только телеметрия, NORAD-фокус, HUD. При `initMap()` вызывает `SatContactGps.start()`, подписывается на `onChange`. При `cleanupMap()` — `SatContactGps.enterCooldown()`.
+- **API:** `window.getMapObserver()` → `SatContactGps.getCoords()`.
 
 ### 5.4 Шаг 4: TLE парсер и математика (tle.js, tle-worker.js)
 
@@ -213,7 +236,7 @@ satcontact/
 
 ### 6.1 Назначение и файлы
 
-- **ar.js** — оркестратор: камера (`getUserMedia`, задняя), только аппаратный GPS, DeviceOrientation (компасный режим), WMM-коррекция магнитного склонения, калибровка по Солнцу/Луне/Полярной (формулы внутри ar.js), Web Audio (звуковой прицел в режиме фокуса — угол наведения из **`SatContactArRender.computeAimingAngularErrorDeg`**, см. п. 6.5), таймер дрейфа, машина состояний **overview / focus** (UI: перекрестие, звук, скрытие прочих спутников при фокусе).
+- **ar.js** — оркестратор: камера (`getUserMedia`, задняя), координаты из `SatContactGps` (не обращается к `navigator.geolocation` напрямую), DeviceOrientation (компасный режим), WMM-коррекция магнитного склонения (пересчёт в `onChange` кеша), калибровка по Солнцу/Луне/Полярной (формулы внутри ar.js), Web Audio (звуковой прицел в режиме фокуса — угол наведения из **`SatContactArRender.computeAimingAngularErrorDeg`**, см. п. 6.5), таймер дрейфа, машина состояний **overview / focus** (UI: перекрестие, звук, скрытие прочих спутников при фокусе).
 - **ar-render.js** — **единый пайплайн Real 3D:** орбитные линии в **WebGL** (vertex: az/el → ориентация → перспектива → NDC; fragment: цвет + свечение), маркеры и подписи — **Canvas2D** поверх `#arCanvas`. При отсутствии WebGL — отрисовка линий на Canvas2D через `projectReal3D()`. Публичный API: помимо `init` / `draw` / `hitTest` / `updateTrajectories` — **`computeAimingAngularErrorDeg(az, el, orientationMatrix)`** (угол между направлением на спутник и осью камеры; та же геометрия, что у маркеров и шейдера; используется звуковым прицелом в **ar.js**).
 - **index.html:** `#arView` — `<video>`, `<canvas id="arCanvasGL">`, `<canvas id="arCanvas">`; шапка, HUD, калибровочная нижняя панель (`#arCalibPanel`), кнопка рекалибровки (`#arRecalibBtn`), заглушка для десктопа без камеры/гироскопа.
 - **tle.js / tle-worker.js:** помимо карты — **`requestArTrajectories(noradIds, observer, pointsPerSat)`** и сообщение Worker **`CALCULATE_AR_TRAJECTORIES`** → ответ **`AR_TRAJECTORIES_READY`** с траекториями `{ [noradId]: [{ az, el }, ...] }` (отсечение по элевации, ~120 точек на спутник). Синхронный fallback в основном потоке при недоступности Worker.
@@ -238,10 +261,12 @@ satcontact/
 
 ### 6.3 Геолокация и сенсоры
 
-- **GPS в AR:** только высокоточный аппаратный фикс; без IP, кэша и ручного ввода (в отличие от карты). Индикация: ТОЧНО / СЛАБО / ПОИСК… (в HUD).
+- **GPS в AR:** координаты берутся из централизованного кеша `SatContactGps.getCoords()`. AR не запрашивает GPS напрямую. При входе вызывается `SatContactGps.start()`, при выходе — `enterCooldown()`. Потеря GPS **не останавливает** рендеринг — AR продолжает работать с кешем.
+- **Единая GPS-строка статуса** в AR HUD: индикатор приёмника, координаты, возраст кеша, кнопка «↻ Сеть».
 - **Камера, компас:** iOS — по жесту `DeviceOrientationEvent.requestPermission`. DeviceMotion не используется.
-- **Готовность датчиков** (`areSensorsReady()`): GPS фикс + DeviceOrientation + камера — все три одновременно. До готовности кнопки «Зафиксировать» и «Пропустить» неактивны, отображается статус («Ожидание GPS…» / «Ожидание сенсоров…» / «Ожидание камеры…»).
+- **Готовность датчиков** (`areSensorsReady()`): кеш координат не пуст (`SatContactGps.getCoords() !== null`) + DeviceOrientation + камера. До готовности кнопки «Зафиксировать» и «Пропустить» неактивны. Если кеш пуст — «Нет координат — обновите по сети или введите вручную в Модуле 2». Если кеш есть (хоть суточной давности) — калибровка работает.
 - **Десктоп:** если нет камеры/ориентации — заглушка с пояснением.
+- **magneticDeclination:** пересчитывается в колбэке `SatContactGps.onChange()`.
 
 ### 6.4 Компас, калибровка, дрейф
 
@@ -255,8 +280,8 @@ satcontact/
 
 Два состояния: `'calibrating'` → `'rendering'`.
 
-- **`calibrating`**: камера и сенсоры запущены, рендеринг не идёт. Нижняя панель `#arCalibPanel` с кнопками небесных тел (Солнце/Луна/Полярная), кнопкой «Зафиксировать» и кнопкой «Пропустить». Кнопка «Назад» в шапке доступна. Доступность тел определяется по elevation > 5° (`updateCelestialBodiesAvailability`, обновляется каждые 10 с). Кнопки неактивны пока `areSensorsReady()` не вернёт true. Потеря GPS при калибровке — деактивация кнопок (не переход в другое состояние). «Зафиксировать» — калибровка по выбранному телу, `calibrationDelta` рассчитан. «Пропустить» — `calibrationDelta = 0`, `lastCalibrationTime = Date.now()`.
-- **`rendering`**: рендеринг спутников (запуск или возобновление). Кнопка `#arRecalibBtn` в правой панели. Таймер дрейфа (`updateDriftIndicator`): при `error ≥ MAX_DRIFT_ERROR_DEG` автоматически вызывает `triggerRecalibration()` → переход в `calibrating`. Потеря GPS при rendering → `triggerRecalibration()`. Ручная рекалибровка через ту же `triggerRecalibration()`.
+- **`calibrating`**: камера и сенсоры запущены, рендеринг не идёт. Нижняя панель `#arCalibPanel` с кнопками небесных тел (Солнце/Луна/Полярная), кнопкой «Зафиксировать» и кнопкой «Пропустить». Кнопка «Назад» в шапке доступна. Доступность тел определяется по elevation > 5° (`updateCelestialBodiesAvailability`, обновляется каждые 10 с). Кнопки неактивны пока `areSensorsReady()` не вернёт true (кеш координат + сенсоры + камера). При пустом кеше — «Нет координат», кнопка «↻ Сеть» работает прямо в AR. «Зафиксировать» — калибровка по выбранному телу, `calibrationDelta` рассчитан. «Пропустить» — `calibrationDelta = 0`, `lastCalibrationTime = Date.now()`.
+- **`rendering`**: рендеринг спутников (запуск или возобновление). Кнопка `#arRecalibBtn` в правой панели. Таймер дрейфа (`updateDriftIndicator`): при `error ≥ MAX_DRIFT_ERROR_DEG` автоматически вызывает `triggerRecalibration()` → переход в `calibrating`. Потеря GPS **не вызывает** рекалибровку — рендеринг продолжается с кешированными координатами. Ручная рекалибровка через ту же `triggerRecalibration()`.
 
 **Дрейф:** таймер после калибровки; при превышении порога — автоматический вход в рекалибровку (`triggerRecalibration`).
 

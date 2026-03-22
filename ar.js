@@ -1,7 +1,7 @@
 /**
  * SatContact — Модуль 3: AR-трекер (Оркестратор)
  * Камера, сенсоры: компасный режим (DeviceOrientation + WMM),
- * GPS, калибровка по небесным телам, аудио-прицел, таймер дрейфа.
+ * координаты из SatContactGps, калибровка по небесным телам, аудио-прицел, таймер дрейфа.
  */
 (function () {
   'use strict';
@@ -10,7 +10,6 @@
   const DEG = Math.PI / 180;
   const RAD = 180 / Math.PI;
   const SLOW_LOOP_MS = 1000;
-  const GPS_TIMEOUT_MS = 10000;
   const DRIFT_RATE_DEG_PER_MIN = 2;
   const MAX_DRIFT_ERROR_DEG = 5;
   const AUDIO_MIN_HZ = 20;
@@ -23,7 +22,7 @@
 
   /* ====== DOM ====== */
   let elVideo, elCanvas, elCanvasGL, elBack, elShowAll;
-  let elSoundToggle, elDrift, elHud, elGpsStatus, elCoords;
+  let elSoundToggle, elDrift, elHud;
   let elTelemetryRow, elTelAz, elTelEl, elTelDist;
   let elFallback, elFallbackBack, elCrosshair;
   let elCalibPhase2;
@@ -31,6 +30,7 @@
   let elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
   let elCalibSkipBtn, elCalibSensorStatus;
   let elRecalibBtn;
+  let elArGpsIndicator, elArGpsCoords, elArGpsAge, elArGpsNetBtn;
 
   /* ====== Состояние ====== */
   let active = false;
@@ -45,11 +45,6 @@
   let cameraStream = null;
   let fovH = DEFAULT_FOV_H;
   let fovV = DEFAULT_FOV_V;
-
-  /* ====== GPS ====== */
-  let gpsCoords = null;             // { latitude, longitude, altitude, accuracy }
-  let gpsQuality = 'searching';     // 'excellent' | 'moderate' | 'searching'
-  let gpsWatchId = null;
 
   /* ====== Сенсоры ====== */
   let sensorState = { alpha: 0, beta: 0, gamma: 0, absolute: false, timestamp: 0 };
@@ -82,6 +77,8 @@
   let currentPositions = {};        // noradId → { az, el, time }
   let trajectoryTimerId = null;     // ~1.3s Worker request timer
   const TRAJECTORY_INTERVAL_MS = 1300;
+
+  let arNetBtnFeedbackTimerId = null;
 
   /* ==========================================================================
      WMM-2025 (упрощённая модель, сферические гармоники до степени 5)
@@ -384,50 +381,6 @@
   }
 
   /* ==========================================================================
-     GPS (только точный, enableHighAccuracy)
-     ========================================================================== */
-  function updateGpsQuality(accuracy) {
-    if (accuracy < 10) gpsQuality = 'excellent';
-    else if (accuracy < 50) gpsQuality = 'moderate';
-    else gpsQuality = 'searching';
-  }
-
-  function startGps() {
-    if (!navigator.geolocation) {
-      gpsQuality = 'searching';
-      return;
-    }
-
-    gpsWatchId = navigator.geolocation.watchPosition(
-      function (pos) {
-        gpsCoords = {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          altitude: pos.coords.altitude || 0,
-          accuracy: pos.coords.accuracy
-        };
-        updateGpsQuality(pos.coords.accuracy);
-        magneticDeclination = getMagneticDeclination(
-          gpsCoords.latitude, gpsCoords.longitude, (gpsCoords.altitude || 0) / 1000
-        );
-      },
-      function () {
-        gpsQuality = 'searching';
-      },
-      { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS, maximumAge: 0 }
-    );
-  }
-
-  function stopGps() {
-    if (gpsWatchId != null) {
-      navigator.geolocation.clearWatch(gpsWatchId);
-      gpsWatchId = null;
-    }
-  }
-
-  /* waitForGps removed — GPS waiting handled by calibState machine */
-
-  /* ==========================================================================
      Аудио-прицел (Web Audio API)
      ========================================================================== */
   function initAudio() {
@@ -495,10 +448,17 @@
   }
 
   /* ==========================================================================
+     GPS-сервис: чтение координат из кеша
+     ========================================================================== */
+  function getGpsCoords() {
+    return window.SatContactGps ? window.SatContactGps.getCoords() : null;
+  }
+
+  /* ==========================================================================
      Калибровочная машина состояний: переходы
      ========================================================================== */
   function areSensorsReady() {
-    return gpsCoords && gpsQuality !== 'searching' && sensorReady && cameraStream;
+    return getGpsCoords() !== null && sensorReady && cameraStream;
   }
 
   function updateCalibButtons() {
@@ -507,16 +467,19 @@
     if (elCalibFixBtn) elCalibFixBtn.disabled = !ready || !selectedCalibBody;
     if (elCalibSensorStatus) {
       if (!ready) {
-        var msg = (!gpsCoords || gpsQuality === 'searching') ? '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 GPS\u2026'
-          : !sensorReady ? '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0441\u0435\u043D\u0441\u043E\u0440\u043E\u0432\u2026'
-          : !cameraStream ? '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u043A\u0430\u043C\u0435\u0440\u044B\u2026' : '';
+        var msg;
+        if (!getGpsCoords()) msg = 'Нет координат \u2014 обновите по сети или введите вручную в Модуле 2';
+        else if (!sensorReady) msg = '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0441\u0435\u043D\u0441\u043E\u0440\u043E\u0432\u2026';
+        else if (!cameraStream) msg = '\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u043A\u0430\u043C\u0435\u0440\u044B\u2026';
+        else msg = '';
         elCalibSensorStatus.textContent = msg;
         elCalibSensorStatus.hidden = false;
       } else {
         elCalibSensorStatus.hidden = true;
       }
     }
-    if (gpsCoords) updateCelestialBodiesAvailability();
+    var coords = getGpsCoords();
+    if (coords) updateCelestialBodiesAvailability();
   }
 
   function showCalibPanel(visible) {
@@ -529,8 +492,9 @@
   }
 
   function updateCelestialBodiesAvailability() {
-    if (!gpsCoords) return;
-    var obs = { latitude: gpsCoords.latitude, longitude: gpsCoords.longitude };
+    var coords = getGpsCoords();
+    if (!coords) return;
+    var obs = { latitude: coords.latitude, longitude: coords.longitude };
     var now = new Date();
     var sunEl = getSunAzEl(obs, now).elevation;
     var moonEl = getMoonAzEl(obs, now).elevation;
@@ -588,8 +552,10 @@
 
   function onFixCalibration() {
     if (!areSensorsReady() || !selectedCalibBody) return;
+    var coords = getGpsCoords();
+    if (!coords) return;
     var now = new Date();
-    var obs = { latitude: gpsCoords.latitude, longitude: gpsCoords.longitude };
+    var obs = { latitude: coords.latitude, longitude: coords.longitude };
     var truePos;
     if (selectedCalibBody === 'sun') truePos = getSunAzEl(obs, now);
     else if (selectedCalibBody === 'moon') truePos = getMoonAzEl(obs, now);
@@ -700,17 +666,14 @@
 
     updateDriftIndicator();
     updateHud();
+    updateArGpsStatusRow();
 
     if (calibState === 'calibrating') {
       updateCalibButtons();
     }
 
-    if (calibState === 'rendering' && (!gpsCoords || gpsQuality === 'searching')) {
-      triggerRecalibration();
-      return;
-    }
-
-    if (!gpsCoords || gpsQuality === 'searching') return;
+    var coords = getGpsCoords();
+    if (!coords) return;
 
     var tleCache = window.SatContactTle ? window.SatContactTle.getCache() : null;
     if (!tleCache) return;
@@ -718,9 +681,9 @@
     var now = new Date();
     var nowMs = now.getTime();
     var observer = {
-      latitude: gpsCoords.latitude,
-      longitude: gpsCoords.longitude,
-      altitude: gpsCoords.altitude || 0
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      altitude: coords.altitude || 0
     };
 
     var newVisible = [];
@@ -752,13 +715,14 @@
      Worker trajectory requests (ТАКТ 3, ~1.3s)
      ========================================================================== */
   function requestWorkerTrajectories() {
-    if (!active || !gpsCoords || gpsQuality === 'searching') return;
+    var coords = getGpsCoords();
+    if (!active || !coords) return;
     if (!window.SatContactTle || !window.SatContactTle.requestArTrajectories) return;
 
     var observer = {
-      latitude: gpsCoords.latitude,
-      longitude: gpsCoords.longitude,
-      altitude: gpsCoords.altitude || 0
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      altitude: coords.altitude || 0
     };
 
     window.SatContactTle.requestArTrajectories(currentNoradIds, observer, 120)
@@ -870,25 +834,66 @@
   }
 
   /* ==========================================================================
-     HUD
+     GPS Status Row (AR HUD)
      ========================================================================== */
-  function updateHud() {
-    if (!elGpsStatus) return;
+  function formatCacheAge(ageMs) {
+    if (!Number.isFinite(ageMs) || ageMs < 60000) return '';
+    if (ageMs < 3600000) {
+      var m = Math.floor(ageMs / 60000);
+      var s = Math.floor((ageMs % 60000) / 1000);
+      return '(кеш ' + m + ':' + String(s).padStart(2, '0') + ')';
+    }
+    if (ageMs < 86400000) return '(кеш ' + Math.floor(ageMs / 3600000) + 'ч)';
+    return '(кеш ' + Math.floor(ageMs / 86400000) + 'д)';
+  }
 
-    var statusIcon, statusText;
-    if (gpsQuality === 'excellent') { statusIcon = '\uD83D\uDFE2'; statusText = 'ТОЧНО'; }
-    else if (gpsQuality === 'moderate') { statusIcon = '\uD83D\uDFE1'; statusText = 'СЛАБО'; }
-    else { statusIcon = '\uD83D\uDD34'; statusText = 'ПОИСК...'; }
-    elGpsStatus.textContent = statusIcon + ' ' + statusText;
+  function updateArGpsStatusRow() {
+    var gps = window.SatContactGps;
+    if (!gps) return;
 
-    if (elCoords) {
-      if (gpsCoords) {
-        elCoords.textContent = gpsCoords.latitude.toFixed(2) + '\u00B0, ' + gpsCoords.longitude.toFixed(2) + '\u00B0';
-      } else {
-        elCoords.textContent = '---';
-      }
+    var coords = gps.getCoords();
+    var status = gps.getReceiverStatus();
+    var ageMs = gps.getCacheAgeMs();
+
+    if (elArGpsIndicator) {
+      if (status === 'fix')          elArGpsIndicator.textContent = '\uD83D\uDFE2 GPS';
+      else if (status === 'searching') elArGpsIndicator.textContent = '\uD83D\uDFE1 ПОИСК';
+      else if (status === 'denied')  elArGpsIndicator.textContent = '\uD83D\uDD34 ЗАПРЕЩЁН';
+      else                           elArGpsIndicator.textContent = '\u26AA ВЫКЛ';
     }
 
+    if (elArGpsCoords) {
+      elArGpsCoords.textContent = coords
+        ? coords.latitude.toFixed(2) + '\u00B0, ' + coords.longitude.toFixed(2) + '\u00B0'
+        : 'НЕТ ДАННЫХ';
+    }
+
+    if (elArGpsAge) {
+      elArGpsAge.textContent = coords ? formatCacheAge(ageMs) : '';
+    }
+  }
+
+  function onArNetworkBtnClick() {
+    if (!elArGpsNetBtn || !window.SatContactGps) return;
+    var savedText = elArGpsNetBtn.textContent;
+    elArGpsNetBtn.textContent = '...';
+    elArGpsNetBtn.disabled = true;
+
+    window.SatContactGps.updateFromNetwork().then(function (ok) {
+      elArGpsNetBtn.textContent = ok ? '\u2713' : 'Сеть недоступна';
+      if (arNetBtnFeedbackTimerId) clearTimeout(arNetBtnFeedbackTimerId);
+      arNetBtnFeedbackTimerId = setTimeout(function () {
+        elArGpsNetBtn.textContent = savedText;
+        elArGpsNetBtn.disabled = false;
+        arNetBtnFeedbackTimerId = null;
+      }, 2000);
+    });
+  }
+
+  /* ==========================================================================
+     HUD (satellite telemetry only)
+     ========================================================================== */
+  function updateHud() {
     var showTel = (state === 'focus' && focusedNoradId);
     if (elTelemetryRow) elTelemetryRow.hidden = !showTel;
 
@@ -905,6 +910,22 @@
         if (elTelDist) elTelDist.textContent = 'ДИСТ: ' + Math.round(focSat.distance) + ' км';
       }
     }
+  }
+
+  /* ==========================================================================
+     GPS onChange handler
+     ========================================================================== */
+  function arGpsChangeHandler(payload) {
+    if (payload && payload.coords) {
+      var c = payload.coords;
+      magneticDeclination = getMagneticDeclination(c.latitude, c.longitude, (c.altitude || 0) / 1000);
+      refreshOrientationMatrix();
+    }
+    if (calibState === 'calibrating') {
+      updateCalibButtons();
+      updateCelestialBodiesAvailability();
+    }
+    updateArGpsStatusRow();
   }
 
   /* ==========================================================================
@@ -976,6 +997,7 @@
     if (elCalibSun) elCalibSun.addEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.addEventListener('click', onSelectCelestialBody);
     if (elCalibPolaris) elCalibPolaris.addEventListener('click', onSelectCelestialBody);
+    if (elArGpsNetBtn) elArGpsNetBtn.addEventListener('click', onArNetworkBtnClick);
   }
 
   function unbindUi() {
@@ -990,6 +1012,7 @@
     if (elCalibSun) elCalibSun.removeEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.removeEventListener('click', onSelectCelestialBody);
     if (elCalibPolaris) elCalibPolaris.removeEventListener('click', onSelectCelestialBody);
+    if (elArGpsNetBtn) elArGpsNetBtn.removeEventListener('click', onArNetworkBtnClick);
   }
 
   /* ==========================================================================
@@ -1004,8 +1027,6 @@
     elSoundToggle = document.getElementById('arSoundToggle');
     elDrift = document.getElementById('arDriftIndicator');
     elHud = document.getElementById('arHud');
-    elGpsStatus = document.getElementById('arGpsStatus');
-    elCoords = document.getElementById('arCoords');
     elTelemetryRow = document.getElementById('arTelemetryRow');
     elTelAz = document.getElementById('arTelAz');
     elTelEl = document.getElementById('arTelEl');
@@ -1023,6 +1044,10 @@
     elPhase2Instruction = document.getElementById('arPhase2Instruction');
     elPhase2NoBodies = document.getElementById('arPhase2NoBodies');
     elRecalibBtn = document.getElementById('arRecalibBtn');
+    elArGpsIndicator = document.getElementById('arGpsIndicator');
+    elArGpsCoords = document.getElementById('arGpsCoords');
+    elArGpsAge = document.getElementById('arGpsAge');
+    elArGpsNetBtn = document.getElementById('arGpsNetBtn');
   }
 
   function startRendering() {
@@ -1083,7 +1108,18 @@
 
     bindUi();
 
-    startGps();
+    if (window.SatContactGps) {
+      window.SatContactGps.start();
+      window.SatContactGps.onChange(arGpsChangeHandler);
+    }
+
+    var initCoords = getGpsCoords();
+    if (initCoords) {
+      magneticDeclination = getMagneticDeclination(initCoords.latitude, initCoords.longitude, (initCoords.altitude || 0) / 1000);
+    }
+
+    updateArGpsStatusRow();
+
     await Promise.all([
       window.SatContactTle.loadTle(),
       startCamera(),
@@ -1108,12 +1144,17 @@
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     stopTrajectoryTimer();
     clearCelestialAvailTimer();
+    if (arNetBtnFeedbackTimerId) { clearTimeout(arNetBtnFeedbackTimerId); arNetBtnFeedbackTimerId = null; }
 
     stopCamera();
     stopSensors();
-    stopGps();
     destroyAudio();
     unbindUi();
+
+    if (window.SatContactGps) {
+      window.SatContactGps.enterCooldown();
+      window.SatContactGps.offChange(arGpsChangeHandler);
+    }
 
     if (window.SatContactArRender) {
       window.SatContactArRender.destroy();
@@ -1130,8 +1171,6 @@
     allTrajectories = {};
     prevPositions = {};
     currentPositions = {};
-    gpsCoords = null;
-    gpsQuality = 'searching';
   }
 
   window.initAr = initAr;
@@ -1142,8 +1181,6 @@
     getFocusedId: function () { return focusedNoradId; },
     setFocus: setFocus,
     getSensorState: function () { return sensorState; },
-    getGpsQuality: function () { return gpsQuality; },
-    getGpsCoords: function () { return gpsCoords; },
     getFov: function () { return { h: fovH, v: fovV }; }
   };
 })();

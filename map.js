@@ -1,56 +1,16 @@
 /**
- * SatContact — Модуль 2: Сервис геолокации (map.js)
- * GPS-контроллер: запрос с таймаутом, localStorage, фоновый опрос 1 раз в час
+ * SatContact — Модуль 2: Интерактивная карта (map.js)
+ * Телеметрия, NORAD-фокус, HUD. Координаты — из SatContactGps.
  */
-
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'satcontact_observer';
-  const MANUAL_STORAGE_KEY = 'satcontact_manual_observer';
-  const GPS_TIMEOUT_MS = 6000;
-  const IP_LOCATION_TIMEOUT_MS = 5000;
-  const PRECISE_GPS_MAX_ACCURACY_M = 100;
-  const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 час
-  const HUD_UPDATE_MS = 1000; // обновление телеметрии каждую секунду
+  const HUD_UPDATE_MS = 1000;
   const TELEMETRY_EMPTY_PLACEHOLDER = '—';
   const TELEMETRY_MULTI_AZ_EL_PLACEHOLDER = '---';
   const TELEMETRY_MULTI_DISTANCE_PLACEHOLDER = '----';
-  const GPS_SOURCE_BADGE_LABELS = Object.freeze({
-    manual: 'РУЧН',
-    gps: 'GPS',
-    network: 'СЕТЬ',
-    none: 'НЕТ GPS'
-  });
-  const HUD_LOADING_TEXT = Object.freeze({
-    searchingGps: 'Поиск GPS…',
-    loadingOrbits: 'Загрузка орбит…',
-    ipWhenGpsDenied: 'Координаты по IP (GPS запрещен)',
-    deniedApiUnavailableCache: 'GPS запрещен, API недоступно, загружен кэш',
-    ipOrNetworkCoarse: 'Координаты по IP/сети (неточно)',
-    ipCoarse: 'Координаты по IP (неточно)',
-    apiUnavailableCache: 'API недоступно, загружен кэш'
-  });
-  const HUD_REFRESH_FEEDBACK_TEXT = Object.freeze({
-    invalidManualCoords: 'Неверный формат координат',
-    manualCoordsApplied: 'Применены ручные координаты',
-    manualCoordsDisabled: 'Ручные координаты отключены',
-    updatingGps: 'Обновляем GPS…',
-    deniedUsingIp: 'GPS запрещен, позиция по IP',
-    deniedUsingCache: 'GPS запрещен, API недоступно, загружен кэш',
-    deniedInBrowser: 'Доступ к GPS запрещен в браузере',
-    gpsUpdated: 'GPS обновлен',
-    noPreciseGpsUsingIp: 'Точный GPS не найден, позиция по IP',
-    apiUnavailableUsingCache: 'API недоступно, загружен кэш',
-    gpsUnavailableOnDevice: 'GPS недоступен на устройстве'
-  });
 
-  let pollTimerId = null;
   let hudTimerId = null;
-  let currentObserver = null;
-  let autoObserver = null;
-  let manualObserver = null;
-  let manualOverrideEnabled = false;
   let currentNoradIds = [];
   let initialNoradIds = [];
   let currentNoradIdToName = {};
@@ -59,16 +19,16 @@
   let hudTelemetryNoradId = null;
   let lastSingleFocusedNoradId = null;
   let mapFocusListener = null;
+  let netBtnFeedbackTimerId = null;
+  let manualBtnFeedbackTimerId = null;
 
   // DOM
-  let mapLoading, mapGpsDenied, mapCoords, mapRefresh, mapShowAllBtn;
+  let mapShowAllBtn;
   let mapAzimuth, mapElevation, mapDistance;
-  let loadingStatus1, loadingStatus2;
-  let gpsRetryBtn, gpsContinueBtn;
-  let mapRefreshFeedback;
-  let mapGpsSourceBadge;
-  let mapManualCoordsInput, mapManualCoordsToggle;
-  let refreshFeedbackTimerId = null;
+  let mapGpsIndicator, mapGpsCoords, mapGpsAge, mapGpsNetBtn;
+  let mapManualCoordsInput, mapManualWriteBtn;
+
+  /* ====== NORAD / Show All / Focus ====== */
 
   function setMapShowAllButtonState(active) {
     isShowAllMode = !!active;
@@ -112,6 +72,8 @@
     }
   }
 
+  /* ====== HUD Telemetry helpers ====== */
+
   function setHudTelemetryPlaceholder(isMultiFocus) {
     if (!mapAzimuth || !mapElevation || !mapDistance) return;
     if (isMultiFocus) {
@@ -133,17 +95,15 @@
   }
 
   function resolveTelemetryNoradId() {
-    if (focusedNoradIds.length > 1) {
-      return null;
-    }
-    if (focusedNoradIds.length === 1) {
-      return focusedNoradIds[0];
-    }
+    if (focusedNoradIds.length > 1) return null;
+    if (focusedNoradIds.length === 1) return focusedNoradIds[0];
     if (hudTelemetryNoradId && currentNoradIds.includes(hudTelemetryNoradId)) {
       return hudTelemetryNoradId;
     }
     return getDefaultTelemetryNoradId();
   }
+
+  /* ====== Map Focus Telemetry ====== */
 
   function onMapFocusChange(evt) {
     const nextFocusedIds = Array.isArray(evt?.detail?.focusedIds)
@@ -212,596 +172,114 @@
     });
   }
 
-  /**
-   * Сохранение координат в localStorage
-   */
-  function saveObserver(coords) {
-    try {
-      const data = {
-        lat: coords.latitude,
-        lon: coords.longitude,
-        altitude: coords.altitude ?? null,
-        accuracy: coords.accuracy ?? null,
-        source: coords.source || 'unknown',
-        timestamp: Date.now()
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-      console.warn('map.js: не удалось сохранить координаты', e);
+  /* ====== GPS Status Row ====== */
+
+  function formatCacheAge(ageMs) {
+    if (!Number.isFinite(ageMs) || ageMs < 60000) return '';
+    if (ageMs < 3600000) {
+      const m = Math.floor(ageMs / 60000);
+      const s = Math.floor((ageMs % 60000) / 1000);
+      return '(кеш ' + m + ':' + String(s).padStart(2, '0') + ')';
+    }
+    if (ageMs < 86400000) return '(кеш ' + Math.floor(ageMs / 3600000) + 'ч)';
+    return '(кеш ' + Math.floor(ageMs / 86400000) + 'д)';
+  }
+
+  function updateGpsStatusRow() {
+    const gps = window.SatContactGps;
+    if (!gps) return;
+
+    const coords = gps.getCoords();
+    const status = gps.getReceiverStatus();
+    const ageMs = gps.getCacheAgeMs();
+
+    if (mapGpsIndicator) {
+      if (status === 'fix')          mapGpsIndicator.textContent = '\uD83D\uDFE2 GPS';
+      else if (status === 'searching') mapGpsIndicator.textContent = '\uD83D\uDFE1 ПОИСК';
+      else if (status === 'denied')  mapGpsIndicator.textContent = '\uD83D\uDD34 ЗАПРЕЩЁН';
+      else                           mapGpsIndicator.textContent = '\u26AA ВЫКЛ';
+    }
+
+    if (mapGpsCoords) {
+      mapGpsCoords.textContent = coords
+        ? coords.latitude.toFixed(2) + '\u00B0, ' + coords.longitude.toFixed(2) + '\u00B0'
+        : 'НЕТ ДАННЫХ';
+    }
+
+    if (mapGpsAge) {
+      mapGpsAge.textContent = coords ? formatCacheAge(ageMs) : '';
     }
   }
 
-  /**
-   * Чтение координат из localStorage
-   */
-  function loadObserver() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      return {
-        latitude: data.lat,
-        longitude: data.lon,
-        altitude: data.altitude,
-        accuracy: data.accuracy ?? null,
-        source: data.source || 'cached'
-      };
-    } catch (e) {
-      return null;
-    }
-  }
+  /* ====== GPS Controls Binding ====== */
 
-  function saveManualOverrideState() {
-    try {
-      const payload = {
-        enabled: manualOverrideEnabled,
-        input: mapManualCoordsInput ? mapManualCoordsInput.value : '',
-        coords: manualObserver ? {
-          lat: manualObserver.latitude,
-          lon: manualObserver.longitude
-        } : null
-      };
-      localStorage.setItem(MANUAL_STORAGE_KEY, JSON.stringify(payload));
-    } catch (e) {
-      console.warn('map.js: не удалось сохранить ручные координаты', e);
-    }
-  }
+  function onNetworkBtnClick() {
+    if (!mapGpsNetBtn || !window.SatContactGps) return;
+    const savedText = mapGpsNetBtn.textContent;
+    mapGpsNetBtn.textContent = '...';
+    mapGpsNetBtn.disabled = true;
 
-  function loadManualOverrideState() {
-    try {
-      const raw = localStorage.getItem(MANUAL_STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function parseManualCoordsInput(value) {
-    const text = String(value || '').trim();
-    if (!text) return null;
-    const matches = text.match(/-?\d+(?:[.,]\d+)?/g);
-    if (!matches || matches.length < 2) return null;
-    const lat = Number(matches[0].replace(',', '.'));
-    const lon = Number(matches[1].replace(',', '.'));
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
-    return { latitude: lat, longitude: lon, altitude: null, accuracy: null, source: 'manual' };
-  }
-
-  function setActiveObserver(nextObserver) {
-    currentObserver = nextObserver || null;
-    updateCoordsDisplay(currentObserver);
-    updateGpsSourceBadge(currentObserver ? currentObserver.source : null);
-  }
-
-  function applyObserverPriority() {
-    if (manualOverrideEnabled && manualObserver) {
-      setActiveObserver(manualObserver);
-      return;
-    }
-    setActiveObserver(autoObserver);
-  }
-
-  function setAutoObserver(nextObserver) {
-    autoObserver = nextObserver || null;
-    if (!manualOverrideEnabled) {
-      setActiveObserver(autoObserver);
-    }
-  }
-
-  /**
-   * Обновление HUD: координаты пользователя
-   */
-  function updateCoordsDisplay(coords) {
-    if (!mapCoords) return;
-    if (!coords) {
-      mapCoords.textContent = '—';
-      return;
-    }
-    const lat = coords.latitude.toFixed(5);
-    const lon = coords.longitude.toFixed(5);
-    const alt = coords.altitude != null ? ` ${coords.altitude.toFixed(0)} м` : '';
-    const acc = Number.isFinite(coords.accuracy) ? ` ±${Math.round(coords.accuracy)} м` : '';
-    mapCoords.textContent = `${lat}°, ${lon}°${alt}${acc}`;
-  }
-
-  function updateGpsSourceBadge(source) {
-    if (!mapGpsSourceBadge) return;
-    mapGpsSourceBadge.classList.remove(
-      'map-view__gps-badge--manual',
-      'map-view__gps-badge--gps',
-      'map-view__gps-badge--network',
-      'map-view__gps-badge--none'
-    );
-    if (source === 'manual') {
-      mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.manual;
-      mapGpsSourceBadge.classList.add('map-view__gps-badge--manual');
-      return;
-    }
-    if (source === 'gps') {
-      mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.gps;
-      mapGpsSourceBadge.classList.add('map-view__gps-badge--gps');
-      return;
-    }
-    if (source === 'network' || source === 'cached') {
-      mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.network;
-      mapGpsSourceBadge.classList.add('map-view__gps-badge--network');
-      return;
-    }
-    mapGpsSourceBadge.textContent = GPS_SOURCE_BADGE_LABELS.none;
-    mapGpsSourceBadge.classList.add('map-view__gps-badge--none');
-  }
-
-  /**
-   * Обновление статуса загрузки
-   */
-  function setLoadingStatus(line1, line2) {
-    if (loadingStatus1) loadingStatus1.textContent = line1 ?? HUD_LOADING_TEXT.searchingGps;
-    if (loadingStatus2) loadingStatus2.textContent = line2 ?? HUD_LOADING_TEXT.loadingOrbits;
-  }
-
-  function clearManualRefreshFeedback() {
-    if (!mapRefreshFeedback) return;
-    mapRefreshFeedback.textContent = '';
-    mapRefreshFeedback.classList.remove(
-      'is-visible',
-      'map-view__refresh-feedback--success',
-      'map-view__refresh-feedback--warning'
-    );
-  }
-
-  function showManualRefreshFeedback(text, type) {
-    if (!mapRefreshFeedback) return;
-    if (refreshFeedbackTimerId) {
-      clearTimeout(refreshFeedbackTimerId);
-      refreshFeedbackTimerId = null;
-    }
-    mapRefreshFeedback.textContent = text || '';
-    mapRefreshFeedback.classList.remove(
-      'map-view__refresh-feedback--success',
-      'map-view__refresh-feedback--warning'
-    );
-    if (type === 'success') {
-      mapRefreshFeedback.classList.add('map-view__refresh-feedback--success');
-    } else if (type === 'warning') {
-      mapRefreshFeedback.classList.add('map-view__refresh-feedback--warning');
-    }
-    mapRefreshFeedback.classList.toggle('is-visible', Boolean(text));
-    if (text) {
-      refreshFeedbackTimerId = setTimeout(() => {
-        clearManualRefreshFeedback();
-        refreshFeedbackTimerId = null;
-      }, 2500);
-    }
-  }
-
-  function setManualControlsReadonly(isLocked) {
-    if (!mapManualCoordsInput) return;
-    mapManualCoordsInput.readOnly = !!isLocked;
-  }
-
-  function setManualOverrideEnabled(nextEnabled) {
-    manualOverrideEnabled = !!nextEnabled;
-    if (mapManualCoordsToggle) mapManualCoordsToggle.checked = manualOverrideEnabled;
-    setManualControlsReadonly(manualOverrideEnabled);
-    applyObserverPriority();
-    if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
-      window.SatContactMapRender.update();
-    }
-    saveManualOverrideState();
-  }
-
-  function bindManualOverrideControls() {
-    if (!mapManualCoordsInput || !mapManualCoordsToggle) return;
-
-    mapManualCoordsToggle.replaceWith(mapManualCoordsToggle.cloneNode(true));
-    mapManualCoordsToggle = document.getElementById('mapManualCoordsToggle');
-    mapManualCoordsInput.replaceWith(mapManualCoordsInput.cloneNode(true));
-    mapManualCoordsInput = document.getElementById('mapManualCoordsInput');
-
-    const stored = loadManualOverrideState();
-    if (stored && typeof stored.input === 'string') {
-      mapManualCoordsInput.value = stored.input;
-    }
-
-    if (stored && stored.coords) {
-      const parsedStored = parseManualCoordsInput(`${stored.coords.lat}, ${stored.coords.lon}`);
-      manualObserver = parsedStored;
-    } else {
-      manualObserver = parseManualCoordsInput(mapManualCoordsInput.value);
-    }
-
-    manualOverrideEnabled = !!(stored && stored.enabled && manualObserver);
-    mapManualCoordsToggle.checked = manualOverrideEnabled;
-    setManualControlsReadonly(manualOverrideEnabled);
-    applyObserverPriority();
-
-    mapManualCoordsToggle.addEventListener('change', () => {
-      if (mapManualCoordsToggle.checked) {
-        const parsed = parseManualCoordsInput(mapManualCoordsInput.value);
-        if (!parsed) {
-          mapManualCoordsToggle.checked = false;
-          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.invalidManualCoords, 'warning');
-          return;
-        }
-        manualObserver = parsed;
-        setManualOverrideEnabled(true);
-        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.manualCoordsApplied, 'success');
-        return;
-      }
-
-      setManualOverrideEnabled(false);
-      showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.manualCoordsDisabled, 'warning');
-    });
-
-    mapManualCoordsInput.addEventListener('change', () => {
-      if (manualOverrideEnabled) return;
-      const parsed = parseManualCoordsInput(mapManualCoordsInput.value);
-      if (parsed) {
-        manualObserver = parsed;
-        saveManualOverrideState();
-      }
-    });
-  }
-
-  /**
-   * Показать плашку «GPS заблокирован»
-   */
-  function showGpsDenied() {
-    if (mapLoading) mapLoading.hidden = true;
-    if (mapGpsDenied) mapGpsDenied.hidden = false;
-  }
-
-  /**
-   * Скрыть плашку «GPS заблокирован»
-   */
-  function hideGpsDenied() {
-    if (mapGpsDenied) mapGpsDenied.hidden = true;
-    if (mapLoading) mapLoading.hidden = false;
-  }
-
-  function normalizeCoords(rawCoords) {
-    if (!rawCoords) return null;
-    const latitude = Number(rawCoords.latitude);
-    const longitude = Number(rawCoords.longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
-    const altitude = Number.isFinite(Number(rawCoords.altitude)) ? Number(rawCoords.altitude) : null;
-    const accuracyRaw = Number(rawCoords.accuracy);
-    const accuracy = Number.isFinite(accuracyRaw) && accuracyRaw > 0 ? accuracyRaw : null;
-    const source = accuracy != null && accuracy <= PRECISE_GPS_MAX_ACCURACY_M ? 'gps' : 'network';
-    return { latitude, longitude, altitude, accuracy, source };
-  }
-
-  /**
-   * Запрос GPS с таймаутом и классификацией качества координат
-   * @returns {Promise<{coords: object|null, status: string, isPrecise: boolean}>}
-   */
-  function requestGps() {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve({ coords: null, status: 'unsupported', isPrecise: false });
-        return;
-      }
-
-      let settled = false;
-      const finish = (payload) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        resolve(payload);
-      };
-
-      const timeoutId = setTimeout(() => {
-        finish({ coords: null, status: 'timeout', isPrecise: false });
-      }, GPS_TIMEOUT_MS);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = normalizeCoords({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            altitude: pos.coords.altitude,
-            accuracy: pos.coords.accuracy
-          });
-          if (!coords) {
-            finish({ coords: null, status: 'invalid', isPrecise: false });
-            return;
-          }
-          const isPrecise = coords.source === 'gps';
-          finish({ coords, status: isPrecise ? 'ok' : 'coarse', isPrecise });
-        },
-        (err) => {
-          const status = err && err.code === 1
-            ? 'denied'
-            : (err && err.code === 3 ? 'timeout' : 'unavailable');
-          finish({ coords: null, status, isPrecise: false });
-        },
-        { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS - 500, maximumAge: 0 }
-      );
-    });
-  }
-
-  /**
-   * Фоллбэк геолокации по IP (грубая, но полезная оценка позиции).
-   * @returns {Promise<{latitude, longitude, altitude, accuracy, source}|null>}
-   */
-  async function requestIpLocation() {
-    const providers = [
-      {
-        url: 'https://ipwhois.app/json/',
-        validate: (data) => {
-          const hasValidCoords = Number.isFinite(Number(data?.latitude)) && Number.isFinite(Number(data?.longitude));
-          const successFlag = data?.success === true || data?.success === 'true';
-          return successFlag || hasValidCoords;
-        }
-      },
-      {
-        url: 'https://geolocation-db.com/json/',
-        validate: (data) => Number.isFinite(Number(data?.latitude)) && Number.isFinite(Number(data?.longitude))
-      }
-    ];
-
-    for (const provider of providers) {
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      let timeoutId = null;
-      try {
-        if (controller) {
-          timeoutId = setTimeout(() => controller.abort(), IP_LOCATION_TIMEOUT_MS);
-        }
-        const res = await fetch(provider.url, {
-          method: 'GET',
-          signal: controller ? controller.signal : undefined
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status} for ${provider.url}`);
-        const data = await res.json();
-        if (!provider.validate(data)) throw new Error(`Invalid IP geo payload from ${provider.url}`);
-
-        const normalized = normalizeCoords({
-          latitude: data.latitude,
-          longitude: data.longitude,
-          altitude: null,
-          accuracy: 5000
-        });
-        if (!normalized) throw new Error(`Invalid normalized coordinates from ${provider.url}`);
-        return { ...normalized, source: 'network', accuracy: 5000 };
-      } catch (e) {
-        console.warn('IP Location error:', e);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Проверка разрешения (navigator.permissions — не везде поддерживается)
-   */
-  function checkPermission() {
-    if (!navigator.permissions || !navigator.permissions.query) return null;
-    return navigator.permissions.query({ name: 'geolocation' });
-  }
-
-  /**
-   * Основная логика получения координат при открытии карты
-   * @returns {Promise<{coords: object|null, denied: boolean}>}
-   */
-  async function acquireObserver() {
-    setLoadingStatus(HUD_LOADING_TEXT.searchingGps, HUD_LOADING_TEXT.loadingOrbits);
-    hideGpsDenied();
-
-    const perm = checkPermission();
-    if (perm) {
-      try {
-        const state = await perm;
-        if (state.state === 'denied') {
-          showGpsDenied();
-          const ipCoords = await requestIpLocation();
-          if (ipCoords) {
-            saveObserver(ipCoords);
-            setAutoObserver(ipCoords);
-            setLoadingStatus(HUD_LOADING_TEXT.ipWhenGpsDenied, '');
-            return { coords: ipCoords, denied: true };
-          }
-
-          const cachedObserver = loadObserver();
-          setAutoObserver(cachedObserver);
-          setLoadingStatus(HUD_LOADING_TEXT.deniedApiUnavailableCache, '');
-          return { coords: cachedObserver, denied: true };
-        }
-      } catch (e) {
-        // Игнорируем, пробуем запрос
-      }
-    }
-
-    const gpsResult = await requestGps();
-    if (gpsResult.status === 'denied') {
-      showGpsDenied();
-      const ipCoords = await requestIpLocation();
-      if (ipCoords) {
-        saveObserver(ipCoords);
-        setAutoObserver(ipCoords);
-        setLoadingStatus(HUD_LOADING_TEXT.ipWhenGpsDenied, '');
-        return { coords: ipCoords, denied: true };
-      }
-
-      const cachedObserver = loadObserver();
-      setAutoObserver(cachedObserver);
-      setLoadingStatus(HUD_LOADING_TEXT.deniedApiUnavailableCache, '');
-      return { coords: cachedObserver, denied: true };
-    }
-
-    if (gpsResult.coords) {
-      let resolvedCoords = gpsResult.coords;
-      if (!gpsResult.isPrecise) {
-        const ipCoords = await requestIpLocation();
-        if (ipCoords) resolvedCoords = ipCoords;
-      }
-      saveObserver(resolvedCoords);
-      setAutoObserver(resolvedCoords);
-      setLoadingStatus(gpsResult.isPrecise ? HUD_LOADING_TEXT.loadingOrbits : HUD_LOADING_TEXT.ipOrNetworkCoarse, '');
-      return { coords: resolvedCoords, denied: false };
-    }
-
-    // Таймаут/ошибка/нет чипа: сначала фоллбэк по IP, затем localStorage.
-    hideGpsDenied();
-    const ipCoords = await requestIpLocation();
-    if (ipCoords) {
-      saveObserver(ipCoords);
-      setAutoObserver(ipCoords);
-      setLoadingStatus(HUD_LOADING_TEXT.ipCoarse, '');
-      return { coords: ipCoords, denied: false };
-    }
-
-    const cachedObserver = loadObserver();
-    setAutoObserver(cachedObserver);
-    setLoadingStatus(HUD_LOADING_TEXT.apiUnavailableCache, '');
-    return { coords: cachedObserver, denied: false };
-  }
-
-  /**
-   * Ручное обновление GPS (кнопка [↻])
-   */
-  async function onManualRefresh() {
-    if (!mapRefresh) return;
-    mapRefresh.disabled = true;
-    setLoadingStatus(HUD_LOADING_TEXT.searchingGps, '');
-    showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.updatingGps);
-    if (mapGpsDenied) mapGpsDenied.hidden = true;
-    if (mapLoading) mapLoading.hidden = true;
-
-    const gpsResult = await requestGps();
-
-    if (gpsResult.status === 'denied') {
-      showGpsDenied();
-      const ipCoords = await requestIpLocation();
-      if (ipCoords) {
-        saveObserver(ipCoords);
-        setAutoObserver(ipCoords);
+    window.SatContactGps.updateFromNetwork().then(function (ok) {
+      if (ok) {
+        mapGpsNetBtn.textContent = '\u2713';
         if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
           window.SatContactMapRender.update();
         }
-        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.deniedUsingIp, 'warning');
       } else {
-        const cached = loadObserver();
-        if (cached) {
-          setAutoObserver(cached);
-          if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
-            window.SatContactMapRender.update();
-          }
-          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.deniedUsingCache, 'warning');
-        } else {
-          updateGpsSourceBadge(null);
-          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.deniedInBrowser, 'warning');
-        }
+        mapGpsNetBtn.textContent = 'Сеть недоступна';
       }
-      setLoadingStatus('', '');
-      mapRefresh.disabled = false;
+      if (netBtnFeedbackTimerId) clearTimeout(netBtnFeedbackTimerId);
+      netBtnFeedbackTimerId = setTimeout(() => {
+        mapGpsNetBtn.textContent = savedText;
+        mapGpsNetBtn.disabled = false;
+        netBtnFeedbackTimerId = null;
+      }, 2000);
+    });
+  }
+
+  function onManualWriteBtnClick() {
+    if (!mapManualCoordsInput || !mapManualWriteBtn || !window.SatContactGps) return;
+    const text = mapManualCoordsInput.value.trim();
+    const matches = text.match(/-?\d+(?:[.,]\d+)?/g);
+    if (!matches || matches.length < 2) {
+      showBriefFeedback(mapManualWriteBtn, 'Неверный формат', manualBtnFeedbackTimerId, (tid) => { manualBtnFeedbackTimerId = tid; }, true);
       return;
     }
-
-    if (gpsResult.coords) {
-      let resolvedCoords = gpsResult.coords;
-      if (!gpsResult.isPrecise) {
-        const ipCoords = await requestIpLocation();
-        if (ipCoords) resolvedCoords = ipCoords;
-      }
-      saveObserver(resolvedCoords);
-      setAutoObserver(resolvedCoords);
+    const lat = Number(matches[0].replace(',', '.'));
+    const lon = Number(matches[1].replace(',', '.'));
+    const ok = window.SatContactGps.updateManual(lat, lon);
+    if (ok) {
+      showBriefFeedback(mapManualWriteBtn, '\u2713', manualBtnFeedbackTimerId, (tid) => { manualBtnFeedbackTimerId = tid; }, false);
       if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
         window.SatContactMapRender.update();
       }
-      if (resolvedCoords.source === 'gps') {
-        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.gpsUpdated, 'success');
-      } else {
-        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.noPreciseGpsUsingIp, 'warning');
-      }
     } else {
-      const ipCoords = await requestIpLocation();
-      if (ipCoords) {
-        saveObserver(ipCoords);
-        setAutoObserver(ipCoords);
-        if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
-          window.SatContactMapRender.update();
-        }
-        showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.noPreciseGpsUsingIp, 'warning');
-      } else {
-        const cached = loadObserver();
-        if (cached) {
-          setAutoObserver(cached);
-          if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
-            window.SatContactMapRender.update();
-          }
-          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.apiUnavailableUsingCache, 'warning');
-        } else {
-          updateGpsSourceBadge(null);
-          showManualRefreshFeedback(HUD_REFRESH_FEEDBACK_TEXT.gpsUnavailableOnDevice, 'warning');
-        }
-      }
-    }
-
-    setLoadingStatus('', '');
-    mapRefresh.disabled = false;
-  }
-
-  /**
-   * Фоновый опрос раз в час
-   */
-  function startPolling() {
-    stopPolling();
-    pollTimerId = setInterval(async () => {
-      const gpsResult = await requestGps();
-      if (gpsResult.coords) {
-        let resolvedCoords = gpsResult.coords;
-        if (!gpsResult.isPrecise) {
-          const ipCoordsFromCoarse = await requestIpLocation();
-          if (ipCoordsFromCoarse) resolvedCoords = ipCoordsFromCoarse;
-        }
-        saveObserver(resolvedCoords);
-        setAutoObserver(resolvedCoords);
-        return;
-      }
-
-      const ipCoords = await requestIpLocation();
-      if (ipCoords) {
-        saveObserver(ipCoords);
-        setAutoObserver(ipCoords);
-      }
-    }, POLL_INTERVAL_MS);
-  }
-
-  function stopPolling() {
-    if (pollTimerId) {
-      clearInterval(pollTimerId);
-      pollTimerId = null;
+      showBriefFeedback(mapManualWriteBtn, 'Неверный формат', manualBtnFeedbackTimerId, (tid) => { manualBtnFeedbackTimerId = tid; }, true);
     }
   }
 
-  /**
-   * Обновление HUD: азимут, элевация, дистанция (из TLE + satellite.js)
-   */
+  function showBriefFeedback(btn, text, timerId, setTimerId, isError) {
+    if (!btn) return;
+    const savedText = btn.textContent;
+    btn.textContent = text;
+    if (isError) btn.style.color = '#ef9a9a';
+    if (timerId) clearTimeout(timerId);
+    setTimerId(setTimeout(() => {
+      btn.textContent = savedText;
+      btn.style.color = '';
+      setTimerId(null);
+    }, 2000));
+  }
+
+  function gpsChangeHandler() {
+    updateGpsStatusRow();
+    if (window.SatContactMapRender && typeof window.SatContactMapRender.update === 'function') {
+      window.SatContactMapRender.update();
+    }
+  }
+
+  /* ====== HUD Telemetry ====== */
+
   function updateHudTelem() {
     if (!mapAzimuth || !mapElevation || !mapDistance) return;
     if (!window.SatContactTle) return;
@@ -822,12 +300,13 @@
       return;
     }
 
-    if (!currentObserver) {
+    const observer = window.SatContactGps ? window.SatContactGps.getCoords() : null;
+    if (!observer) {
       setHudTelemetryPlaceholder(isMultiFocus);
       return;
     }
 
-    const result = window.SatContactTle.computeSatellite(tleData, currentObserver, new Date());
+    const result = window.SatContactTle.computeSatellite(tleData, observer, new Date());
     if (!result) {
       setHudTelemetryPlaceholder(isMultiFocus);
       return;
@@ -843,8 +322,10 @@
   function startHudUpdate() {
     stopHudUpdate();
     updateHudTelem();
+    updateGpsStatusRow();
     hudTimerId = setInterval(() => {
       updateHudTelem();
+      updateGpsStatusRow();
       if (window.SatContactMapRender) window.SatContactMapRender.update();
     }, HUD_UPDATE_MS);
   }
@@ -856,9 +337,8 @@
     }
   }
 
-  /**
-   * Инициализация карты (вызывается из app.js)
-   */
+  /* ====== Init / Cleanup ====== */
+
   window.initMap = function (options) {
     const { noradIds = [], satelliteName, noradIdToName = {} } = options || {};
     initialNoradIds = [...new Set((noradIds || []).map((id) => String(id)).filter(Boolean))];
@@ -871,30 +351,39 @@
       : Object.fromEntries(initialNoradIds.map((id) => [id, satelliteName || `NORAD ${id}`]));
 
     const mapCanvas = document.getElementById('mapCanvas');
-    mapLoading = document.getElementById('mapLoading');
-    mapGpsDenied = document.getElementById('mapGpsDenied');
-    mapCoords = document.getElementById('mapCoords');
-    mapRefresh = document.getElementById('mapRefresh');
     mapShowAllBtn = document.getElementById('mapShowAll');
     mapAzimuth = document.getElementById('mapAzimuth');
     mapElevation = document.getElementById('mapElevation');
     mapDistance = document.getElementById('mapDistance');
-    loadingStatus1 = document.getElementById('mapLoadingStatus1');
-    loadingStatus2 = document.getElementById('mapLoadingStatus2');
-    gpsRetryBtn = document.getElementById('mapGpsRetry');
-    gpsContinueBtn = document.getElementById('mapGpsContinue');
-    mapRefreshFeedback = document.getElementById('mapRefreshFeedback');
-    mapGpsSourceBadge = document.getElementById('mapGpsSourceBadge');
+    mapGpsIndicator = document.getElementById('mapGpsIndicator');
+    mapGpsCoords = document.getElementById('mapGpsCoords');
+    mapGpsAge = document.getElementById('mapGpsAge');
+    mapGpsNetBtn = document.getElementById('mapGpsNetBtn');
     mapManualCoordsInput = document.getElementById('mapManualCoordsInput');
-    mapManualCoordsToggle = document.getElementById('mapManualCoordsToggle');
-    updateGpsSourceBadge(null);
-    clearManualRefreshFeedback();
-    bindManualOverrideControls();
+    mapManualWriteBtn = document.getElementById('mapManualWriteBtn');
+
     bindMapShowAllButton();
     bindMapFocusTelemetry();
 
-    acquireObserver().then(async ({ denied }) => {
-      setLoadingStatus(HUD_LOADING_TEXT.loadingOrbits, '');
+    if (mapGpsNetBtn) {
+      mapGpsNetBtn.replaceWith(mapGpsNetBtn.cloneNode(true));
+      mapGpsNetBtn = document.getElementById('mapGpsNetBtn');
+      mapGpsNetBtn.addEventListener('click', onNetworkBtnClick);
+    }
+    if (mapManualWriteBtn) {
+      mapManualWriteBtn.replaceWith(mapManualWriteBtn.cloneNode(true));
+      mapManualWriteBtn = document.getElementById('mapManualWriteBtn');
+      mapManualWriteBtn.addEventListener('click', onManualWriteBtnClick);
+    }
+
+    if (window.SatContactGps) {
+      window.SatContactGps.start();
+      window.SatContactGps.onChange(gpsChangeHandler);
+    }
+
+    updateGpsStatusRow();
+
+    (async function () {
       try {
         if (window.SatContactTle) {
           await window.SatContactTle.loadTle();
@@ -902,54 +391,25 @@
       } catch (e) {
         console.warn('map.js: не удалось загрузить TLE', e);
       }
-      if (mapLoading) mapLoading.hidden = true;
-      if (!denied) startPolling();
       startHudUpdate();
       if (window.SatContactMapRender && mapCanvas) {
         window.SatContactMapRender.init(mapCanvas);
       }
-    });
-
-    if (mapRefresh) {
-      mapRefresh.replaceWith(mapRefresh.cloneNode(true));
-      mapRefresh = document.getElementById('mapRefresh');
-      mapRefresh.addEventListener('click', onManualRefresh);
-    }
-
-    if (gpsRetryBtn) {
-      gpsRetryBtn.replaceWith(gpsRetryBtn.cloneNode(true));
-      gpsRetryBtn = document.getElementById('mapGpsRetry');
-      gpsRetryBtn.addEventListener('click', () => acquireObserver().then(({ denied }) => {
-        if (!denied) {
-          hideGpsDenied();
-          if (mapLoading) mapLoading.hidden = true;
-          startPolling();
-        }
-      }));
-    }
-
-    if (gpsContinueBtn) {
-      gpsContinueBtn.replaceWith(gpsContinueBtn.cloneNode(true));
-      gpsContinueBtn = document.getElementById('mapGpsContinue');
-      gpsContinueBtn.addEventListener('click', () => {
-        if (mapGpsDenied) mapGpsDenied.hidden = true;
-        if (mapLoading) mapLoading.hidden = true;
-      });
-    }
+    })();
   };
 
-  /**
-   * Очистка при закрытии карты
-   */
   window.cleanupMap = function () {
-    stopPolling();
     stopHudUpdate();
     unbindMapFocusTelemetry();
-    if (refreshFeedbackTimerId) {
-      clearTimeout(refreshFeedbackTimerId);
-      refreshFeedbackTimerId = null;
+
+    if (netBtnFeedbackTimerId) { clearTimeout(netBtnFeedbackTimerId); netBtnFeedbackTimerId = null; }
+    if (manualBtnFeedbackTimerId) { clearTimeout(manualBtnFeedbackTimerId); manualBtnFeedbackTimerId = null; }
+
+    if (window.SatContactGps) {
+      window.SatContactGps.enterCooldown();
+      window.SatContactGps.offChange(gpsChangeHandler);
     }
-    clearManualRefreshFeedback();
+
     setMapShowAllButtonState(false);
     focusedNoradIds = [];
     hudTelemetryNoradId = null;
@@ -957,40 +417,25 @@
     if (window.SatContactMapRender) window.SatContactMapRender.destroy();
   };
 
-  /**
-   * Получить текущие координаты наблюдателя (для шагов 4–5)
-   */
   window.getMapObserver = function () {
-    return currentObserver;
+    return window.SatContactGps ? window.SatContactGps.getCoords() : null;
   };
 
-  /**
-   * Получить текущие NORAD ID (для D3-рендера)
-   */
   window.getMapNoradIds = function () {
     return currentNoradIds;
   };
 
-  /**
-   * Получить соответствие NORAD ID → название спутника
-   */
   window.getMapNoradIdToName = function () {
     return currentNoradIdToName || {};
   };
 
-  /**
-   * Вычислить позицию спутника (для D3-карты)
-   * @param {string} noradId
-   * @param {Date} [date]
-   * @returns {{ lat, lon } | null}
-   */
   window.getSatellitePosition = function (noradId, date) {
     if (!window.SatContactTle) return null;
     const tleMap = window.SatContactTle.getCache();
     if (!tleMap) return null;
     const tleData = tleMap.get(noradId);
     if (!tleData) return null;
-    const observer = currentObserver || { latitude: 0, longitude: 0, altitude: 0 };
+    const observer = (window.SatContactGps && window.SatContactGps.getCoords()) || { latitude: 0, longitude: 0, altitude: 0 };
     const result = window.SatContactTle.computeSatellite(tleData, observer, date || new Date());
     return result ? { lat: result.lat, lon: result.lon } : null;
   };

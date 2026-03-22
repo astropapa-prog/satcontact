@@ -12,7 +12,7 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
-  let header, main, mapView, mapBack, mapTitle, mapLoading, mapHud, mapFreqRibbon, arView;
+  let header, main, mapView, mapBack, mapTitle, mapHud, mapFreqRibbon, arView;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -466,16 +466,10 @@
     mapView.hidden = false;
 
     if (mapTitle) mapTitle.textContent = satelliteName || 'Карта';
-    if (mapLoading) mapLoading.hidden = false;
     hideMapFreqRibbon();
 
     if (typeof window.initMap === 'function') {
       window.initMap({ noradIds, satelliteName, noradIdToName });
-    } else {
-      // Заглушка до подключения map.js
-      setTimeout(() => {
-        if (mapLoading) mapLoading.hidden = true;
-      }, 500);
     }
   }
 
@@ -867,7 +861,6 @@
     mapView = document.getElementById('mapView');
     mapBack = document.getElementById('mapBack');
     mapTitle = document.getElementById('mapTitle');
-    mapLoading = document.getElementById('mapLoading');
     mapHud = document.getElementById('mapHud');
     mapFreqRibbon = document.getElementById('mapFreqRibbon');
     arView = document.getElementById('arView');

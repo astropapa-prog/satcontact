@@ -63,17 +63,6 @@
           <span>Элевация:</span>
           <span id="mapElevation">—</span>
         </div>
-        <div class="map-view__loading" id="mapLoading">
-          <div class="map-view__loading-status" id="mapLoadingStatus1">Поиск GPS…</div>
-          <div class="map-view__loading-status" id="mapLoadingStatus2">Загрузка орбит…</div>
-        </div>
-        <div class="map-view__gps-denied" id="mapGpsDenied" hidden>
-          <p class="map-view__gps-denied-text">GPS заблокирован. Разрешите доступ в браузере 🔒</p>
-          <div class="map-view__gps-denied-btns">
-            <button type="button" class="map-view__gps-btn" id="mapGpsRetry">Проверить снова</button>
-            <button type="button" class="map-view__gps-btn" id="mapGpsContinue">Продолжить без GPS</button>
-          </div>
-        </div>
       </div>
       <div id="mapFreqRibbon" class="map-view__freq-ribbon"></div>
       <div class="map-view__hud" id="mapHud">
@@ -85,29 +74,18 @@
           <span>Дистанция:</span>
           <span id="mapDistance">—</span>
         </div>
-        <div class="map-view__hud-row map-view__hud-manual">
-          <input
-            type="text"
-            id="mapManualCoordsInput"
-            class="map-view__manual-input"
-            placeholder="53.28024034333129, 63.24983460394551"
-            autocomplete="off"
-            spellcheck="false"
-          >
-          <label class="map-view__manual-toggle">
-            <input type="checkbox" id="mapManualCoordsToggle">
-            <span>Применить</span>
-          </label>
-        </div>
-        <div class="map-view__hud-row map-view__hud-coords">
-          <div class="map-view__coords-stack">
-            <div class="map-view__coords-main">
-              <span id="mapCoords">—</span>
-              <span id="mapGpsSourceBadge" class="map-view__gps-badge map-view__gps-badge--none">НЕТ GPS</span>
-            </div>
-            <small id="mapRefreshFeedback" class="map-view__refresh-feedback" aria-live="polite"></small>
+        <div class="map-view__hud-row map-view__hud-row--gps-status">
+          <div class="gps-status" id="mapGpsStatus">
+            <span class="gps-status__indicator" id="mapGpsIndicator">🔴 ВЫКЛ</span>
+            <span class="gps-status__coords" id="mapGpsCoords">НЕТ ДАННЫХ</span>
+            <span class="gps-status__age" id="mapGpsAge"></span>
+            <button type="button" class="gps-status__net-btn" id="mapGpsNetBtn">↻ Сеть</button>
           </div>
-          <button type="button" class="map-view__refresh" id="mapRefresh" aria-label="Обновить GPS">↻</button>
+        </div>
+        <div class="map-view__hud-row map-view__hud-row--manual">
+          <input type="text" id="mapManualCoordsInput" class="gps-status__manual-input"
+                 placeholder="53.28024, 63.24983" autocomplete="off" spellcheck="false">
+          <button type="button" id="mapManualWriteBtn" class="gps-status__manual-btn">Записать</button>
         </div>
       </div>
     </div>
@@ -149,9 +127,11 @@
       </div>
 
       <div id="arHud" class="ar-view__hud">
-        <div class="ar-view__hud-row">
-          <span id="arGpsStatus">&#128308; ПОИСК...</span>
-          <span id="arCoords">---</span>
+        <div class="gps-status gps-status--ar" id="arGpsStatusRow">
+          <span class="gps-status__indicator" id="arGpsIndicator">🔴 ВЫКЛ</span>
+          <span class="gps-status__coords" id="arGpsCoords">НЕТ ДАННЫХ</span>
+          <span class="gps-status__age" id="arGpsAge"></span>
+          <button type="button" class="gps-status__net-btn" id="arGpsNetBtn">↻ Сеть</button>
         </div>
         <div id="arTelemetryRow" class="ar-view__hud-row ar-view__hud-telemetry" hidden>
           <span id="arTelAz">АЗ: ---°</span>
@@ -173,6 +153,7 @@
   <script src="lib/d3.min.js"></script>
   <script src="lib/topojson.min.js"></script>
   <script src="tle.js"></script>
+  <script src="gps-service.js"></script>
   <script src="map.js"></script>
   <script src="map-render.js"></script>
   <script src="ar-render.js"></script>
