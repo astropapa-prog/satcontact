@@ -7,6 +7,7 @@
   'use strict';
 
   const DATA_URL = 'data/Frequencies.xml';
+  const GROUP_STORAGE_KEY = 'satcontact_selected_group';
 
   // DOM elements
   let searchInput, cardList, emptyState, statusText, groupSelect;
@@ -563,7 +564,18 @@
     const groups = getUniqueGroups(allEntries);
     groupSelect.innerHTML = '<option value="">Все группы</option>' +
       groups.map((g) => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
-    groupSelect.addEventListener('change', () => applyFilter());
+
+    try {
+      const saved = localStorage.getItem(GROUP_STORAGE_KEY);
+      if (saved && groupSelect.querySelector('option[value="' + CSS.escape(saved) + '"]')) {
+        groupSelect.value = saved;
+      }
+    } catch (e) { /* localStorage недоступен */ }
+
+    groupSelect.addEventListener('change', () => {
+      try { localStorage.setItem(GROUP_STORAGE_KEY, groupSelect.value); } catch (e) { /* */ }
+      applyFilter();
+    });
   }
 
   /**
