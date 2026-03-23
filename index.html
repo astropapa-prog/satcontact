@@ -14,7 +14,7 @@
   <div class="app">
     <header class="header" id="header">
       <div class="header__top">
-        <h1 class="header__title">SAT Навигатор</h1>
+        <h1 class="header__title" id="headerTitle" role="button" tabindex="0" style="cursor:pointer;">SAT Навигатор</h1>
         <select class="group-select" id="groupSelect" aria-label="Группа">
           <option value="">Загрузка...</option>
         </select>
@@ -149,7 +149,72 @@
         <button type="button" id="arFallbackBack" class="ar-view__fallback-btn">Назад</button>
       </div>
     </div>
-  </div>
+    <!-- Модуль 4: Новости (SPA-переход) -->
+    <div id="newsView" class="news-view" hidden>
+      <header class="news-view__header">
+        <button type="button" class="news-view__back" id="newsBack" aria-label="Назад">&#x2B05; Назад</button>
+        <h2 class="news-view__title">Новости</h2>
+        <div class="news-view__header-actions">
+          <button type="button" class="news-view__refresh-btn" id="newsRefresh" aria-label="Обновить">&#x1F504;</button>
+          <button type="button" class="news-view__settings-btn" id="newsSettings" aria-label="Настройки">&#x2699;</button>
+        </div>
+      </header>
+      <div class="news-view__body" id="newsBody">
+        <section class="news-view__board" id="newsBoard">
+          <button type="button" class="news-view__board-toggle" id="newsBoardToggle">
+            &#x1F4CC; ДОСКА ОБЪЯВЛЕНИЙ <span id="newsBoardArrow">&#x25BE;</span>
+          </button>
+          <div class="news-view__board-content" id="boardContent">
+            <p class="news-view__loading">Загрузка...</p>
+          </div>
+        </section>
+        <section class="news-view__chat" id="newsChat">
+          <div class="news-view__chat-loader" id="chatLoader" hidden>Загрузка сообщений...</div>
+          <div class="news-view__chat-feed" id="chatFeed"></div>
+          <div class="news-view__chat-empty" id="chatEmpty" hidden>
+            Пока нет сообщений. Будьте первым!
+          </div>
+        </section>
+      </div>
+      <div class="news-view__auth-modal" id="newsAuthModal" hidden>
+        <div class="news-view__auth-overlay"></div>
+        <div class="news-view__auth-box">
+          <h3>Введите ваш позывной</h3>
+          <input type="text" id="newsCallsignInput" class="news-view__auth-input"
+                 placeholder="UA9XXX" autocomplete="off" spellcheck="false" maxlength="20">
+          <button type="button" id="newsCallsignBtn" class="news-view__auth-btn">Войти в чат</button>
+          <p class="news-view__auth-hint">Позывной будет виден другим пользователям</p>
+        </div>
+      </div>
+      <div class="news-view__input-bar" id="newsInputBar">
+        <div class="news-view__input-actions">
+          <button type="button" class="news-view__media-btn" id="newsMediaBtn" aria-label="Фото/видео">&#x1F4F7;</button>
+          <button type="button" class="news-view__attach-btn" id="newsAttachBtn" aria-label="Файл">&#x1F4CE;</button>
+        </div>
+        <textarea class="news-view__text-input" id="newsTextInput"
+                  placeholder="Сообщение..." rows="1" maxlength="2000"></textarea>
+        <button type="button" class="news-view__send-btn" id="newsSendBtn" disabled aria-label="Отправить">&#x27A4;</button>
+        <input type="file" id="newsMediaInput" accept="image/*,video/mp4,video/webm" hidden>
+        <input type="file" id="newsAttachInput" hidden>
+      </div>
+      <div class="news-view__preview" id="newsPreview" hidden>
+        <span class="news-view__preview-name" id="newsPreviewName"></span>
+        <span class="news-view__preview-size" id="newsPreviewSize"></span>
+        <button type="button" class="news-view__preview-remove" id="newsPreviewRemove">&#x2715;</button>
+      </div>
+      <div class="news-view__edit-modal" id="newsEditModal" hidden>
+        <div class="news-view__edit-overlay"></div>
+        <div class="news-view__edit-box">
+          <h3>Редактирование</h3>
+          <textarea id="newsEditText" class="news-view__edit-textarea" rows="4" maxlength="2000"></textarea>
+          <div class="news-view__edit-actions">
+            <button type="button" id="newsEditCancel" class="news-view__edit-cancel">Отмена</button>
+            <button type="button" id="newsEditSave" class="news-view__edit-save">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
 
   <script src="utils.js"></script>
   <script src="lib/satellite.min.js"></script>
@@ -161,6 +226,8 @@
   <script src="map-render.js"></script>
   <script src="ar-render.js"></script>
   <script src="ar.js"></script>
+  <script src="lib/aws4fetch.min.js"></script>
+  <script src="news.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

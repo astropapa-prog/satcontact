@@ -13,7 +13,7 @@
   let searchInput, cardList, emptyState, statusText, groupSelect;
   let chipAll, chipRowSatellites, chipRowBandwidth, chipRowSensitivity;
   let toggleBandwidth, toggleSensitivity;
-  let header, main, mapView, mapBack, mapTitle, mapHud, mapFreqRibbon, arView;
+  let header, main, mapView, mapBack, mapTitle, mapHud, mapFreqRibbon, arView, newsView;
   let allEntries = [];
   let filteredEntries = [];
   let lastRenderedGroup = null;
@@ -464,6 +464,7 @@
 
     header.classList.add('hidden');
     main.classList.add('hidden');
+    if (newsView) newsView.hidden = true;
     mapView.hidden = false;
 
     if (mapTitle) mapTitle.textContent = satelliteName || 'Карта';
@@ -497,6 +498,7 @@
     header.classList.add('hidden');
     main.classList.add('hidden');
     if (mapView) mapView.hidden = true;
+    if (newsView) newsView.hidden = true;
     arView.hidden = false;
     hideMapFreqRibbon();
 
@@ -524,6 +526,25 @@
     if (typeof window.cleanupAr === 'function') {
       window.cleanupAr();
     }
+  }
+
+  function openNewsView() {
+    if (!newsView || !header || !main) return;
+    header.classList.add('hidden');
+    main.classList.add('hidden');
+    if (mapView) mapView.hidden = true;
+    if (arView) arView.hidden = true;
+    newsView.hidden = false;
+    hideMapFreqRibbon();
+    if (typeof window.initNews === 'function') window.initNews();
+  }
+
+  function closeNewsView() {
+    if (!newsView || !header || !main) return;
+    newsView.hidden = true;
+    header.classList.remove('hidden');
+    main.classList.remove('hidden');
+    if (typeof window.cleanupNews === 'function') window.cleanupNews();
   }
 
   /**
@@ -876,6 +897,15 @@
     mapHud = document.getElementById('mapHud');
     mapFreqRibbon = document.getElementById('mapFreqRibbon');
     arView = document.getElementById('arView');
+    newsView = document.getElementById('newsView');
+
+    const headerTitle = document.getElementById('headerTitle');
+    if (headerTitle) {
+      headerTitle.addEventListener('click', () => openNewsView());
+      headerTitle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNewsView(); }
+      });
+    }
 
     bindMapButtons();
     bindMapFocusRibbon();
@@ -888,6 +918,7 @@
   };
 
   window.closeArView = closeArView;
+  window.closeNewsView = closeNewsView;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

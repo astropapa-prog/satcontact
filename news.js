@@ -1,0 +1,899 @@
+/**
+ * SatContact — Module 4 (News: Board + Chat)
+ * Vanilla JS, PWA-ready
+ */
+(function () {
+  'use strict';
+
+  // ═══════════════════════════════════════════
+  // CONFIGURATION
+  // ═══════════════════════════════════════════
+  const S3_ENDPOINT = 'https://s3.eu-central-003.backblazeb2.com';
+  const CHAT_BUCKET = 'satcontact-chat';
+  const PUBLIC_URL  = 'https://f003.backblazeb2.com/file/satcontact-chat';
+  const BOARD_PATH  = 'data/board.html';
+
+  const B2_KEY_ID  = '003a862a1ffe1780000000002';
+  const B2_APP_KEY = 'K003p3mK5LUuCKzLFEk3KZ5PJ6wTQkE';
+
+  const MAX_IMAGE_SIZE   = 5 * 1024 * 1024;
+  const MAX_VIDEO_SIZE   = 10 * 1024 * 1024;
+  const MAX_ATTACH_SIZE  = 5 * 1024 * 1024;
+  const IMAGE_MAX_DIM    = 1280;
+  const IMAGE_QUALITY    = 0.75;
+  const MSG_MAX_LENGTH   = 2000;
+  const LISTING_CACHE_TTL = 90000;
+  const POLL_INTERVAL     = 90000;
+  const MESSAGES_PER_PAGE = 30;
+  const MESSAGES_LOAD_MORE = 20;
+
+  const LS_CALLSIGN_KEY   = 'satcontact_news_callsign';
+  const LS_HASH_KEY       = 'satcontact_news_hash';
+  const LS_BOARD_CACHE    = 'satcontact_board_html';
+  const SS_LISTING_KEY    = 'satcontact_chat_listing';
+  const LS_BOARD_COLLAPSED = 'satcontact_board_collapsed';
+
+  // ═══════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════
+  let chatClient = null;
+  let callsign = '';
+  let userHash = '';
+  let allFileNames = [];
+  let loadedMessages = [];
+  let renderedSet = new Set();
+  let pollTimer = null;
+  let pendingMedia = null;
+  let pendingAttach = null;
+  let editingFilename = null;
+  let isInitialized = false;
+  let isLoadingMore = false;
+
+  // ═══════════════════════════════════════════
+  // DOM REFERENCES
+  // ═══════════════════════════════════════════
+  let els = {};
+
+  // ═══════════════════════════════════════════
+  // PUBLIC API
+  // ═══════════════════════════════════════════
+  window.initNews = initNews;
+  window.cleanupNews = cleanupNews;
+
+  // ═══════════════════════════════════════════
+  // LIFECYCLE
+  // ═══════════════════════════════════════════
+  function initNews() {
+    if (isInitialized) return;
+    isInitialized = true;
+
+    els = {
+      body:           document.getElementById('newsBody'),
+      boardToggle:    document.getElementById('newsBoardToggle'),
+      boardArrow:     document.getElementById('newsBoardArrow'),
+      boardContent:   document.getElementById('boardContent'),
+      boardSection:   document.getElementById('newsBoard'),
+      chatFeed:       document.getElementById('chatFeed'),
+      chatLoader:     document.getElementById('chatLoader'),
+      chatEmpty:      document.getElementById('chatEmpty'),
+      authModal:      document.getElementById('newsAuthModal'),
+      callsignInput:  document.getElementById('newsCallsignInput'),
+      callsignBtn:    document.getElementById('newsCallsignBtn'),
+      inputBar:       document.getElementById('newsInputBar'),
+      textInput:      document.getElementById('newsTextInput'),
+      sendBtn:        document.getElementById('newsSendBtn'),
+      mediaBtn:       document.getElementById('newsMediaBtn'),
+      attachBtn:      document.getElementById('newsAttachBtn'),
+      mediaInput:     document.getElementById('newsMediaInput'),
+      attachInput:    document.getElementById('newsAttachInput'),
+      preview:        document.getElementById('newsPreview'),
+      previewName:    document.getElementById('newsPreviewName'),
+      previewSize:    document.getElementById('newsPreviewSize'),
+      previewRemove:  document.getElementById('newsPreviewRemove'),
+      editModal:      document.getElementById('newsEditModal'),
+      editText:       document.getElementById('newsEditText'),
+      editCancel:     document.getElementById('newsEditCancel'),
+      editSave:       document.getElementById('newsEditSave'),
+      back:           document.getElementById('newsBack'),
+      refresh:        document.getElementById('newsRefresh'),
+      settings:       document.getElementById('newsSettings'),
+    };
+
+    chatClient = new AwsClient({
+      accessKeyId: B2_KEY_ID,
+      secretAccessKey: B2_APP_KEY,
+      region: 'eu-central-003',
+      service: 's3'
+    });
+
+    loadBoard();
+    checkAuth();
+    fetchAndRenderFeed();
+    bindEvents();
+    startPolling();
+  }
+
+  function cleanupNews() {
+    stopPolling();
+    if (els.chatFeed) els.chatFeed.innerHTML = '';
+    allFileNames = [];
+    loadedMessages = [];
+    renderedSet.clear();
+    pendingMedia = null;
+    pendingAttach = null;
+    editingFilename = null;
+    isInitialized = false;
+    isLoadingMore = false;
+  }
+
+  // ═══════════════════════════════════════════
+  // BOARD
+  // ═══════════════════════════════════════════
+  async function loadBoard() {
+    if (!els.boardContent) return;
+
+    try {
+      const cached = localStorage.getItem(LS_BOARD_CACHE);
+      if (cached) els.boardContent.innerHTML = cached;
+    } catch (e) { /* localStorage unavailable */ }
+
+    const collapsed = localStorage.getItem(LS_BOARD_COLLAPSED) === '1';
+    if (collapsed && els.boardSection) {
+      els.boardSection.classList.add('news-view__board--collapsed');
+      if (els.boardArrow) els.boardArrow.textContent = '\u25B8';
+    }
+
+    try {
+      const res = await fetch(BOARD_PATH);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const html = await res.text();
+      els.boardContent.innerHTML = html;
+      try { localStorage.setItem(LS_BOARD_CACHE, html); } catch (e) { /* */ }
+    } catch (err) {
+      if (!els.boardContent.innerHTML || els.boardContent.innerHTML.includes('Загрузка')) {
+        els.boardContent.innerHTML = '<p style="color:var(--text-secondary)">Доска объявлений недоступна</p>';
+      }
+    }
+  }
+
+  function toggleBoard() {
+    if (!els.boardSection) return;
+    const isCollapsed = els.boardSection.classList.toggle('news-view__board--collapsed');
+    if (els.boardArrow) els.boardArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
+    try { localStorage.setItem(LS_BOARD_COLLAPSED, isCollapsed ? '1' : '0'); } catch (e) { /* */ }
+  }
+
+  // ═══════════════════════════════════════════
+  // AUTH
+  // ═══════════════════════════════════════════
+  function checkAuth() {
+    try {
+      callsign = localStorage.getItem(LS_CALLSIGN_KEY) || '';
+      userHash = localStorage.getItem(LS_HASH_KEY) || '';
+    } catch (e) { /* */ }
+
+    if (callsign && userHash) {
+      unlockInput();
+    } else {
+      lockInput();
+    }
+  }
+
+  async function setCallsign(name) {
+    const trimmed = name.trim().toUpperCase();
+    if (!trimmed) return;
+    const hash = await computeHash(trimmed);
+    callsign = trimmed;
+    userHash = hash;
+    try {
+      localStorage.setItem(LS_CALLSIGN_KEY, callsign);
+      localStorage.setItem(LS_HASH_KEY, userHash);
+    } catch (e) { /* */ }
+    if (els.authModal) els.authModal.hidden = true;
+    unlockInput();
+  }
+
+  function unlockInput() {
+    if (els.textInput) els.textInput.disabled = false;
+    if (els.sendBtn) els.sendBtn.disabled = false;
+    if (els.mediaBtn) els.mediaBtn.disabled = false;
+    if (els.attachBtn) els.attachBtn.disabled = false;
+    if (els.textInput) els.textInput.placeholder = 'Сообщение...';
+    updateSendBtnState();
+  }
+
+  function lockInput() {
+    if (els.textInput) { els.textInput.disabled = true; els.textInput.placeholder = 'Введите позывной для отправки'; }
+    if (els.sendBtn) els.sendBtn.disabled = true;
+    if (els.mediaBtn) els.mediaBtn.disabled = true;
+    if (els.attachBtn) els.attachBtn.disabled = true;
+  }
+
+  function showAuthModal() {
+    if (!els.authModal) return;
+    els.authModal.hidden = false;
+    if (els.callsignInput) {
+      els.callsignInput.value = callsign || '';
+      setTimeout(() => els.callsignInput.focus(), 100);
+    }
+  }
+
+  async function computeHash(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 8);
+  }
+
+  // ═══════════════════════════════════════════
+  // LISTING & FETCHING
+  // ═══════════════════════════════════════════
+  async function fetchFileList(useCache) {
+    if (useCache) {
+      try {
+        const raw = sessionStorage.getItem(SS_LISTING_KEY);
+        if (raw) {
+          const cached = JSON.parse(raw);
+          if (Date.now() - cached.ts < LISTING_CACHE_TTL) return cached.files;
+        }
+      } catch (e) { /* */ }
+    }
+
+    const url = S3_ENDPOINT + '/' + CHAT_BUCKET + '?list-type=2&prefix=messages/&max-keys=1000';
+    const res = await chatClient.fetch(url);
+    if (!res.ok) throw new Error('ListObjects failed: ' + res.status);
+    const xmlText = await res.text();
+    const keys = parseS3ListXml(xmlText);
+    const msgFiles = keys.filter(k => k.endsWith('-msg.json'));
+    msgFiles.sort((a, b) => {
+      const ta = parseInt(a.replace('messages/', '').split('-')[0], 10) || 0;
+      const tb = parseInt(b.replace('messages/', '').split('-')[0], 10) || 0;
+      return ta - tb;
+    });
+
+    try {
+      sessionStorage.setItem(SS_LISTING_KEY, JSON.stringify({ ts: Date.now(), files: msgFiles }));
+    } catch (e) { /* */ }
+
+    return msgFiles;
+  }
+
+  async function fetchAndRenderFeed() {
+    if (els.chatLoader) els.chatLoader.hidden = false;
+    if (els.chatEmpty) els.chatEmpty.hidden = true;
+
+    try {
+      allFileNames = await fetchFileList(true);
+      const toLoad = allFileNames.slice(-MESSAGES_PER_PAGE);
+      const messages = await Promise.all(toLoad.map(fetchMessage));
+      loadedMessages = messages.filter(Boolean);
+      renderMessages();
+      scrollToBottom();
+    } catch (err) {
+      console.error('Feed load error:', err);
+    } finally {
+      if (els.chatLoader) els.chatLoader.hidden = true;
+    }
+  }
+
+  async function loadMoreMessages() {
+    if (isLoadingMore) return;
+    const loadedNames = new Set(loadedMessages.map(m => m._filename));
+    const remaining = allFileNames.filter(f => !loadedNames.has(f));
+    if (remaining.length === 0) return;
+
+    isLoadingMore = true;
+    const toLoad = remaining.slice(-MESSAGES_LOAD_MORE);
+
+    const scrollEl = els.body;
+    const prevScrollHeight = scrollEl ? scrollEl.scrollHeight : 0;
+    const prevScrollTop = scrollEl ? scrollEl.scrollTop : 0;
+
+    try {
+      const messages = await Promise.all(toLoad.map(fetchMessage));
+      const valid = messages.filter(Boolean);
+      loadedMessages = [...valid, ...loadedMessages];
+      renderMessages();
+      if (scrollEl) {
+        scrollEl.scrollTop = prevScrollTop + (scrollEl.scrollHeight - prevScrollHeight);
+      }
+    } catch (err) {
+      console.error('Load more error:', err);
+    } finally {
+      isLoadingMore = false;
+    }
+  }
+
+  async function fetchMessage(filename) {
+    const name = filename.replace('messages/', '');
+    try {
+      const res = await fetch(PUBLIC_URL + '/messages/' + name);
+      if (!res.ok) return null;
+      const msg = await res.json();
+      msg._filename = filename;
+      msg._name = name;
+      return msg;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // RENDERING
+  // ═══════════════════════════════════════════
+  function renderMessages() {
+    if (!els.chatFeed) return;
+    els.chatFeed.innerHTML = '';
+    renderedSet.clear();
+
+    if (loadedMessages.length === 0) {
+      if (els.chatEmpty) els.chatEmpty.hidden = false;
+      return;
+    }
+    if (els.chatEmpty) els.chatEmpty.hidden = true;
+
+    loadedMessages.forEach(msg => {
+      const el = createMessageElement(msg);
+      els.chatFeed.appendChild(el);
+      renderedSet.add(msg._filename);
+    });
+  }
+
+  function createMessageElement(msg) {
+    const isOwn = msg.author_hash === userHash && userHash !== '';
+    const div = document.createElement('div');
+    div.className = 'news-msg' + (isOwn ? ' news-msg--own' : '');
+    div.dataset.filename = msg._filename || '';
+
+    let html = '';
+
+    // Header: author + time
+    html += '<div class="news-msg__header">';
+    html += '<span class="news-msg__author">' + escapeHtml(msg.author || '???') + '</span>';
+    html += '<span class="news-msg__time">' + relativeTime(msg.ts) + '</span>';
+    html += '</div>';
+
+    // Text
+    if (msg.text) {
+      html += '<div class="news-msg__text">' + escapeHtml(msg.text).replace(/\n/g, '<br>') + '</div>';
+    }
+
+    // Media
+    if (msg.media && msg.media.length > 0) {
+      const m = msg.media[0];
+      html += '<div class="news-msg__media">';
+      if (m.type === 'video') {
+        html += '<video src="' + escapeHtml(PUBLIC_URL + '/' + m.path) + '" controls preload="metadata" playsinline class="news-msg__video"></video>';
+      } else {
+        html += '<img src="' + escapeHtml(PUBLIC_URL + '/' + m.path) + '" alt="' + escapeHtml(m.name || '') + '" loading="lazy" class="news-msg__image">';
+      }
+      html += '</div>';
+    }
+
+    // Attachments
+    if (msg.attachments && msg.attachments.length > 0) {
+      msg.attachments.forEach(a => {
+        html += '<div class="news-msg__attachment">';
+        html += '<a href="' + escapeHtml(PUBLIC_URL + '/' + a.path) + '" download="' + escapeHtml(a.name) + '" class="news-msg__attachment-link">';
+        html += '\uD83D\uDCCE ' + escapeHtml(a.name) + ' <span class="news-msg__attachment-size">(' + formatFileSize(a.size) + ')</span>';
+        html += '</a></div>';
+      });
+    }
+
+    // Edited mark
+    if (msg.edited_at) {
+      html += '<span class="news-msg__edited">(изменено)</span>';
+    }
+
+    // Own message actions
+    if (isOwn) {
+      html += '<div class="news-msg__actions">';
+      html += '<button type="button" class="news-msg__edit-btn" data-filename="' + escapeHtml(msg._filename || '') + '" aria-label="Изменить">\u270F\uFE0F</button>';
+      html += '<button type="button" class="news-msg__delete-btn" data-filename="' + escapeHtml(msg._filename || '') + '" aria-label="Удалить">\uD83D\uDDD1\uFE0F</button>';
+      html += '</div>';
+    }
+
+    div.innerHTML = html;
+    return div;
+  }
+
+  function relativeTime(ts) {
+    if (!ts) return '';
+    const now = Date.now();
+    const diff = now - ts;
+    if (diff < 60000) return 'только что';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' мин';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' ч';
+
+    const d = new Date(ts);
+    const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const day = d.getDate();
+    const month = months[d.getMonth()];
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (d.toDateString() === yesterday.toDateString()) return 'вчера, ' + hours + ':' + mins;
+    return day + ' ' + month + ', ' + hours + ':' + mins;
+  }
+
+  function formatFileSize(bytes) {
+    if (!bytes || bytes < 0) return '0 Б';
+    if (bytes < 1024) return bytes + ' Б';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function scrollToBottom() {
+    if (els.body) {
+      setTimeout(() => { els.body.scrollTop = els.body.scrollHeight; }, 50);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // SEND MESSAGE
+  // ═══════════════════════════════════════════
+  async function sendMessage() {
+    if (!callsign || !userHash) { showAuthModal(); return; }
+
+    const text = (els.textInput ? els.textInput.value.trim() : '');
+    if (!text && !pendingMedia && !pendingAttach) return;
+
+    if (els.sendBtn) els.sendBtn.disabled = true;
+    const ts = Date.now();
+
+    try {
+      const mediaArr = [];
+      const attachArr = [];
+
+      // Upload media
+      if (pendingMedia) {
+        let blob = pendingMedia.file;
+        let fileName = sanitizeFilename(pendingMedia.file.name);
+        const mediaType = pendingMedia.type;
+
+        if (mediaType === 'image') {
+          blob = await compressImage(pendingMedia.file);
+          const ext = '.jpg';
+          fileName = fileName.replace(/\.[^.]+$/, '') + ext;
+        }
+
+        const mediaKey = 'media/' + ts + '-' + userHash + '-' + fileName;
+        await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + mediaKey, {
+          method: 'PUT',
+          headers: { 'Content-Type': blob.type || 'application/octet-stream', 'Cache-Control': 'public, max-age=3600' },
+          body: blob
+        });
+
+        mediaArr.push({
+          type: mediaType,
+          name: fileName,
+          path: mediaKey,
+          size: blob.size
+        });
+      }
+
+      // Upload attachment
+      if (pendingAttach) {
+        const fileName = sanitizeFilename(pendingAttach.file.name);
+        const attachKey = 'media/' + ts + '-' + userHash + '-' + fileName;
+        await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + attachKey, {
+          method: 'PUT',
+          headers: { 'Content-Type': pendingAttach.file.type || 'application/octet-stream', 'Cache-Control': 'public, max-age=3600' },
+          body: pendingAttach.file
+        });
+
+        attachArr.push({
+          name: fileName,
+          path: attachKey,
+          size: pendingAttach.file.size
+        });
+      }
+
+      // Build message JSON
+      const messageData = {
+        v: 1,
+        author: callsign,
+        author_hash: userHash,
+        text: text,
+        media: mediaArr,
+        attachments: attachArr,
+        ts: ts,
+        edited_at: null
+      };
+
+      const msgFilename = ts + '-' + userHash + '-msg.json';
+      const msgKey = 'messages/' + msgFilename;
+      await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + msgKey, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120' },
+        body: JSON.stringify(messageData)
+      });
+
+      // Optimistic update
+      messageData._filename = msgKey;
+      messageData._name = msgFilename;
+      loadedMessages.push(messageData);
+      allFileNames.push(msgKey);
+      renderMessages();
+      scrollToBottom();
+
+      // Clear input
+      if (els.textInput) els.textInput.value = '';
+      clearPending();
+      try { sessionStorage.removeItem(SS_LISTING_KEY); } catch (e) { /* */ }
+
+    } catch (err) {
+      console.error('Send error:', err);
+      alert('Ошибка отправки: ' + err.message);
+    } finally {
+      updateSendBtnState();
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // IMAGE COMPRESSION
+  // ═══════════════════════════════════════════
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (Math.max(w, h) > IMAGE_MAX_DIM) {
+          const ratio = IMAGE_MAX_DIM / Math.max(w, h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          if (blob) resolve(blob); else reject(new Error('Compress failed'));
+        }, 'image/jpeg', IMAGE_QUALITY);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+      img.src = url;
+    });
+  }
+
+  // ═══════════════════════════════════════════
+  // EDIT MESSAGE
+  // ═══════════════════════════════════════════
+  function openEditModal(filename) {
+    const msg = loadedMessages.find(m => m._filename === filename);
+    if (!msg) return;
+    editingFilename = filename;
+    if (els.editText) els.editText.value = msg.text || '';
+    if (els.editModal) els.editModal.hidden = false;
+  }
+
+  async function saveEdit() {
+    if (!editingFilename) return;
+    const msg = loadedMessages.find(m => m._filename === editingFilename);
+    if (!msg) return;
+
+    const newText = els.editText ? els.editText.value.trim() : '';
+    msg.text = newText;
+    msg.edited_at = Date.now();
+
+    try {
+      await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + editingFilename, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120' },
+        body: JSON.stringify({
+          v: msg.v || 1,
+          author: msg.author,
+          author_hash: msg.author_hash,
+          text: msg.text,
+          media: msg.media || [],
+          attachments: msg.attachments || [],
+          ts: msg.ts,
+          edited_at: msg.edited_at
+        })
+      });
+      renderMessages();
+      scrollToBottom();
+    } catch (err) {
+      console.error('Edit error:', err);
+      alert('Ошибка редактирования: ' + err.message);
+    } finally {
+      if (els.editModal) els.editModal.hidden = true;
+      editingFilename = null;
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // DELETE MESSAGE
+  // ═══════════════════════════════════════════
+  async function deleteMessage(filename) {
+    if (!confirm('Удалить сообщение?')) return;
+    const msg = loadedMessages.find(m => m._filename === filename);
+    if (!msg) return;
+
+    try {
+      await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + filename, { method: 'DELETE' });
+
+      if (msg.media) {
+        for (const m of msg.media) {
+          await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + m.path, { method: 'DELETE' });
+        }
+      }
+      if (msg.attachments) {
+        for (const a of msg.attachments) {
+          await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + a.path, { method: 'DELETE' });
+        }
+      }
+
+      loadedMessages = loadedMessages.filter(m => m._filename !== filename);
+      allFileNames = allFileNames.filter(f => f !== filename);
+      renderMessages();
+      try { sessionStorage.removeItem(SS_LISTING_KEY); } catch (e) { /* */ }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Ошибка удаления: ' + err.message);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // POLLING
+  // ═══════════════════════════════════════════
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      checkForNewMessages();
+    }, POLL_INTERVAL);
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  }
+
+  function onVisibilityChange() {
+    if (document.visibilityState === 'visible' && isInitialized) {
+      checkForNewMessages();
+    }
+  }
+
+  async function checkForNewMessages() {
+    try {
+      const freshList = await fetchFileList(false);
+      const currentSet = new Set(allFileNames);
+      const newFiles = freshList.filter(f => !currentSet.has(f));
+      const deletedFiles = new Set(allFileNames.filter(f => !freshList.includes(f)));
+
+      if (deletedFiles.size > 0) {
+        loadedMessages = loadedMessages.filter(m => !deletedFiles.has(m._filename));
+      }
+
+      allFileNames = freshList;
+
+      if (newFiles.length > 0) {
+        const newMsgs = await Promise.all(newFiles.map(fetchMessage));
+        const valid = newMsgs.filter(Boolean);
+        loadedMessages.push(...valid);
+        loadedMessages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      }
+
+      if (newFiles.length > 0 || deletedFiles.size > 0) {
+        const wasAtBottom = isScrolledToBottom();
+        renderMessages();
+        if (wasAtBottom) scrollToBottom();
+      }
+    } catch (err) {
+      console.error('Poll error:', err);
+    }
+  }
+
+  function isScrolledToBottom() {
+    if (!els.body) return true;
+    return els.body.scrollHeight - els.body.scrollTop - els.body.clientHeight < 80;
+  }
+
+  // ═══════════════════════════════════════════
+  // EVENTS
+  // ═══════════════════════════════════════════
+  function bindEvents() {
+    if (els.back) els.back.addEventListener('click', () => {
+      if (typeof window.closeNewsView === 'function') window.closeNewsView();
+    });
+
+    if (els.refresh) els.refresh.addEventListener('click', () => {
+      try { sessionStorage.removeItem(SS_LISTING_KEY); } catch (e) { /* */ }
+      fetchAndRenderFeed();
+    });
+
+    if (els.settings) els.settings.addEventListener('click', () => showAuthModal());
+
+    if (els.boardToggle) els.boardToggle.addEventListener('click', () => toggleBoard());
+
+    if (els.callsignBtn) els.callsignBtn.addEventListener('click', () => {
+      const val = els.callsignInput ? els.callsignInput.value : '';
+      if (val.trim()) setCallsign(val);
+    });
+
+    if (els.callsignInput) els.callsignInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = els.callsignInput.value;
+        if (val.trim()) setCallsign(val);
+      }
+    });
+
+    if (els.sendBtn) els.sendBtn.addEventListener('click', () => sendMessage());
+
+    if (els.textInput) {
+      els.textInput.addEventListener('input', () => {
+        autoResizeTextarea();
+        updateSendBtnState();
+      });
+      els.textInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    if (els.mediaBtn) els.mediaBtn.addEventListener('click', () => {
+      if (els.mediaInput) els.mediaInput.click();
+    });
+
+    if (els.attachBtn) els.attachBtn.addEventListener('click', () => {
+      if (els.attachInput) els.attachInput.click();
+    });
+
+    if (els.mediaInput) els.mediaInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const isVideo = file.type.startsWith('video/');
+      const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+      if (file.size > maxSize) {
+        alert('Файл слишком большой. Максимум: ' + formatFileSize(maxSize));
+        e.target.value = '';
+        return;
+      }
+      pendingMedia = { file: file, type: isVideo ? 'video' : 'image' };
+      showPreview(file);
+      updateSendBtnState();
+      e.target.value = '';
+    });
+
+    if (els.attachInput) els.attachInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > MAX_ATTACH_SIZE) {
+        alert('Файл слишком большой. Максимум: ' + formatFileSize(MAX_ATTACH_SIZE));
+        e.target.value = '';
+        return;
+      }
+      pendingAttach = { file: file };
+      showPreview(file);
+      updateSendBtnState();
+      e.target.value = '';
+    });
+
+    if (els.previewRemove) els.previewRemove.addEventListener('click', () => {
+      clearPending();
+      updateSendBtnState();
+    });
+
+    if (els.editCancel) els.editCancel.addEventListener('click', () => {
+      if (els.editModal) els.editModal.hidden = true;
+      editingFilename = null;
+    });
+
+    if (els.editSave) els.editSave.addEventListener('click', () => saveEdit());
+
+    // Delegate clicks in chatFeed for edit/delete
+    if (els.chatFeed) els.chatFeed.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('.news-msg__edit-btn');
+      if (editBtn) { openEditModal(editBtn.dataset.filename); return; }
+      const deleteBtn = e.target.closest('.news-msg__delete-btn');
+      if (deleteBtn) { deleteMessage(deleteBtn.dataset.filename); return; }
+      const img = e.target.closest('.news-msg__image');
+      if (img) { openFullscreenImage(img.src); return; }
+    });
+
+    // Scroll-up to load more
+    if (els.body) els.body.addEventListener('scroll', () => {
+      if (els.body.scrollTop < 100 && allFileNames.length > loadedMessages.length) {
+        loadMoreMessages();
+      }
+    });
+
+    // Close auth modal overlay click
+    const authOverlay = els.authModal ? els.authModal.querySelector('.news-view__auth-overlay') : null;
+    if (authOverlay) authOverlay.addEventListener('click', () => {
+      if (callsign && userHash) els.authModal.hidden = true;
+    });
+
+    // Close edit modal overlay click
+    const editOverlay = els.editModal ? els.editModal.querySelector('.news-view__edit-overlay') : null;
+    if (editOverlay) editOverlay.addEventListener('click', () => {
+      if (els.editModal) els.editModal.hidden = true;
+      editingFilename = null;
+    });
+  }
+
+  function autoResizeTextarea() {
+    if (!els.textInput) return;
+    els.textInput.style.height = 'auto';
+    els.textInput.style.height = Math.min(els.textInput.scrollHeight, 120) + 'px';
+  }
+
+  function updateSendBtnState() {
+    if (!els.sendBtn) return;
+    const hasText = els.textInput && els.textInput.value.trim().length > 0;
+    const hasMedia = !!pendingMedia || !!pendingAttach;
+    const hasAuth = !!(callsign && userHash);
+    els.sendBtn.disabled = !(hasAuth && (hasText || hasMedia));
+  }
+
+  function showPreview(file) {
+    if (els.previewName) els.previewName.textContent = file.name;
+    if (els.previewSize) els.previewSize.textContent = formatFileSize(file.size);
+    if (els.preview) els.preview.hidden = false;
+  }
+
+  function clearPending() {
+    pendingMedia = null;
+    pendingAttach = null;
+    if (els.preview) els.preview.hidden = true;
+    if (els.previewName) els.previewName.textContent = '';
+    if (els.previewSize) els.previewSize.textContent = '';
+  }
+
+  function openFullscreenImage(src) {
+    const overlay = document.createElement('div');
+    overlay.className = 'news-view__fullscreen-overlay';
+    overlay.innerHTML = '<img src="' + escapeHtml(src) + '" class="news-view__fullscreen-img">';
+    overlay.addEventListener('click', () => overlay.remove());
+    document.body.appendChild(overlay);
+  }
+
+  // ═══════════════════════════════════════════
+  // UTILITIES
+  // ═══════════════════════════════════════════
+  function parseFilename(name) {
+    const clean = name.replace('messages/', '').replace('.json', '');
+    const parts = clean.split('-');
+    return {
+      ts: parseInt(parts[0], 10),
+      hash: parts[1],
+      type: parts[2]
+    };
+  }
+
+  function parseS3ListXml(xmlText) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'text/xml');
+    const contents = doc.querySelectorAll('Contents');
+    const keys = [];
+    contents.forEach(c => {
+      const keyEl = c.querySelector('Key');
+      if (keyEl) keys.push(keyEl.textContent);
+    });
+    return keys;
+  }
+
+  function sanitizeFilename(name) {
+    return name.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 60);
+  }
+})();
