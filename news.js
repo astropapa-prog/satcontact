@@ -17,13 +17,14 @@
   const B2_APP_KEY = 'K003p3mK5LUuCKzLFEk3KZ5PJ6wTQkE';
 
   const MAX_IMAGE_SIZE   = 5 * 1024 * 1024;
-  const MAX_VIDEO_SIZE   = 10 * 1024 * 1024;
+  const MAX_VIDEO_SIZE   = 25 * 1024 * 1024;
   const MAX_ATTACH_SIZE  = 5 * 1024 * 1024;
   const IMAGE_MAX_DIM    = 1280;
   const IMAGE_QUALITY    = 0.75;
   const MSG_MAX_LENGTH   = 2000;
-  const LISTING_CACHE_TTL = 90000;
-  const POLL_INTERVAL     = 90000;
+  const LISTING_CACHE_TTL = 30000;
+  const POLL_INTERVAL     = 30000;
+  const INACTIVITY_TIMEOUT = 300000;
   const MESSAGES_PER_PAGE = 30;
   const MESSAGES_LOAD_MORE = 20;
 
@@ -56,6 +57,8 @@
   let loadedDmMessages = [];
   let allMessagesLoaded = false;
   let allDmsLoaded = false;
+  let inactivityTimer = null;
+  let lastListedKey = '';
 
   // ═══════════════════════════════════════════
   // DOM REFERENCES
@@ -150,6 +153,7 @@
 
   function cleanupNews() {
     stopPolling();
+    stopInactivityTimer();
     if (els.chatFeed) els.chatFeed.innerHTML = '';
     allFileNames = [];
     loadedMessages = [];
@@ -167,6 +171,7 @@
     allMessagesLoaded = false;
     allDmsLoaded = false;
     pendingReply = null;
+    lastListedKey = '';
   }
 
   // ═══════════════════════════════════════════
@@ -221,11 +226,13 @@
         chatLoaded = true;
         fetchAndRenderFeed();
       } else {
-        checkForNewMessages();
+        checkForNewMessagesFull();
       }
       startPolling();
+      resetInactivityTimer();
     } else {
       stopPolling();
+      stopInactivityTimer();
     }
   }
 
@@ -383,7 +390,7 @@
     });
   }
 
-  async function fetchFileList(useCache) {
+  async function fetchFileList(useCache, incremental) {
     if (useCache) {
       try {
         var raw = sessionStorage.getItem(SS_LISTING_KEY);
@@ -391,28 +398,78 @@
           var cached = JSON.parse(raw);
           if (Date.now() - cached.ts < LISTING_CACHE_TTL) {
             if (cached.dmFiles) allDmFiles = cached.dmFiles;
+            if (cached.lastKey) lastListedKey = cached.lastKey;
             return cached.files;
           }
         }
       } catch (e) { /* */ }
     }
 
-    var url = S3_ENDPOINT + '/' + CHAT_BUCKET + '?list-type=2&prefix=messages/&max-keys=1000';
-    var res = await chatClient.fetch(url);
-    if (!res.ok) throw new Error('ListObjects failed: ' + res.status);
-    var xmlText = await res.text();
-    var keys = parseS3ListXml(xmlText);
-    var msgFiles = keys.filter(function (k) { return k.endsWith('-msg.json'); });
-    var dmFiles = keys.filter(function (k) { return k.endsWith('-dm.json'); });
-    sortByTimestamp(msgFiles);
-    sortByTimestamp(dmFiles);
-    allDmFiles = dmFiles;
+    var allKeys = [];
+    if (incremental && lastListedKey) {
+      var url = S3_ENDPOINT + '/' + CHAT_BUCKET
+        + '?list-type=2&prefix=messages/&max-keys=100&start-after='
+        + encodeURIComponent(lastListedKey);
+      var res = await chatClient.fetch(url);
+      if (!res.ok) throw new Error('ListObjects failed: ' + res.status);
+      allKeys = parseS3ListXml(await res.text());
+    } else {
+      var continuationToken = null;
+      var isTruncated = true;
+      while (isTruncated) {
+        var pUrl = S3_ENDPOINT + '/' + CHAT_BUCKET
+          + '?list-type=2&prefix=messages/&max-keys=1000';
+        if (continuationToken) {
+          pUrl += '&continuation-token=' + encodeURIComponent(continuationToken);
+        }
+        var pRes = await chatClient.fetch(pUrl);
+        if (!pRes.ok) throw new Error('ListObjects failed: ' + pRes.status);
+        var xmlText = await pRes.text();
+        var pageKeys = parseS3ListXml(xmlText);
+        allKeys = allKeys.concat(pageKeys);
+        var parsed = parseS3ListXmlMeta(xmlText);
+        isTruncated = parsed.isTruncated;
+        continuationToken = parsed.nextToken;
+      }
+    }
 
+    var newMsgFiles = allKeys.filter(function (k) { return k.endsWith('-msg.json'); });
+    var newDmFiles = allKeys.filter(function (k) { return k.endsWith('-dm.json'); });
+
+    if (incremental && lastListedKey) {
+      if (newMsgFiles.length > 0) {
+        allFileNames = allFileNames.concat(newMsgFiles);
+        sortByTimestamp(allFileNames);
+      }
+      if (newDmFiles.length > 0) {
+        allDmFiles = allDmFiles.concat(newDmFiles);
+        sortByTimestamp(allDmFiles);
+      }
+    } else {
+      sortByTimestamp(newMsgFiles);
+      sortByTimestamp(newDmFiles);
+      allDmFiles = newDmFiles;
+    }
+
+    if (allKeys.length > 0) {
+      var sorted = allKeys.slice().sort();
+      var candidate = sorted[sorted.length - 1];
+      if (!lastListedKey || candidate > lastListedKey) {
+        lastListedKey = candidate;
+      }
+    }
+
+    var resultFiles = incremental ? allFileNames : newMsgFiles;
     try {
-      sessionStorage.setItem(SS_LISTING_KEY, JSON.stringify({ ts: Date.now(), files: msgFiles, dmFiles: dmFiles }));
+      sessionStorage.setItem(SS_LISTING_KEY, JSON.stringify({
+        ts: Date.now(),
+        files: incremental ? allFileNames : newMsgFiles,
+        dmFiles: allDmFiles,
+        lastKey: lastListedKey
+      }));
     } catch (e) { /* */ }
 
-    return msgFiles;
+    return resultFiles;
   }
 
   async function fetchAndRenderFeed() {
@@ -969,19 +1026,77 @@
     document.removeEventListener('visibilitychange', onVisibilityChange);
   }
 
+  function resetInactivityTimer() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(collapseByInactivity, INACTIVITY_TIMEOUT);
+  }
+
+  function stopInactivityTimer() {
+    if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = null; }
+  }
+
+  function collapseByInactivity() {
+    if (!els.chatSection) return;
+    var isCollapsed = els.chatSection.classList.contains('news-view__chat--collapsed');
+    if (isCollapsed) return;
+    toggleChat();
+  }
+
   function onVisibilityChange() {
     if (document.visibilityState === 'visible' && isInitialized) {
-      checkForNewMessages();
+      checkForNewMessagesFull();
+      resetInactivityTimer();
     }
   }
 
   async function checkForNewMessages() {
     try {
+      var prevMsgCount = allFileNames.length;
+      var prevDmCount = allDmFiles.length;
+
+      await fetchFileList(false, true);
+
+      var newMsgFiles = allFileNames.slice(prevMsgCount);
+      var newDmFilesArr = allDmFiles.slice(prevDmCount);
+
+      var changed = false;
+      if (newMsgFiles.length > 0) {
+        var newMsgs = await Promise.all(newMsgFiles.map(fetchMessage));
+        var valid = newMsgs.filter(Boolean);
+        loadedMessages.push.apply(loadedMessages, valid);
+        loadedMessages.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+        changed = true;
+      }
+
+      var dmChanged = false;
+      if (allDmsLoaded && newDmFilesArr.length > 0) {
+        var dmMsgs = await Promise.all(newDmFilesArr.map(fetchMessage));
+        var validDm = dmMsgs.filter(function (m) {
+          return m && (m.author_hash === userHash || (m.private && m.private.to_hash === userHash));
+        });
+        if (validDm.length > 0) {
+          loadedDmMessages.push.apply(loadedDmMessages, validDm);
+          loadedDmMessages.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+          dmChanged = true;
+        }
+      }
+
+      if (changed || dmChanged) {
+        var wasAtBottom = isScrolledToBottom();
+        renderMessages();
+        if (wasAtBottom) scrollToBottom();
+      }
+    } catch (err) {
+      console.error('Poll error:', err);
+    }
+  }
+
+  async function checkForNewMessagesFull() {
+    try {
       var prevMsgSet = new Set(allFileNames);
       var prevDmSet = new Set(allDmFiles);
 
-      var freshMsgList = await fetchFileList(false);
-      // allDmFiles is now updated by fetchFileList
+      var freshMsgList = await fetchFileList(false, false);
 
       var newMsgFiles = freshMsgList.filter(function (f) { return !prevMsgSet.has(f); });
       var deletedMsgSet = new Set();
@@ -1032,7 +1147,7 @@
         if (wasAtBottom) scrollToBottom();
       }
     } catch (err) {
-      console.error('Poll error:', err);
+      console.error('Full refresh error:', err);
     }
   }
 
@@ -1049,8 +1164,11 @@
       if (typeof window.closeNewsView === 'function') window.closeNewsView();
     });
 
-    if (els.refresh) els.refresh.addEventListener('click', () => {
+    if (els.refresh) els.refresh.addEventListener('click', function () {
       try { sessionStorage.removeItem(SS_LISTING_KEY); } catch (e) { /* */ }
+      lastListedKey = '';
+      allMessagesLoaded = false;
+      allDmsLoaded = false;
       if (boardLoaded) loadBoard();
       if (chatLoaded) fetchAndRenderFeed();
     });
@@ -1213,6 +1331,22 @@
       if (els.editModal) els.editModal.hidden = true;
       editingFilename = null;
     });
+
+    var activityEvents = ['scroll', 'click', 'touchstart', 'keydown'];
+    var activityContainer = els.body || document.getElementById('newsView');
+    function onChatActivity() {
+      if (els.chatSection && !els.chatSection.classList.contains('news-view__chat--collapsed')) {
+        resetInactivityTimer();
+      }
+    }
+    if (activityContainer) {
+      activityEvents.forEach(function (evtName) {
+        activityContainer.addEventListener(evtName, onChatActivity, { passive: true });
+      });
+    }
+    if (els.textInput) {
+      els.textInput.addEventListener('input', onChatActivity, { passive: true });
+    }
   }
 
   function autoResizeTextarea() {
@@ -1288,6 +1422,17 @@
       if (keyEl) keys.push(keyEl.textContent);
     });
     return keys;
+  }
+
+  function parseS3ListXmlMeta(xmlText) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xmlText, 'text/xml');
+    var truncEl = doc.querySelector('IsTruncated');
+    var tokenEl = doc.querySelector('NextContinuationToken');
+    return {
+      isTruncated: truncEl ? truncEl.textContent === 'true' : false,
+      nextToken: tokenEl ? tokenEl.textContent : null
+    };
   }
 
   function sanitizeFilename(name) {
