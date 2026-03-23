@@ -50,6 +50,12 @@
   let isLoadingMore = false;
   let boardLoaded = false;
   let chatLoaded = false;
+  let pendingReply = null;
+  let activeFilter = 'all';
+  let allDmFiles = [];
+  let loadedDmMessages = [];
+  let allMessagesLoaded = false;
+  let allDmsLoaded = false;
 
   // ═══════════════════════════════════════════
   // DOM REFERENCES
@@ -110,6 +116,12 @@
       back:           document.getElementById('newsBack'),
       refresh:        document.getElementById('newsRefresh'),
       settings:       document.getElementById('newsSettings'),
+      chatFilters:    document.getElementById('chatFilters'),
+      replyPreview:   document.getElementById('newsReplyPreview'),
+      replyAuthor:    document.getElementById('newsReplyAuthor'),
+      replyText:      document.getElementById('newsReplyText'),
+      replyBadge:     document.getElementById('newsReplyBadge'),
+      replyClose:     document.getElementById('newsReplyClose'),
     };
 
     chatClient = new AwsClient({
@@ -149,6 +161,12 @@
     isLoadingMore = false;
     boardLoaded = false;
     chatLoaded = false;
+    activeFilter = 'all';
+    allDmFiles = [];
+    loadedDmMessages = [];
+    allMessagesLoaded = false;
+    allDmsLoaded = false;
+    pendingReply = null;
   }
 
   // ═══════════════════════════════════════════
@@ -195,6 +213,8 @@
     var isCollapsed = els.chatSection.classList.toggle('news-view__chat--collapsed');
     if (els.chatArrow) els.chatArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
     if (els.inputBar) els.inputBar.hidden = isCollapsed;
+    if (els.chatFilters) els.chatFilters.hidden = isCollapsed || !userHash;
+    if (els.replyPreview && isCollapsed) els.replyPreview.hidden = true;
 
     if (!isCollapsed) {
       if (!chatLoaded) {
@@ -260,6 +280,7 @@
     if (els.mediaBtn) els.mediaBtn.disabled = false;
     if (els.attachBtn) els.attachBtn.disabled = false;
     if (els.textInput) els.textInput.placeholder = 'Сообщение...';
+    if (els.chatFilters) els.chatFilters.hidden = false;
     updateSendBtnState();
   }
 
@@ -268,6 +289,7 @@
     if (els.sendBtn) els.sendBtn.disabled = true;
     if (els.mediaBtn) els.mediaBtn.disabled = true;
     if (els.attachBtn) els.attachBtn.disabled = true;
+    if (els.chatFilters) els.chatFilters.hidden = true;
   }
 
   function showAuthModal() {
@@ -353,31 +375,41 @@
   // ═══════════════════════════════════════════
   // LISTING & FETCHING
   // ═══════════════════════════════════════════
+  function sortByTimestamp(arr) {
+    arr.sort(function (a, b) {
+      var ta = parseInt(a.replace('messages/', '').split('-')[0], 10) || 0;
+      var tb = parseInt(b.replace('messages/', '').split('-')[0], 10) || 0;
+      return ta - tb;
+    });
+  }
+
   async function fetchFileList(useCache) {
     if (useCache) {
       try {
-        const raw = sessionStorage.getItem(SS_LISTING_KEY);
+        var raw = sessionStorage.getItem(SS_LISTING_KEY);
         if (raw) {
-          const cached = JSON.parse(raw);
-          if (Date.now() - cached.ts < LISTING_CACHE_TTL) return cached.files;
+          var cached = JSON.parse(raw);
+          if (Date.now() - cached.ts < LISTING_CACHE_TTL) {
+            if (cached.dmFiles) allDmFiles = cached.dmFiles;
+            return cached.files;
+          }
         }
       } catch (e) { /* */ }
     }
 
-    const url = S3_ENDPOINT + '/' + CHAT_BUCKET + '?list-type=2&prefix=messages/&max-keys=1000';
-    const res = await chatClient.fetch(url);
+    var url = S3_ENDPOINT + '/' + CHAT_BUCKET + '?list-type=2&prefix=messages/&max-keys=1000';
+    var res = await chatClient.fetch(url);
     if (!res.ok) throw new Error('ListObjects failed: ' + res.status);
-    const xmlText = await res.text();
-    const keys = parseS3ListXml(xmlText);
-    const msgFiles = keys.filter(k => k.endsWith('-msg.json'));
-    msgFiles.sort((a, b) => {
-      const ta = parseInt(a.replace('messages/', '').split('-')[0], 10) || 0;
-      const tb = parseInt(b.replace('messages/', '').split('-')[0], 10) || 0;
-      return ta - tb;
-    });
+    var xmlText = await res.text();
+    var keys = parseS3ListXml(xmlText);
+    var msgFiles = keys.filter(function (k) { return k.endsWith('-msg.json'); });
+    var dmFiles = keys.filter(function (k) { return k.endsWith('-dm.json'); });
+    sortByTimestamp(msgFiles);
+    sortByTimestamp(dmFiles);
+    allDmFiles = dmFiles;
 
     try {
-      sessionStorage.setItem(SS_LISTING_KEY, JSON.stringify({ ts: Date.now(), files: msgFiles }));
+      sessionStorage.setItem(SS_LISTING_KEY, JSON.stringify({ ts: Date.now(), files: msgFiles, dmFiles: dmFiles }));
     } catch (e) { /* */ }
 
     return msgFiles;
@@ -451,14 +483,18 @@
     els.chatFeed.innerHTML = '';
     renderedSet.clear();
 
-    if (loadedMessages.length === 0) {
-      if (els.chatEmpty) els.chatEmpty.hidden = false;
+    var filtered = getFilteredMessages();
+    if (filtered.length === 0) {
+      if (els.chatEmpty) {
+        els.chatEmpty.hidden = false;
+        els.chatEmpty.textContent = getEmptyMessage();
+      }
       return;
     }
     if (els.chatEmpty) els.chatEmpty.hidden = true;
 
-    loadedMessages.forEach(msg => {
-      const el = createMessageElement(msg);
+    filtered.forEach(function (msg) {
+      var el = createMessageElement(msg);
       els.chatFeed.appendChild(el);
       renderedSet.add(msg._filename);
     });
@@ -482,6 +518,14 @@
     html += '<span class="news-msg__author" style="color:' + authorColor + '">' + escapeHtml(msg.author || '???') + '</span>';
     html += '<span class="news-msg__time">' + relativeTime(msg.ts) + '</span>';
     html += '</div>';
+
+    if (msg.reply_to && msg.reply_to.author) {
+      var quoteColor = msg.reply_to.hash ? hashToColor(msg.reply_to.hash) : 'var(--accent)';
+      html += '<div class="news-msg__quote" style="border-left-color:' + quoteColor + '">';
+      html += '<span class="news-msg__quote-author" style="color:' + quoteColor + '">' + escapeHtml(msg.reply_to.author) + '</span>';
+      html += '<span class="news-msg__quote-text">' + escapeHtml(msg.reply_to.text || '') + '</span>';
+      html += '</div>';
+    }
 
     // Text
     if (msg.text) {
@@ -515,7 +559,26 @@
       html += '<span class="news-msg__edited">(изменено)</span>';
     }
 
-    // Own message actions
+    if (userHash) {
+      var snippetText = escapeHtml((msg.text || '').substring(0, 25));
+      html += '<div class="news-msg__reply-actions">';
+      html += '<button type="button" class="news-msg__reply-btn"'
+        + ' data-filename="' + escapeHtml(msg._filename || '') + '"'
+        + ' data-author="' + escapeHtml(msg.author || '') + '"'
+        + ' data-hash="' + escapeHtml(msg.author_hash || '') + '"'
+        + ' data-text="' + snippetText + '"'
+        + ' aria-label="Ответить">\u21A9\uFE0F</button>';
+      if (!isOwn) {
+        html += '<button type="button" class="news-msg__dm-btn"'
+          + ' data-filename="' + escapeHtml(msg._filename || '') + '"'
+          + ' data-author="' + escapeHtml(msg.author || '') + '"'
+          + ' data-hash="' + escapeHtml(msg.author_hash || '') + '"'
+          + ' data-text="' + snippetText + '"'
+          + ' aria-label="В личку">\uD83D\uDD12</button>';
+      }
+      html += '</div>';
+    }
+
     if (isOwn) {
       html += '<div class="news-msg__actions">';
       html += '<button type="button" class="news-msg__edit-btn" data-filename="' + escapeHtml(msg._filename || '') + '" aria-label="Изменить">\u270F\uFE0F</button>';
@@ -568,6 +631,99 @@
     if (els.body) {
       setTimeout(() => { els.body.scrollTop = els.body.scrollHeight; }, 50);
     }
+  }
+
+  // ═══════════════════════════════════════════
+  // FILTERS & REPLIES
+  // ═══════════════════════════════════════════
+  function getFilteredMessages() {
+    if (activeFilter === 'all') {
+      return loadedMessages.filter(function (m) { return !m.private; });
+    }
+    if (activeFilter === 'replies') {
+      var repliesToMe = loadedMessages.filter(function (m) {
+        return !m.private && m.reply_to && m.reply_to.hash === userHash;
+      });
+      var originFilenames = new Set(repliesToMe.map(function (m) { return m.reply_to.filename; }));
+      var myOriginals = loadedMessages.filter(function (m) { return originFilenames.has(m._filename); });
+      var combined = new Map();
+      myOriginals.forEach(function (m) { combined.set(m._filename, m); });
+      repliesToMe.forEach(function (m) { combined.set(m._filename, m); });
+      var result = Array.from(combined.values());
+      result.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+      return result;
+    }
+    if (activeFilter === 'dm') {
+      return loadedDmMessages.filter(function (m) {
+        return m.author_hash === userHash || (m.private && m.private.to_hash === userHash);
+      });
+    }
+    return loadedMessages;
+  }
+
+  function getEmptyMessage() {
+    if (activeFilter === 'replies') return 'Пока нет ответов на ваши сообщения.';
+    if (activeFilter === 'dm') return 'Пока нет личных сообщений.';
+    return 'Пока нет сообщений. Будьте первым!';
+  }
+
+  async function ensureAllMessagesLoaded() {
+    if (allMessagesLoaded) return;
+    var loadedNames = new Set(loadedMessages.map(function (m) { return m._filename; }));
+    var remaining = allFileNames.filter(function (f) { return !loadedNames.has(f); });
+    if (remaining.length === 0) { allMessagesLoaded = true; return; }
+    if (els.chatLoader) els.chatLoader.hidden = false;
+    var msgs = await Promise.all(remaining.map(fetchMessage));
+    var valid = msgs.filter(Boolean);
+    loadedMessages = loadedMessages.concat(valid);
+    loadedMessages.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    allMessagesLoaded = true;
+    if (els.chatLoader) els.chatLoader.hidden = true;
+  }
+
+  async function ensureAllDmsLoaded() {
+    if (allDmsLoaded) return;
+    if (allDmFiles.length === 0) { allDmsLoaded = true; return; }
+    if (els.chatLoader) els.chatLoader.hidden = false;
+    var msgs = await Promise.all(allDmFiles.map(fetchMessage));
+    var valid = msgs.filter(Boolean);
+    loadedDmMessages = valid.filter(function (m) {
+      return m.author_hash === userHash || (m.private && m.private.to_hash === userHash);
+    });
+    loadedDmMessages.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    allDmsLoaded = true;
+    if (els.chatLoader) els.chatLoader.hidden = true;
+  }
+
+  async function setFilter(filter) {
+    activeFilter = filter;
+    document.querySelectorAll('.news-view__filter-btn').forEach(function (btn) {
+      btn.classList.toggle('news-view__filter-btn--active', btn.dataset.filter === filter);
+    });
+    if (filter === 'replies') await ensureAllMessagesLoaded();
+    if (filter === 'dm') await ensureAllDmsLoaded();
+    renderMessages();
+    if (filter === 'all') scrollToBottom();
+    updateSendBtnState();
+  }
+
+  function setPendingReply(data, isDm) {
+    pendingReply = {
+      hash: data.hash,
+      author: data.author,
+      text: data.text,
+      filename: data.filename,
+      isDm: isDm
+    };
+    if (els.replyPreview) els.replyPreview.hidden = false;
+    if (els.replyAuthor) {
+      els.replyAuthor.textContent = (isDm ? '\uD83D\uDD12 ' : '\u21A9 ') + data.author;
+      els.replyAuthor.style.color = data.hash ? hashToColor(data.hash) : '';
+    }
+    if (els.replyText) els.replyText.textContent = data.text || '';
+    if (els.replyBadge) els.replyBadge.hidden = !isDm;
+    if (els.textInput) els.textInput.focus();
+    updateSendBtnState();
   }
 
   // ═══════════════════════════════════════════
@@ -631,6 +787,7 @@
       }
 
       // Build message JSON
+      var isDm = pendingReply && pendingReply.isDm;
       const messageData = {
         v: 1,
         author: callsign,
@@ -639,10 +796,21 @@
         media: mediaArr,
         attachments: attachArr,
         ts: ts,
-        edited_at: null
+        edited_at: null,
+        reply_to: pendingReply ? {
+          hash: pendingReply.hash,
+          author: pendingReply.author,
+          text: pendingReply.text,
+          filename: pendingReply.filename
+        } : null,
+        private: isDm ? {
+          to_hash: pendingReply.hash,
+          to_author: pendingReply.author
+        } : null
       };
 
-      const msgFilename = ts + '-' + userHash + '-msg.json';
+      var msgType = isDm ? 'dm' : 'msg';
+      const msgFilename = ts + '-' + userHash + '-' + msgType + '.json';
       const msgKey = 'messages/' + msgFilename;
       await chatClient.fetch(S3_ENDPOINT + '/' + CHAT_BUCKET + '/' + msgKey, {
         method: 'PUT',
@@ -650,11 +818,15 @@
         body: JSON.stringify(messageData)
       });
 
-      // Optimistic update
       messageData._filename = msgKey;
       messageData._name = msgFilename;
-      loadedMessages.push(messageData);
-      allFileNames.push(msgKey);
+      if (isDm) {
+        loadedDmMessages.push(messageData);
+        allDmFiles.push(msgKey);
+      } else {
+        loadedMessages.push(messageData);
+        allFileNames.push(msgKey);
+      }
       renderMessages();
       scrollToBottom();
 
@@ -805,26 +977,57 @@
 
   async function checkForNewMessages() {
     try {
-      const freshList = await fetchFileList(false);
-      const currentSet = new Set(allFileNames);
-      const newFiles = freshList.filter(f => !currentSet.has(f));
-      const deletedFiles = new Set(allFileNames.filter(f => !freshList.includes(f)));
+      var prevMsgSet = new Set(allFileNames);
+      var prevDmSet = new Set(allDmFiles);
 
-      if (deletedFiles.size > 0) {
-        loadedMessages = loadedMessages.filter(m => !deletedFiles.has(m._filename));
+      var freshMsgList = await fetchFileList(false);
+      // allDmFiles is now updated by fetchFileList
+
+      var newMsgFiles = freshMsgList.filter(function (f) { return !prevMsgSet.has(f); });
+      var deletedMsgSet = new Set();
+      prevMsgSet.forEach(function (f) { if (freshMsgList.indexOf(f) === -1) deletedMsgSet.add(f); });
+
+      if (deletedMsgSet.size > 0) {
+        loadedMessages = loadedMessages.filter(function (m) { return !deletedMsgSet.has(m._filename); });
       }
 
-      allFileNames = freshList;
+      allFileNames = freshMsgList;
 
-      if (newFiles.length > 0) {
-        const newMsgs = await Promise.all(newFiles.map(fetchMessage));
-        const valid = newMsgs.filter(Boolean);
-        loadedMessages.push(...valid);
-        loadedMessages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      if (newMsgFiles.length > 0) {
+        var newMsgs = await Promise.all(newMsgFiles.map(fetchMessage));
+        var valid = newMsgs.filter(Boolean);
+        loadedMessages.push.apply(loadedMessages, valid);
+        loadedMessages.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
       }
 
-      if (newFiles.length > 0 || deletedFiles.size > 0) {
-        const wasAtBottom = isScrolledToBottom();
+      var dmChanged = false;
+      if (allDmsLoaded) {
+        var freshDmSet = new Set(allDmFiles);
+        var newDmFiles = allDmFiles.filter(function (f) { return !prevDmSet.has(f); });
+        var deletedDmArr = [];
+        prevDmSet.forEach(function (f) { if (!freshDmSet.has(f)) deletedDmArr.push(f); });
+
+        if (deletedDmArr.length > 0) {
+          var delDmSet = new Set(deletedDmArr);
+          loadedDmMessages = loadedDmMessages.filter(function (m) { return !delDmSet.has(m._filename); });
+          dmChanged = true;
+        }
+
+        if (newDmFiles.length > 0) {
+          var dmMsgs = await Promise.all(newDmFiles.map(fetchMessage));
+          var validDm = dmMsgs.filter(function (m) {
+            return m && (m.author_hash === userHash || (m.private && m.private.to_hash === userHash));
+          });
+          if (validDm.length > 0) {
+            loadedDmMessages.push.apply(loadedDmMessages, validDm);
+            loadedDmMessages.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+            dmChanged = true;
+          }
+        }
+      }
+
+      if (newMsgFiles.length > 0 || deletedMsgSet.size > 0 || dmChanged) {
+        var wasAtBottom = isScrolledToBottom();
         renderMessages();
         if (wasAtBottom) scrollToBottom();
       }
@@ -953,14 +1156,28 @@
 
     if (els.editSave) els.editSave.addEventListener('click', () => saveEdit());
 
-    // Delegate clicks in chatFeed for edit/delete
-    if (els.chatFeed) els.chatFeed.addEventListener('click', (e) => {
-      const editBtn = e.target.closest('.news-msg__edit-btn');
+    if (els.chatFeed) els.chatFeed.addEventListener('click', function (e) {
+      var replyBtn = e.target.closest('.news-msg__reply-btn');
+      if (replyBtn) { setPendingReply(replyBtn.dataset, false); return; }
+      var dmBtn = e.target.closest('.news-msg__dm-btn');
+      if (dmBtn) { setPendingReply(dmBtn.dataset, true); return; }
+      var editBtn = e.target.closest('.news-msg__edit-btn');
       if (editBtn) { openEditModal(editBtn.dataset.filename); return; }
-      const deleteBtn = e.target.closest('.news-msg__delete-btn');
+      var deleteBtn = e.target.closest('.news-msg__delete-btn');
       if (deleteBtn) { deleteMessage(deleteBtn.dataset.filename); return; }
-      const img = e.target.closest('.news-msg__image');
+      var img = e.target.closest('.news-msg__image');
       if (img) { openFullscreenImage(img.src); return; }
+    });
+
+    if (els.chatFilters) els.chatFilters.addEventListener('click', function (e) {
+      var btn = e.target.closest('.news-view__filter-btn');
+      if (btn && btn.dataset.filter) setFilter(btn.dataset.filter);
+    });
+
+    if (els.replyClose) els.replyClose.addEventListener('click', function () {
+      pendingReply = null;
+      if (els.replyPreview) els.replyPreview.hidden = true;
+      updateSendBtnState();
     });
 
     // Scroll-up to load more
@@ -992,9 +1209,21 @@
 
   function updateSendBtnState() {
     if (!els.sendBtn) return;
-    const hasText = els.textInput && els.textInput.value.trim().length > 0;
-    const hasMedia = !!pendingMedia || !!pendingAttach;
-    const hasAuth = !!(callsign && userHash);
+    var hasText = els.textInput && els.textInput.value.trim().length > 0;
+    var hasMedia = !!pendingMedia || !!pendingAttach;
+    var hasAuth = !!(callsign && userHash);
+
+    if (activeFilter === 'dm' && !pendingReply) {
+      els.sendBtn.disabled = true;
+      if (els.textInput) els.textInput.placeholder = 'Нажмите \uD83D\uDD12 на сообщении для ответа в личку';
+      return;
+    }
+    if (els.textInput && activeFilter === 'dm' && pendingReply) {
+      els.textInput.placeholder = 'Личное сообщение...';
+    } else if (els.textInput && els.textInput.placeholder !== 'Сообщение...' && activeFilter !== 'dm') {
+      if (hasAuth) els.textInput.placeholder = 'Сообщение...';
+    }
+
     els.sendBtn.disabled = !(hasAuth && (hasText || hasMedia));
   }
 
@@ -1007,9 +1236,11 @@
   function clearPending() {
     pendingMedia = null;
     pendingAttach = null;
+    pendingReply = null;
     if (els.preview) els.preview.hidden = true;
     if (els.previewName) els.previewName.textContent = '';
     if (els.previewSize) els.previewSize.textContent = '';
+    if (els.replyPreview) els.replyPreview.hidden = true;
   }
 
   function openFullscreenImage(src) {
