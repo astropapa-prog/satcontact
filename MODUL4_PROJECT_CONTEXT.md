@@ -81,6 +81,7 @@ Rule 2:
       "Authorization",
       "Content-Type",
       "Content-Length",
+      "Cache-Control",
       "x-amz-content-sha256",
       "x-amz-date"
     ],
@@ -909,7 +910,7 @@ CORS обновлён. Финальная конфигурация бакета 
 Параметр	Значение
 AllowedOrigins	*
 AllowedMethods	HEAD, GET, PUT, DELETE
-AllowedHeaders	Authorization, Content-Type, Content-Length, x-amz-content-sha256, x-amz-date
+AllowedHeaders	Authorization, Content-Type, Content-Length, Cache-Control, x-amz-content-sha256, x-amz-date
 ExposeHeaders	ETag, x-amz-request-id
 MaxAgeSeconds	86400
 
