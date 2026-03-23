@@ -48,6 +48,8 @@
   let editingFilename = null;
   let isInitialized = false;
   let isLoadingMore = false;
+  let boardLoaded = false;
+  let chatLoaded = false;
 
   // ═══════════════════════════════════════════
   // DOM REFERENCES
@@ -60,12 +62,17 @@
   window.initNews = initNews;
   window.cleanupNews = cleanupNews;
 
+  // TODO [PWA]: migrate checkBoardForUpdates to Service Worker for background detection
+  window.checkBoardForUpdates = checkBoardForUpdates;
+
   // ═══════════════════════════════════════════
   // LIFECYCLE
   // ═══════════════════════════════════════════
   function initNews() {
     if (isInitialized) return;
     isInitialized = true;
+    boardLoaded = false;
+    chatLoaded = false;
 
     els = {
       body:           document.getElementById('newsBody'),
@@ -73,6 +80,10 @@
       boardArrow:     document.getElementById('newsBoardArrow'),
       boardContent:   document.getElementById('boardContent'),
       boardSection:   document.getElementById('newsBoard'),
+      chatToggle:     document.getElementById('newsChatToggle'),
+      chatArrow:      document.getElementById('newsChatArrow'),
+      chatContent:    document.getElementById('chatContent'),
+      chatSection:    document.getElementById('newsChat'),
       chatFeed:       document.getElementById('chatFeed'),
       chatLoader:     document.getElementById('chatLoader'),
       chatEmpty:      document.getElementById('chatEmpty'),
@@ -106,11 +117,21 @@
       service: 's3'
     });
 
-    loadBoard();
+    var boardShouldExpand = localStorage.getItem(LS_BOARD_COLLAPSED) === '0';
+    if (boardShouldExpand) {
+      if (els.boardArrow) els.boardArrow.textContent = '\u25BE';
+      loadBoard();
+    } else {
+      if (els.boardSection) els.boardSection.classList.add('news-view__board--collapsed');
+      if (els.boardArrow) els.boardArrow.textContent = '\u25B8';
+    }
+
+    if (els.chatSection) els.chatSection.classList.add('news-view__chat--collapsed');
+    if (els.chatArrow) els.chatArrow.textContent = '\u25B8';
+    if (els.inputBar) els.inputBar.hidden = true;
+
     checkAuth();
-    fetchAndRenderFeed();
     bindEvents();
-    startPolling();
   }
 
   function cleanupNews() {
@@ -124,6 +145,8 @@
     editingFilename = null;
     isInitialized = false;
     isLoadingMore = false;
+    boardLoaded = false;
+    chatLoaded = false;
   }
 
   // ═══════════════════════════════════════════
@@ -131,22 +154,17 @@
   // ═══════════════════════════════════════════
   async function loadBoard() {
     if (!els.boardContent) return;
+    boardLoaded = true;
 
     try {
-      const cached = localStorage.getItem(LS_BOARD_CACHE);
+      var cached = localStorage.getItem(LS_BOARD_CACHE);
       if (cached) els.boardContent.innerHTML = cached;
     } catch (e) { /* localStorage unavailable */ }
 
-    const collapsed = localStorage.getItem(LS_BOARD_COLLAPSED) === '1';
-    if (collapsed && els.boardSection) {
-      els.boardSection.classList.add('news-view__board--collapsed');
-      if (els.boardArrow) els.boardArrow.textContent = '\u25B8';
-    }
-
     try {
-      const res = await fetch(BOARD_PATH);
+      var res = await fetch(BOARD_PATH);
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const html = await res.text();
+      var html = await res.text();
       els.boardContent.innerHTML = html;
       try { localStorage.setItem(LS_BOARD_CACHE, html); } catch (e) { /* */ }
     } catch (err) {
@@ -154,13 +172,54 @@
         els.boardContent.innerHTML = '<p style="color:var(--text-secondary)">Доска объявлений недоступна</p>';
       }
     }
+
+    var btn = document.getElementById('newsBtn');
+    if (btn) btn.classList.remove('btn--news-updated');
   }
 
   function toggleBoard() {
     if (!els.boardSection) return;
-    const isCollapsed = els.boardSection.classList.toggle('news-view__board--collapsed');
+    var isCollapsed = els.boardSection.classList.toggle('news-view__board--collapsed');
     if (els.boardArrow) els.boardArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
     try { localStorage.setItem(LS_BOARD_COLLAPSED, isCollapsed ? '1' : '0'); } catch (e) { /* */ }
+
+    if (!isCollapsed && !boardLoaded) {
+      loadBoard();
+    }
+  }
+
+  function toggleChat() {
+    if (!els.chatSection) return;
+    var isCollapsed = els.chatSection.classList.toggle('news-view__chat--collapsed');
+    if (els.chatArrow) els.chatArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
+    if (els.inputBar) els.inputBar.hidden = isCollapsed;
+
+    if (!isCollapsed) {
+      if (!chatLoaded) {
+        chatLoaded = true;
+        fetchAndRenderFeed();
+      } else {
+        checkForNewMessages();
+      }
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  }
+
+  // TODO [PWA]: migrate to Service Worker for background board update detection
+  async function checkBoardForUpdates() {
+    try {
+      var res = await fetch(BOARD_PATH, { cache: 'no-cache' });
+      if (!res.ok) return;
+      var html = await res.text();
+      var cached = '';
+      try { cached = localStorage.getItem(LS_BOARD_CACHE) || ''; } catch (e) { /* */ }
+      if (cached && cached !== html) {
+        var btn = document.getElementById('newsBtn');
+        if (btn) btn.classList.add('btn--news-updated');
+      }
+    } catch (e) { /* network unavailable — skip */ }
   }
 
   // ═══════════════════════════════════════════
@@ -716,12 +775,14 @@
 
     if (els.refresh) els.refresh.addEventListener('click', () => {
       try { sessionStorage.removeItem(SS_LISTING_KEY); } catch (e) { /* */ }
-      fetchAndRenderFeed();
+      if (boardLoaded) loadBoard();
+      if (chatLoaded) fetchAndRenderFeed();
     });
 
     if (els.settings) els.settings.addEventListener('click', () => showAuthModal());
 
     if (els.boardToggle) els.boardToggle.addEventListener('click', () => toggleBoard());
+    if (els.chatToggle) els.chatToggle.addEventListener('click', () => toggleChat());
 
     if (els.callsignBtn) els.callsignBtn.addEventListener('click', () => {
       const val = els.callsignInput ? els.callsignInput.value : '';

@@ -14,7 +14,7 @@
   <div class="app">
     <header class="header" id="header">
       <div class="header__top">
-        <h1 class="header__title" id="headerTitle" role="button" tabindex="0" style="cursor:pointer;">SAT Навигатор</h1>
+        <button type="button" class="btn btn--news" id="newsBtn">НОВОСТИ</button>
         <select class="group-select" id="groupSelect" aria-label="Группа">
           <option value="">Загрузка...</option>
         </select>
@@ -169,10 +169,15 @@
           </div>
         </section>
         <section class="news-view__chat" id="newsChat">
-          <div class="news-view__chat-loader" id="chatLoader" hidden>Загрузка сообщений...</div>
-          <div class="news-view__chat-feed" id="chatFeed"></div>
-          <div class="news-view__chat-empty" id="chatEmpty" hidden>
-            Пока нет сообщений. Будьте первым!
+          <button type="button" class="news-view__chat-toggle" id="newsChatToggle">
+            &#x1F4AC; ЧАТ <span id="newsChatArrow">&#x25B8;</span>
+          </button>
+          <div class="news-view__chat-content" id="chatContent">
+            <div class="news-view__chat-loader" id="chatLoader" hidden>Загрузка сообщений...</div>
+            <div class="news-view__chat-feed" id="chatFeed"></div>
+            <div class="news-view__chat-empty" id="chatEmpty" hidden>
+              Пока нет сообщений. Будьте первым!
+            </div>
           </div>
         </section>
       </div>

@@ -899,18 +899,19 @@
     arView = document.getElementById('arView');
     newsView = document.getElementById('newsView');
 
-    const headerTitle = document.getElementById('headerTitle');
-    if (headerTitle) {
-      headerTitle.addEventListener('click', () => openNewsView());
-      headerTitle.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNewsView(); }
-      });
+    const newsBtn = document.getElementById('newsBtn');
+    if (newsBtn) {
+      newsBtn.addEventListener('click', () => openNewsView());
     }
 
     bindMapButtons();
     bindMapFocusRibbon();
     window.addEventListener('resize', updateRibbonBottomOffset);
     loadData();
+
+    if (typeof window.checkBoardForUpdates === 'function') {
+      window.checkBoardForUpdates();
+    }
   }
 
   window.getSatContactFilteredEntries = function () {

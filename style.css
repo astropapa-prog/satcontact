@@ -68,11 +68,45 @@ body {
   margin-bottom: 6px;
 }
 
-.header__title {
-  margin: 0;
-  font-size: 1rem;
+/* ---------- News button (Module 4 entry) ---------- */
+.btn--news {
   font-weight: 600;
-  flex-shrink: 0;
+  letter-spacing: 0.05em;
+  background: rgba(82, 136, 193, 0.15);
+  border-color: rgba(82, 136, 193, 0.3);
+  color: var(--text-secondary);
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.btn--news:hover,
+.btn--news:focus {
+  background: rgba(82, 136, 193, 0.3);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.btn--news-updated {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(270deg, #f5a623, #7ed321, #f8e71c, #f5a623);
+  background-size: 600% 100%;
+  animation: newsShimmer 3s ease infinite;
+}
+
+.btn--news-updated:hover,
+.btn--news-updated:focus {
+  background: linear-gradient(270deg, #f5a623, #7ed321, #f8e71c, #f5a623);
+  background-size: 600% 100%;
+  animation: newsShimmer 3s ease infinite;
+  border-color: transparent;
+  filter: brightness(1.15);
+}
+
+@keyframes newsShimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .group-select {
@@ -463,10 +497,6 @@ body {
   .header {
     padding: 8px 16px;
     padding-top: calc(8px + var(--safe-top));
-  }
-
-  .header__title {
-    font-size: 1.125rem;
   }
 
   .main {
@@ -1601,8 +1631,40 @@ body {
 
 /* ---------- Chat ---------- */
 .news-view__chat {
+  background: #1a2530;
+  border-top: 1px solid #2a3a4a;
+  padding: 0;
+}
+
+.news-view__chat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.news-view__chat-toggle:hover,
+.news-view__chat-toggle:focus {
+  background: rgba(82, 136, 193, 0.1);
+  outline: none;
+}
+
+.news-view__chat-content {
   padding: 8px 0;
   min-height: 200px;
+}
+
+.news-view__chat--collapsed .news-view__chat-content {
+  display: none;
 }
 
 .news-view__chat-loader {
