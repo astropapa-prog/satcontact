@@ -184,11 +184,14 @@
       <div class="news-view__auth-modal" id="newsAuthModal" hidden>
         <div class="news-view__auth-overlay"></div>
         <div class="news-view__auth-box">
-          <h3>Введите ваш позывной</h3>
+          <h3>Вход в чат</h3>
           <input type="text" id="newsCallsignInput" class="news-view__auth-input"
-                 placeholder="UA9XXX" autocomplete="off" spellcheck="false" maxlength="20">
+                 placeholder="UA9XXX" autocomplete="off" spellcheck="false" maxlength="12">
+          <input type="password" id="newsPasswordInput" class="news-view__auth-input"
+                 placeholder="Пароль (минимум 8 символов)" autocomplete="off">
+          <p class="news-view__auth-error" id="newsAuthError" hidden></p>
           <button type="button" id="newsCallsignBtn" class="news-view__auth-btn">Войти в чат</button>
-          <p class="news-view__auth-hint">Позывной будет виден другим пользователям</p>
+          <p class="news-view__auth-hint">Позывной будет виден в чате. Пароль нужен для защиты имени.</p>
         </div>
       </div>
       <div class="news-view__input-bar" id="newsInputBar">

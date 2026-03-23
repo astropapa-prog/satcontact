@@ -89,6 +89,8 @@
       chatEmpty:      document.getElementById('chatEmpty'),
       authModal:      document.getElementById('newsAuthModal'),
       callsignInput:  document.getElementById('newsCallsignInput'),
+      passwordInput:  document.getElementById('newsPasswordInput'),
+      authError:      document.getElementById('newsAuthError'),
       callsignBtn:    document.getElementById('newsCallsignBtn'),
       inputBar:       document.getElementById('newsInputBar'),
       textInput:      document.getElementById('newsTextInput'),
@@ -238,10 +240,10 @@
     }
   }
 
-  async function setCallsign(name) {
+  async function setCallsign(name, password) {
     const trimmed = name.trim().toUpperCase();
     if (!trimmed) return;
-    const hash = await computeHash(trimmed);
+    const hash = await computeHash(trimmed + ':' + password);
     callsign = trimmed;
     userHash = hash;
     try {
@@ -275,11 +277,77 @@
       els.callsignInput.value = callsign || '';
       setTimeout(() => els.callsignInput.focus(), 100);
     }
+    if (els.passwordInput) els.passwordInput.value = '';
+    if (els.authError) els.authError.hidden = true;
   }
 
   async function computeHash(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 8);
+  }
+
+  function hashToColor(hash) {
+    var h = parseInt(hash.substring(0, 3), 16) % 360;
+    var s = 40 + (parseInt(hash.substring(3, 5), 16) % 40);
+    var l = 55 + (parseInt(hash.substring(5, 7), 16) % 20);
+    return 'hsl(' + h + ', ' + s + '%, ' + l + '%)';
+  }
+
+  var blockieCache = {};
+
+  function createBlockie(hash, size) {
+    if (blockieCache[hash]) return blockieCache[hash];
+    size = size || 32;
+
+    var seed = parseInt(hash, 16);
+    function xorshift() {
+      seed ^= seed << 13;
+      seed ^= seed >> 17;
+      seed ^= seed << 5;
+      return (seed >>> 0) / 4294967296;
+    }
+
+    function randColor() {
+      var h = Math.floor(xorshift() * 360);
+      var s = 40 + Math.floor(xorshift() * 40);
+      var l = 45 + Math.floor(xorshift() * 30);
+      return 'hsl(' + h + ',' + s + '%,' + l + '%)';
+    }
+
+    var bgColor = randColor();
+    var mainColor = randColor();
+    var accentColor = randColor();
+
+    var grid = 8;
+    var half = grid / 2;
+    var data = [];
+    for (var i = 0; i < grid * half; i++) {
+      var v = Math.floor(xorshift() * 3);
+      data.push(v);
+    }
+
+    var canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    var cell = size / grid;
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, size, size);
+
+    for (var y = 0; y < grid; y++) {
+      for (var x = 0; x < half; x++) {
+        var val = data[y * half + x];
+        if (val === 0) continue;
+        ctx.fillStyle = val === 1 ? mainColor : accentColor;
+        ctx.fillRect(x * cell, y * cell, cell, cell);
+        ctx.fillRect((grid - 1 - x) * cell, y * cell, cell, cell);
+      }
+    }
+
+    var url = canvas.toDataURL();
+    blockieCache[hash] = url;
+    return url;
   }
 
   // ═══════════════════════════════════════════
@@ -406,7 +474,12 @@
 
     // Header: author + time
     html += '<div class="news-msg__header">';
-    html += '<span class="news-msg__author">' + escapeHtml(msg.author || '???') + '</span>';
+    var blockieSrc = msg.author_hash ? createBlockie(msg.author_hash, 32) : '';
+    if (blockieSrc) {
+      html += '<img class="news-msg__avatar" src="' + blockieSrc + '" width="24" height="24" alt="">';
+    }
+    var authorColor = msg.author_hash ? hashToColor(msg.author_hash) : 'var(--accent)';
+    html += '<span class="news-msg__author" style="color:' + authorColor + '">' + escapeHtml(msg.author || '???') + '</span>';
     html += '<span class="news-msg__time">' + relativeTime(msg.ts) + '</span>';
     html += '</div>';
 
@@ -784,17 +857,35 @@
     if (els.boardToggle) els.boardToggle.addEventListener('click', () => toggleBoard());
     if (els.chatToggle) els.chatToggle.addEventListener('click', () => toggleChat());
 
-    if (els.callsignBtn) els.callsignBtn.addEventListener('click', () => {
-      const val = els.callsignInput ? els.callsignInput.value : '';
-      if (val.trim()) setCallsign(val);
+    function validateAndLogin() {
+      var name = els.callsignInput ? els.callsignInput.value : '';
+      var pass = els.passwordInput ? els.passwordInput.value : '';
+      if (!name.trim() || name.trim().length > 12) {
+        if (els.authError) {
+          els.authError.textContent = 'Позывной не может быть пустым и должен быть не длиннее 12 символов';
+          els.authError.hidden = false;
+        }
+        return;
+      }
+      if (pass.length < 8) {
+        if (els.authError) {
+          els.authError.textContent = 'Пароль должен содержать минимум 8 символов';
+          els.authError.hidden = false;
+        }
+        return;
+      }
+      if (els.authError) els.authError.hidden = true;
+      setCallsign(name, pass);
+    }
+
+    if (els.callsignBtn) els.callsignBtn.addEventListener('click', validateAndLogin);
+
+    if (els.callsignInput) els.callsignInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); validateAndLogin(); }
     });
 
-    if (els.callsignInput) els.callsignInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const val = els.callsignInput.value;
-        if (val.trim()) setCallsign(val);
-      }
+    if (els.passwordInput) els.passwordInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); validateAndLogin(); }
     });
 
     if (els.sendBtn) els.sendBtn.addEventListener('click', () => sendMessage());

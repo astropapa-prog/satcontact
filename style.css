@@ -1715,13 +1715,20 @@ body {
 
 .news-msg__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   margin-bottom: 4px;
 }
 
+.news-msg__avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
 .news-msg__author {
-  color: var(--accent);
   font-weight: 600;
   font-size: 0.8125rem;
 }
@@ -2040,6 +2047,20 @@ body {
 .news-view__auth-btn:focus {
   background: var(--accent-hover);
   outline: none;
+}
+
+.news-view__auth-input + .news-view__auth-input {
+  margin-top: 10px;
+}
+
+.news-view__auth-error {
+  margin: 10px 0 0;
+  font-size: 0.8125rem;
+  color: #ff6b6b;
+}
+
+.news-view__auth-error[hidden] {
+  display: none;
 }
 
 .news-view__auth-hint {
