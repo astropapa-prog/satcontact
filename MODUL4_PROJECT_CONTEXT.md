@@ -75,7 +75,9 @@ Rule 2:
       "s3_head",
       "s3_get",
       "s3_put",
-      "s3_delete"
+      "s3_delete",
+      "b2_download_file_by_name",
+      "b2_download_file_by_id"
     ],
     "allowedHeaders": [
       "Authorization",
@@ -909,7 +911,7 @@ CORS обновлён. Финальная конфигурация бакета 
 
 Параметр	Значение
 AllowedOrigins	*
-AllowedMethods	HEAD, GET, PUT, DELETE
+AllowedMethods	HEAD, GET, PUT, DELETE (S3) + b2_download_file_by_name, b2_download_file_by_id (B2 native)
 AllowedHeaders	Authorization, Content-Type, Content-Length, Cache-Control, x-amz-content-sha256, x-amz-date
 ExposeHeaders	ETag, x-amz-request-id
 MaxAgeSeconds	86400
