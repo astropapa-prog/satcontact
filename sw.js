@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'satcontact-v1';
+const CACHE_VERSION = 'satcontact-v2';
 const RUNTIME_CACHE = 'satcontact-runtime';
 
 const PRECACHE_URLS = [
@@ -71,16 +71,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (url.pathname.endsWith('/data/Frequencies.xml')) {
+    event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
+    return;
+  }
+
   event.respondWith(cacheFirst(event.request));
 });
 
 async function handleBoardFetch(request) {
   const cache = await caches.open(RUNTIME_CACHE);
+  const cacheKey = new Request(request.url.split('?')[0], { method: 'GET' });
   try {
-    const networkResponse = await fetch(request, { cache: 'no-store' });
+    const bustUrl = request.url.split('?')[0] + '?_=' + Date.now();
+    const networkResponse = await fetch(bustUrl, { cache: 'no-store' });
     if (networkResponse.ok) {
       const newHtml = await networkResponse.clone().text();
-      const cachedResponse = await cache.match(request);
+      const cachedResponse = await cache.match(cacheKey);
       if (cachedResponse) {
         const oldHtml = await cachedResponse.text();
         if (oldHtml !== newHtml) {
@@ -90,20 +97,20 @@ async function handleBoardFetch(request) {
           });
         }
       }
-      await cache.put(request, networkResponse.clone());
+      await cache.put(cacheKey, networkResponse.clone());
       return networkResponse;
     }
-    const cached = await cache.match(request);
+    const cached = await cache.match(cacheKey);
     return cached || networkResponse;
   } catch (e) {
-    const cached = await cache.match(request);
+    const cached = await cache.match(cacheKey);
     return cached || new Response('Доска объявлений недоступна', { status: 503 });
   }
 }
 
 async function networkFirst(request, cacheName) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     if (response.ok) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());

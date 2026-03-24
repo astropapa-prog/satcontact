@@ -8,14 +8,24 @@
 
   if ('serviceWorker' in navigator) {
     var swController = navigator.serviceWorker.controller;
+    var lastBoardCheck = 0;
+    var BOARD_CHECK_INTERVAL = 5 * 60 * 1000;
+
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (swController) {
         swController = null;
       }
     });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && !swController) {
+      if (document.visibilityState !== 'visible') return;
+      if (!swController) {
         location.reload();
+        return;
+      }
+      var now = Date.now();
+      if (now - lastBoardCheck > BOARD_CHECK_INTERVAL) {
+        lastBoardCheck = now;
+        fetch(window.SatContactResolveUrl('data/board.html')).catch(function () {});
       }
     });
     navigator.serviceWorker.addEventListener('message', function (event) {
