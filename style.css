@@ -1182,6 +1182,60 @@ body {
   transform: translateX(-0.5px);
 }
 
+/* --- Венера, Юпитер, Сириус: белый прицел (аналогично Полярной) --- */
+.ar-view__calib-crosshair--venus,
+.ar-view__calib-crosshair--jupiter,
+.ar-view__calib-crosshair--sirius {
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8) 1.5px, transparent 1.5px);
+  filter: drop-shadow(0 0 6px rgba(180, 220, 255, 0.35));
+  animation: calibCrosshairPulse 2.5s ease-in-out infinite;
+}
+
+.ar-view__calib-crosshair--venus .ar-view__calib-crosshair__inner,
+.ar-view__calib-crosshair--jupiter .ar-view__calib-crosshair__inner,
+.ar-view__calib-crosshair--sirius .ar-view__calib-crosshair__inner {
+  display: block;
+  width: 40px;
+  height: 40px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+}
+
+.ar-view__calib-crosshair--venus::before,
+.ar-view__calib-crosshair--venus::after,
+.ar-view__calib-crosshair--jupiter::before,
+.ar-view__calib-crosshair--jupiter::after,
+.ar-view__calib-crosshair--sirius::before,
+.ar-view__calib-crosshair--sirius::after {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ar-view__calib-crosshair--venus::before,
+.ar-view__calib-crosshair--jupiter::before,
+.ar-view__calib-crosshair--sirius::before {
+  top: 50%;
+  left: -12px;
+  right: -12px;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.ar-view__calib-crosshair--venus::after,
+.ar-view__calib-crosshair--jupiter::after,
+.ar-view__calib-crosshair--sirius::after {
+  left: 50%;
+  top: -12px;
+  bottom: -12px;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
 @keyframes calibCrosshairPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
@@ -1219,13 +1273,6 @@ body {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
-.ar-view__calib-panel-sub {
-  margin: 0;
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-  color: rgba(255, 255, 255, 0.65);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
 
 .ar-view__calib-panel-warn {
   margin: 0;

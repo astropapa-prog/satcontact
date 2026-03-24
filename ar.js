@@ -25,7 +25,8 @@
   let elFallback, elFallbackBack, elCrosshair, elCalibCrosshair;
   let elCalibPhase2;
   let elCalibSun, elCalibMoon, elCalibPolaris;
-  let elCalibFixBtn, elPhase2Instruction, elPhase2NoBodies;
+  let elCalibVenus, elCalibJupiter, elCalibSirius;
+  let elCalibFixBtn, elPhase2NoBodies;
   let elCalibSensorStatus;
   let elRecalibBtn;
   let elArGpsIndicator, elArGpsCoords, elArGpsAge, elArGpsNetBtn;
@@ -53,7 +54,7 @@
 
   /* ====== Калибровочная машина состояний ====== */
   let calibState = 'calibrating';  // 'calibrating' | 'rendering'
-  let selectedCalibBody = null;    // 'sun' | 'moon' | 'polaris'
+  let selectedCalibBody = null;    // 'sun' | 'moon' | 'polaris' | 'venus' | 'jupiter' | 'sirius'
   let celestialAvailTimerId = null;
 
   /* ====== Аудио ====== */
@@ -257,6 +258,86 @@
     const raDeg = (2 + 31 / 60 + 49 / 3600) * 15; // 2h 31m 49s → degrees
     const decDeg = 89 + 15 / 60 + 51 / 3600;       // +89° 15' 51"
     return raDecToAzEl(raDeg, decDeg, observer, date);
+  }
+
+  function getSiriusAzEl(observer, date) {
+    const raDeg = (6 + 45 / 60 + 9 / 3600) * 15;  // 6h 45m 09s → degrees
+    const decDeg = -(16 + 42 / 60 + 58 / 3600);    // −16° 42' 58"
+    return raDecToAzEl(raDeg, decDeg, observer, date);
+  }
+
+  function getVenusAzEl(observer, date) {
+    const T = julianCenturies(date);
+    const Le = ((280.46646 + 36000.76983 * T) % 360 + 360) % 360;
+    const Me = ((357.52911 + 35999.05029 * T) % 360 + 360) % 360;
+    const MeR = Me * DEG;
+    const earthLon = Le + (1.9146 - 0.004817 * T) * Math.sin(MeR)
+                        + 0.019993 * Math.sin(2 * MeR);
+
+    const Lv = ((181.97973 + 58517.81539 * T) % 360 + 360) % 360;
+    const Mv = ((210.33628 + 58517.49325 * T) % 360 + 360) % 360;
+    const MvR = Mv * DEG;
+    const venusLon = Lv + (0.7758 - 0.0033 * T) * Math.sin(MvR)
+                        + 0.0033 * Math.sin(2 * MvR);
+
+    const Re = 1.00014 - 0.01671 * Math.cos(MeR) - 0.00014 * Math.cos(2 * MeR);
+    const Rv = 0.72333 - 0.00489 * Math.cos(MvR) - 0.00002 * Math.cos(2 * MvR);
+
+    const earthLonR = earthLon * DEG;
+    const venusLonR = venusLon * DEG;
+
+    const xh = Rv * Math.cos(venusLonR) - Re * Math.cos(earthLonR);
+    const yh = Rv * Math.sin(venusLonR) - Re * Math.sin(earthLonR);
+    const zh = 0;
+
+    const epsilon = (23.439291 - 0.013004 * T) * DEG;
+    const xeq = xh;
+    const yeq = yh * Math.cos(epsilon) - zh * Math.sin(epsilon);
+    const zeq = yh * Math.sin(epsilon) + zh * Math.cos(epsilon);
+
+    const ra = ((Math.atan2(yeq, xeq) * RAD) % 360 + 360) % 360;
+    const dec = Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq)) * RAD;
+
+    return raDecToAzEl(ra, dec, observer, date);
+  }
+
+  function getJupiterAzEl(observer, date) {
+    const T = julianCenturies(date);
+    const Le = ((280.46646 + 36000.76983 * T) % 360 + 360) % 360;
+    const Me = ((357.52911 + 35999.05029 * T) % 360 + 360) % 360;
+    const MeR = Me * DEG;
+    const earthLon = Le + (1.9146 - 0.004817 * T) * Math.sin(MeR)
+                        + 0.019993 * Math.sin(2 * MeR);
+
+    const Lj = ((34.35148 + 3034.90567 * T) % 360 + 360) % 360;
+    const Mj = ((20.02032 + 3034.69202 * T) % 360 + 360) % 360;
+    const MjR = Mj * DEG;
+    const jupLon = Lj + (5.5549 - 0.0125 * T) * Math.sin(MjR)
+                      + 0.1683 * Math.sin(2 * MjR)
+                      - 0.0066 * Math.sin(3 * MjR);
+
+    const jupLatDeg = -1.3064 + 0.0537 * Math.cos(MjR);
+    const jupLatR = jupLatDeg * DEG;
+
+    const Re = 1.00014 - 0.01671 * Math.cos(MeR) - 0.00014 * Math.cos(2 * MeR);
+    const Rj = 5.20260 - 0.25130 * Math.cos(MjR) - 0.00610 * Math.cos(2 * MjR);
+
+    const earthLonR = earthLon * DEG;
+    const jupLonR = jupLon * DEG;
+
+    const xh = Rj * Math.cos(jupLatR) * Math.cos(jupLonR) - Re * Math.cos(earthLonR);
+    const yh = Rj * Math.cos(jupLatR) * Math.sin(jupLonR) - Re * Math.sin(earthLonR);
+    const zh = Rj * Math.sin(jupLatR);
+
+    const epsilon = (23.439291 - 0.013004 * T) * DEG;
+    const xeq = xh;
+    const yeq = yh * Math.cos(epsilon) - zh * Math.sin(epsilon);
+    const zeq = yh * Math.sin(epsilon) + zh * Math.cos(epsilon);
+
+    const ra = ((Math.atan2(yeq, xeq) * RAD) % 360 + 360) % 360;
+    const dec = Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq)) * RAD;
+
+    return raDecToAzEl(ra, dec, observer, date);
   }
 
   /* ==========================================================================
@@ -467,28 +548,40 @@
     var sunEl = getSunAzEl(obs, now).elevation;
     var moonEl = getMoonAzEl(obs, now).elevation;
     var polarisEl = getPolarisAzEl(obs, now).elevation;
+    var venusEl = getVenusAzEl(obs, now).elevation;
+    var jupiterEl = getJupiterAzEl(obs, now).elevation;
+    var siriusEl = getSiriusAzEl(obs, now).elevation;
 
     var sunOk = sunEl > CELESTIAL_ELEVATION_THRESHOLD;
     var moonOk = moonEl > CELESTIAL_ELEVATION_THRESHOLD;
     var polarisOk = polarisEl > CELESTIAL_ELEVATION_THRESHOLD;
+    var venusOk = venusEl > CELESTIAL_ELEVATION_THRESHOLD;
+    var jupiterOk = jupiterEl > CELESTIAL_ELEVATION_THRESHOLD;
+    var siriusOk = siriusEl > CELESTIAL_ELEVATION_THRESHOLD;
 
     if (elCalibSun) elCalibSun.disabled = !sunOk;
     if (elCalibMoon) elCalibMoon.disabled = !moonOk;
     if (elCalibPolaris) elCalibPolaris.disabled = !polarisOk;
+    if (elCalibVenus) elCalibVenus.disabled = !venusOk;
+    if (elCalibJupiter) elCalibJupiter.disabled = !jupiterOk;
+    if (elCalibSirius) elCalibSirius.disabled = !siriusOk;
 
     if (selectedCalibBody === 'sun' && !sunOk) selectedCalibBody = null;
     if (selectedCalibBody === 'moon' && !moonOk) selectedCalibBody = null;
     if (selectedCalibBody === 'polaris' && !polarisOk) selectedCalibBody = null;
+    if (selectedCalibBody === 'venus' && !venusOk) selectedCalibBody = null;
+    if (selectedCalibBody === 'jupiter' && !jupiterOk) selectedCalibBody = null;
+    if (selectedCalibBody === 'sirius' && !siriusOk) selectedCalibBody = null;
     syncBodySelection();
     updateCalibCrosshair();
 
-    var noneAvailable = !sunOk && !moonOk && !polarisOk;
+    var noneAvailable = !sunOk && !moonOk && !polarisOk && !venusOk && !jupiterOk && !siriusOk;
     if (elPhase2NoBodies) elPhase2NoBodies.hidden = !noneAvailable;
     updatePhase2FixButton();
   }
 
   function syncBodySelection() {
-    [elCalibSun, elCalibMoon, elCalibPolaris].forEach(function (btn) {
+    [elCalibSun, elCalibMoon, elCalibPolaris, elCalibVenus, elCalibJupiter, elCalibSirius].forEach(function (btn) {
       if (btn) btn.classList.toggle('selected', btn.dataset.body === selectedCalibBody);
     });
   }
@@ -500,24 +593,12 @@
     selectedCalibBody = (selectedCalibBody === body) ? null : body;
     syncBodySelection();
     updatePhase2FixButton();
-    updatePhase2Instruction();
     updateCalibCrosshair();
   }
 
   function updatePhase2FixButton() {
     if (!elCalibFixBtn) return;
     elCalibFixBtn.disabled = !selectedCalibBody || !areSensorsReady();
-  }
-
-  function updatePhase2Instruction() {
-    if (!elPhase2Instruction) return;
-    var names = { sun: 'Солнце', moon: 'Луну', polaris: 'Полярную звезду' };
-    if (selectedCalibBody) {
-      elPhase2Instruction.textContent = 'Направьте камеру на ' +
-        (names[selectedCalibBody] || 'тело') + ' и нажмите \u00ABЗафиксировать\u00BB';
-    } else {
-      elPhase2Instruction.textContent = 'Выберите тело и нажмите \u00ABЗафиксировать\u00BB';
-    }
   }
 
   function updateCalibCrosshair() {
@@ -537,10 +618,13 @@
     if (navigator.vibrate) navigator.vibrate(50);
     var now = new Date();
     var obs = { latitude: coords.latitude, longitude: coords.longitude };
-    var truePos;
-    if (selectedCalibBody === 'sun') truePos = getSunAzEl(obs, now);
-    else if (selectedCalibBody === 'moon') truePos = getMoonAzEl(obs, now);
-    else truePos = getPolarisAzEl(obs, now);
+    var bodyFn = {
+      sun: getSunAzEl, moon: getMoonAzEl, polaris: getPolarisAzEl,
+      venus: getVenusAzEl, jupiter: getJupiterAzEl, sirius: getSiriusAzEl
+    };
+    var fn = bodyFn[selectedCalibBody];
+    if (!fn) return;
+    var truePos = fn(obs, now);
     if (!truePos) return;
 
     var sensorAz = ((360 - sensorState.alpha + magneticDeclination) % 360 + 360) % 360;
@@ -982,6 +1066,9 @@
     if (elCalibSun) elCalibSun.addEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.addEventListener('click', onSelectCelestialBody);
     if (elCalibPolaris) elCalibPolaris.addEventListener('click', onSelectCelestialBody);
+    if (elCalibVenus) elCalibVenus.addEventListener('click', onSelectCelestialBody);
+    if (elCalibJupiter) elCalibJupiter.addEventListener('click', onSelectCelestialBody);
+    if (elCalibSirius) elCalibSirius.addEventListener('click', onSelectCelestialBody);
     if (elArGpsNetBtn) elArGpsNetBtn.addEventListener('click', onArNetworkBtnClick);
   }
 
@@ -996,6 +1083,9 @@
     if (elCalibSun) elCalibSun.removeEventListener('click', onSelectCelestialBody);
     if (elCalibMoon) elCalibMoon.removeEventListener('click', onSelectCelestialBody);
     if (elCalibPolaris) elCalibPolaris.removeEventListener('click', onSelectCelestialBody);
+    if (elCalibVenus) elCalibVenus.removeEventListener('click', onSelectCelestialBody);
+    if (elCalibJupiter) elCalibJupiter.removeEventListener('click', onSelectCelestialBody);
+    if (elCalibSirius) elCalibSirius.removeEventListener('click', onSelectCelestialBody);
     if (elArGpsNetBtn) elArGpsNetBtn.removeEventListener('click', onArNetworkBtnClick);
   }
 
@@ -1022,9 +1112,11 @@
     elCalibSun = document.getElementById('arCalibSun');
     elCalibMoon = document.getElementById('arCalibMoon');
     elCalibPolaris = document.getElementById('arCalibPolaris');
+    elCalibVenus = document.getElementById('arCalibVenus');
+    elCalibJupiter = document.getElementById('arCalibJupiter');
+    elCalibSirius = document.getElementById('arCalibSirius');
     elCalibFixBtn = document.getElementById('arCalibFixBtn');
     elCalibSensorStatus = document.getElementById('arCalibSensorStatus');
-    elPhase2Instruction = document.getElementById('arPhase2Instruction');
     elPhase2NoBodies = document.getElementById('arPhase2NoBodies');
     elRecalibBtn = document.getElementById('arRecalibBtn');
     elArGpsIndicator = document.getElementById('arGpsIndicator');
