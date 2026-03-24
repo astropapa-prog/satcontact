@@ -8,10 +8,31 @@
   <meta name="theme-color" content="#1c242d">
   <meta name="description" content="SatContact — менеджер частот для радиолюбителей">
   <title>SatContact</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app">
+    <div class="inapp-overlay" id="inappOverlay" hidden>
+      <div class="inapp-overlay__box">
+        <div class="inapp-overlay__icon">⚠️</div>
+        <p class="inapp-overlay__text">
+          Вы открыли SatContact внутри мессенджера.
+        </p>
+        <p class="inapp-overlay__text">
+          Для корректной работы GPS, компаса и возможности установки
+          приложения на экран телефона, пожалуйста, откройте его
+          в стандартном браузере.
+        </p>
+        <p class="inapp-overlay__hint">
+          👉 Нажмите на меню (три точки) в правом верхнем углу
+          и выберите «Открыть в браузере» (Chrome / Safari).
+        </p>
+      </div>
+    </div>
     <header class="header" id="header">
       <div class="header__top">
         <button type="button" class="btn btn--news" id="newsBtn">НОВОСТИ</button>

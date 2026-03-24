@@ -71,9 +71,6 @@
   window.initNews = initNews;
   window.cleanupNews = cleanupNews;
 
-  // TODO [PWA]: migrate checkBoardForUpdates to Service Worker for background detection
-  window.checkBoardForUpdates = checkBoardForUpdates;
-
   // ═══════════════════════════════════════════
   // LIFECYCLE
   // ═══════════════════════════════════════════
@@ -255,21 +252,6 @@
       stopPolling();
       stopInactivityTimer();
     }
-  }
-
-  // TODO [PWA]: migrate to Service Worker for background board update detection
-  async function checkBoardForUpdates() {
-    try {
-      var res = await fetch(BOARD_PATH, { cache: 'no-cache' });
-      if (!res.ok) return;
-      var html = await res.text();
-      var cached = '';
-      try { cached = localStorage.getItem(LS_BOARD_CACHE) || ''; } catch (e) { /* */ }
-      if (cached && cached !== html) {
-        var btn = document.getElementById('newsBtn');
-        if (btn) btn.classList.add('btn--news-updated');
-      }
-    } catch (e) { /* network unavailable — skip */ }
   }
 
   // ═══════════════════════════════════════════

@@ -6,6 +6,27 @@
 (function () {
   'use strict';
 
+  if ('serviceWorker' in navigator) {
+    var swController = navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (swController) {
+        swController = null;
+      }
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && !swController) {
+        location.reload();
+      }
+    });
+    navigator.serviceWorker.addEventListener('message', function (event) {
+      if (event.data && event.data.type === 'BOARD_UPDATED') {
+        var btn = document.getElementById('newsBtn');
+        if (btn) btn.classList.add('btn--news-updated');
+      }
+    });
+    navigator.serviceWorker.register('sw.js');
+  }
+
   const DATA_URL = 'data/Frequencies.xml';
   const GROUP_STORAGE_KEY = 'satcontact_selected_group';
 
@@ -873,10 +894,20 @@
     });
   }
 
-  /**
-   * Инициализация при загрузке DOM
-   */
+  function isInAppBrowser() {
+    var ua = navigator.userAgent || '';
+    if (/FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|Snapchat|WhatsApp|Telegram/i.test(ua)) return true;
+    if (/; wv\)/.test(ua)) return true;
+    if (/iPhone|iPad|iPod/.test(ua) && /AppleWebKit/.test(ua) && !/Safari\//.test(ua)) return true;
+    return false;
+  }
+
   function init() {
+    if (isInAppBrowser()) {
+      var overlay = document.getElementById('inappOverlay');
+      if (overlay) overlay.hidden = false;
+      return;
+    }
     searchInput = document.getElementById('searchInput');
     cardList = document.getElementById('cardList');
     emptyState = document.getElementById('emptyState');
@@ -909,9 +940,7 @@
     window.addEventListener('resize', updateRibbonBottomOffset);
     loadData();
 
-    if (typeof window.checkBoardForUpdates === 'function') {
-      window.checkBoardForUpdates();
-    }
+    fetch(window.SatContactResolveUrl('data/board.html')).catch(function() {});
   }
 
   window.getSatContactFilteredEntries = function () {

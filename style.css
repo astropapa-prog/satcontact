@@ -2527,3 +2527,43 @@ body {
     margin-right: 60px;
   }
 }
+
+/* ============================================
+   In-App Browser Overlay
+   ============================================ */
+.inapp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 24px;
+}
+.inapp-overlay__box {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 32px 24px;
+  max-width: 400px;
+  text-align: center;
+}
+.inapp-overlay__icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+.inapp-overlay__text {
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.inapp-overlay__hint {
+  color: var(--accent);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 16px 0 0;
+  font-weight: 600;
+}
