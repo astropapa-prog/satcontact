@@ -1252,6 +1252,7 @@
         return;
       }
       pendingMedia = { file: file, type: isVideo ? 'video' : 'image' };
+      pendingAttach = null;
       showPreview(file);
       updateSendBtnState();
       e.target.value = '';
@@ -1260,12 +1261,21 @@
     if (els.attachInput) els.attachInput.addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      if (file.size > MAX_ATTACH_SIZE) {
-        alert('Файл слишком большой. Максимум: ' + formatFileSize(MAX_ATTACH_SIZE));
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      const maxSize = isImage ? MAX_IMAGE_SIZE : isVideo ? MAX_VIDEO_SIZE : MAX_ATTACH_SIZE;
+      if (file.size > maxSize) {
+        alert('Файл слишком большой. Максимум: ' + formatFileSize(maxSize));
         e.target.value = '';
         return;
       }
-      pendingAttach = { file: file };
+      if (isImage || isVideo) {
+        pendingMedia = { file: file, type: isImage ? 'image' : 'video' };
+        pendingAttach = null;
+      } else {
+        pendingAttach = { file: file };
+        pendingMedia = null;
+      }
       showPreview(file);
       updateSendBtnState();
       e.target.value = '';

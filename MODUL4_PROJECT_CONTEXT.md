@@ -190,11 +190,27 @@ edited_at — timestamp редактирования или null.
 
 Тип	Форматы	Макс. размер	Примечание
 Изображение	JPEG, PNG, WebP	5 МБ (до сжатия)	Обязательное клиентское сжатие
-Видео	MP4, WebM	10 МБ	Без сжатия, рекомендация до 15 сек
+Видео	MP4, WebM	25 МБ	Без сжатия
 Файл	Любой	5 МБ	Скачивание по ссылке
 Лимит на сообщение: 1 медиафайл (картинка ИЛИ видео) + 1 вложение.
 
-Клиентское сжатие изображений (обязательное):
+Две кнопки прикрепления файлов (Вариант C — семантика по источнику):
+
+📷 Камера (#newsMediaBtn → #newsMediaInput с capture="environment"):
+  - Назначение: снять фото/видео прямо сейчас
+  - На мобильных: capture="environment" сразу открывает камеру (без промежуточного меню выбора)
+  - Форматы: image/*, video/mp4, video/webm (через accept)
+
+📎 Скрепка (#newsAttachBtn → #newsAttachInput без accept):
+  - Назначение: выбрать любой файл из хранилища/проводника
+  - Обработка по типу файла (не по кнопке):
+    • Изображение → сжимается, отображается инлайн (как через камеру)
+    • Видео → лимит 25 МБ, отображается инлайн как <video>
+    • Прочие файлы → лимит 5 МБ, ссылка на скачивание
+
+Принцип: обработка зависит от типа файла, а не от кнопки выбора.
+
+Клиентское сжатие изображений (обязательное, для любой кнопки):
 
 Загрузка файла в <img> → отрисовка на <canvas>
 Ресайз: max 1280px по большей стороне (пропорционально)
@@ -501,7 +517,7 @@ function closeNewsView() {
   const PUBLIC_URL  = 'https://f005.backblazeb2.com/file/satcontact-chat';
   const BOARD_PATH  = 'data/board.html';
   const MAX_IMAGE_SIZE   = 5 * 1024 * 1024;   // 5 МБ до сжатия
-  const MAX_VIDEO_SIZE   = 10 * 1024 * 1024;   // 10 МБ
+  const MAX_VIDEO_SIZE   = 25 * 1024 * 1024;   // 25 МБ
   const MAX_ATTACH_SIZE  = 5 * 1024 * 1024;    // 5 МБ
   const IMAGE_MAX_DIM    = 1280;               // пикселей по большей стороне
   const IMAGE_QUALITY    = 0.75;               // JPEG quality
@@ -728,10 +744,11 @@ function closeNewsView() {
   // newsSettings → показать меню (смена позывного)
   // newsBoardToggle → toggleBoard()
   // newsSendBtn → sendMessage()
-  // newsMediaBtn → newsMediaInput.click()
-  // newsAttachBtn → newsAttachInput.click()
-  // newsMediaInput change → валидация размера → показ превью
-  // newsAttachInput change → валидация размера → показ превью
+  // newsMediaBtn → newsMediaInput.click() (с capture — открывает камеру на мобильных)
+  // newsAttachBtn → newsAttachInput.click() (файловый менеджер)
+  // newsMediaInput change → валидация размера по типу → показ превью
+  // newsAttachInput change → определение типа файла → маршрутизация:
+  //   изображение/видео → pendingMedia (сжатие + инлайн), прочее → pendingAttach (скачивание)
   // newsPreviewRemove → очистка pendingMedia/pendingAttach
   // newsTextInput input → auto-resize textarea, enable/disable send button
   // chatFeed scroll → если scrollTop < threshold → loadMoreMessages()
@@ -859,7 +876,7 @@ Race condition при записи	Невозможна: каждое сообщ
 Два сообщения с одинаковым timestamp	Крайне маловероятно (миллисекунды + разные hash). Если случится — оба файла сохранятся (разные имена)
 Спам через вшитый ключ	Ключ ограничен одним бакетом. Мусор вымывается lifecycle за 3 дня. Можно настроить Data Cap Alert в B2
 Пользователь представился чужим позывным	Осознанный компромисс. Нет серверной авторизации — нет гарантии подлинности. Для нашей аудитории радиолюбителей использование чужого позывного — серьёзное нарушение этики, социальный контроль сильнее технического
-Большие видео тормозят загрузку	Клиентский лимит 10 МБ, предупреждение при превышении. Видео стримится через <video> + HTTP Range Requests (B2 поддерживает)
+Большие видео тормозят загрузку	Клиентский лимит 25 МБ, предупреждение при превышении. Видео стримится через <video> + HTTP Range Requests (B2 поддерживает)
 ListObjectsV2 >1000 файлов	При 150 msg/day × 3 = 450, даже при 300 msg/day = 900 — в лимите 1000. Если превысит — пагинация через continuation-token в S3 API
 SubtleCrypto (для SHA-256 хеша позывного)	Доступен во всех современных браузерах на HTTPS. GitHub Pages = HTTPS. На file:// в Chrome работает, в Firefox может не работать (не критично — это локальная разработка)
 board.html кеширование GitHub Pages CDN	GitHub Pages кеширует ~10 мин. Для редко меняемой доски это приемлемо. Cache-busting ?t=... пробивает кеш

@@ -220,7 +220,7 @@
         <textarea class="news-view__text-input" id="newsTextInput"
                   placeholder="Сообщение..." rows="1" maxlength="2000"></textarea>
         <button type="button" class="news-view__send-btn" id="newsSendBtn" disabled aria-label="Отправить">&#x27A4;</button>
-        <input type="file" id="newsMediaInput" accept="image/*,video/mp4,video/webm" hidden>
+        <input type="file" id="newsMediaInput" accept="image/*,video/mp4,video/webm" capture="environment" hidden>
         <input type="file" id="newsAttachInput" hidden>
       </div>
       <div class="news-view__preview" id="newsPreview" hidden>
