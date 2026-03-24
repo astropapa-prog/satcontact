@@ -201,14 +201,33 @@
     if (btn) btn.classList.remove('btn--news-updated');
   }
 
+  function collapseBoard() {
+    if (!els.boardSection || els.boardSection.classList.contains('news-view__board--collapsed')) return;
+    els.boardSection.classList.add('news-view__board--collapsed');
+    if (els.boardArrow) els.boardArrow.textContent = '\u25B8';
+    try { localStorage.setItem(LS_BOARD_COLLAPSED, '1'); } catch (e) { /* */ }
+  }
+
+  function collapseChat() {
+    if (!els.chatSection || els.chatSection.classList.contains('news-view__chat--collapsed')) return;
+    els.chatSection.classList.add('news-view__chat--collapsed');
+    if (els.chatArrow) els.chatArrow.textContent = '\u25B8';
+    if (els.chatFilters) els.chatFilters.hidden = true;
+    if (els.replyPreview) els.replyPreview.hidden = true;
+    if (els.preview) els.preview.hidden = true;
+    stopPolling();
+    stopInactivityTimer();
+  }
+
   function toggleBoard() {
     if (!els.boardSection) return;
     var isCollapsed = els.boardSection.classList.toggle('news-view__board--collapsed');
     if (els.boardArrow) els.boardArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
     try { localStorage.setItem(LS_BOARD_COLLAPSED, isCollapsed ? '1' : '0'); } catch (e) { /* */ }
 
-    if (!isCollapsed && !boardLoaded) {
-      loadBoard();
+    if (!isCollapsed) {
+      collapseChat();
+      if (!boardLoaded) loadBoard();
     }
   }
 
@@ -223,6 +242,7 @@
     }
 
     if (!isCollapsed) {
+      collapseBoard();
       if (!chatLoaded) {
         chatLoaded = true;
         fetchAndRenderFeed();
