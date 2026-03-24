@@ -1650,6 +1650,12 @@ body {
   outline: none;
 }
 
+.news-view__board-toggle--updated {
+  background: linear-gradient(270deg, rgba(245,166,35,0.15), rgba(126,211,33,0.15), rgba(248,231,28,0.15), rgba(245,166,35,0.15));
+  background-size: 600% 100%;
+  animation: newsShimmer 3s ease infinite;
+}
+
 .news-view__board-content {
   padding: 0 14px 12px;
   font-size: 0.875rem;

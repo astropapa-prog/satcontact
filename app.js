@@ -24,8 +24,10 @@
             return;
           }
           if (cached !== html) {
+            localStorage.setItem('satcontact_board_html', html);
             var btn = document.getElementById('newsBtn');
             if (btn) btn.classList.add('btn--news-updated');
+            if (typeof window.onBoardDataChanged === 'function') window.onBoardDataChanged();
           }
         } catch (e) {}
       })
@@ -75,6 +77,7 @@
       if (event.data && event.data.type === 'BOARD_UPDATED') {
         var btn = document.getElementById('newsBtn');
         if (btn) btn.classList.add('btn--news-updated');
+        if (typeof window.onBoardDataChanged === 'function') window.onBoardDataChanged();
       }
     });
     navigator.serviceWorker.register('sw.js');

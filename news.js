@@ -71,6 +71,14 @@
   // ═══════════════════════════════════════════
   window.initNews = initNews;
   window.cleanupNews = cleanupNews;
+  window.onBoardDataChanged = function () {
+    if (!isInitialized) return;
+    if (els.boardSection && !els.boardSection.classList.contains('news-view__board--collapsed') && boardLoaded) {
+      loadBoard();
+    } else if (els.boardToggle) {
+      els.boardToggle.classList.add('news-view__board-toggle--updated');
+    }
+  };
 
   // ═══════════════════════════════════════════
   // LIFECYCLE
@@ -193,14 +201,13 @@
       var html = await res.text();
       els.boardContent.innerHTML = html;
       try { localStorage.setItem(LS_BOARD_CACHE, html); } catch (e) { /* */ }
+      var btn = document.getElementById('newsBtn');
+      if (btn) btn.classList.remove('btn--news-updated');
     } catch (err) {
       if (!els.boardContent.innerHTML || els.boardContent.innerHTML.includes('Загрузка')) {
         els.boardContent.innerHTML = '<p style="color:var(--text-secondary)">Доска объявлений недоступна</p>';
       }
     }
-
-    var btn = document.getElementById('newsBtn');
-    if (btn) btn.classList.remove('btn--news-updated');
   }
 
   function collapseBoard() {
@@ -229,7 +236,8 @@
 
     if (!isCollapsed) {
       collapseChat();
-      if (!boardLoaded) loadBoard();
+      if (els.boardToggle) els.boardToggle.classList.remove('news-view__board-toggle--updated');
+      loadBoard();
     }
   }
 
