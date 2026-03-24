@@ -59,6 +59,7 @@
   let allDmsLoaded = false;
   let inactivityTimer = null;
   let lastListedKey = '';
+  let eventsBound = false;
 
   // ═══════════════════════════════════════════
   // DOM REFERENCES
@@ -133,6 +134,7 @@
 
     var boardShouldExpand = localStorage.getItem(LS_BOARD_COLLAPSED) === '0';
     if (boardShouldExpand) {
+      if (els.boardSection) els.boardSection.classList.remove('news-view__board--collapsed');
       if (els.boardArrow) els.boardArrow.textContent = '\u25BE';
       loadBoard();
     } else {
@@ -142,6 +144,9 @@
 
     if (els.chatSection) els.chatSection.classList.add('news-view__chat--collapsed');
     if (els.chatArrow) els.chatArrow.textContent = '\u25B8';
+    if (els.chatFilters) els.chatFilters.hidden = true;
+    if (els.replyPreview) els.replyPreview.hidden = true;
+    if (els.preview) els.preview.hidden = true;
 
     checkAuth();
     bindEvents();
@@ -1163,6 +1168,9 @@
   // EVENTS
   // ═══════════════════════════════════════════
   function bindEvents() {
+    if (eventsBound) return;
+    eventsBound = true;
+
     if (els.back) els.back.addEventListener('click', () => {
       if (typeof window.closeNewsView === 'function') window.closeNewsView();
     });

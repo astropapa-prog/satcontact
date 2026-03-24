@@ -19,7 +19,11 @@
         if (!html) return;
         try {
           var cached = localStorage.getItem('satcontact_board_html');
-          if (cached && cached !== html) {
+          if (!cached) {
+            localStorage.setItem('satcontact_board_html', html);
+            return;
+          }
+          if (cached !== html) {
             var btn = document.getElementById('newsBtn');
             if (btn) btn.classList.add('btn--news-updated');
           }
@@ -40,25 +44,32 @@
     if (boardPollTimer) { clearInterval(boardPollTimer); boardPollTimer = null; }
   }
 
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') {
+      stopBoardPoll();
+      return;
+    }
+    triggerBoardCheck();
+    startBoardPoll();
+  });
+
   if ('serviceWorker' in navigator) {
     var swController = navigator.serviceWorker.controller;
 
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (swController) {
         swController = null;
+        if (document.visibilityState === 'visible') {
+          location.reload();
+        } else {
+          document.addEventListener('visibilitychange', function onVisible() {
+            if (document.visibilityState === 'visible') {
+              document.removeEventListener('visibilitychange', onVisible);
+              location.reload();
+            }
+          });
+        }
       }
-    });
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState !== 'visible') {
-        stopBoardPoll();
-        return;
-      }
-      if (!swController) {
-        location.reload();
-        return;
-      }
-      triggerBoardCheck();
-      startBoardPoll();
     });
     navigator.serviceWorker.addEventListener('message', function (event) {
       if (event.data && event.data.type === 'BOARD_UPDATED') {
@@ -982,7 +993,15 @@
     window.addEventListener('resize', updateRibbonBottomOffset);
     loadData();
 
-    triggerBoardCheck();
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      triggerBoardCheck();
+    } else if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(function () {
+        triggerBoardCheck();
+      });
+    } else {
+      triggerBoardCheck();
+    }
     startBoardPoll();
   }
 
