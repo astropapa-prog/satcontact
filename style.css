@@ -2543,6 +2543,9 @@ body {
   -webkit-backdrop-filter: blur(6px);
   padding: 24px;
 }
+.inapp-overlay[hidden] {
+  display: none !important;
+}
 .inapp-overlay__box {
   background: var(--bg-card);
   border-radius: 16px;
