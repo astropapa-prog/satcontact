@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'satcontact-v2';
+const CACHE_VERSION = 'satcontact-v3';
 const RUNTIME_CACHE = 'satcontact-runtime';
 
 const PRECACHE_URLS = [
@@ -28,11 +28,20 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  var boardUrl = new URL('data/board.html', self.location).href;
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
       return cache.addAll(
         PRECACHE_URLS.map(url => new Request(url, { cache: 'reload' }))
       );
+    }).then(function () {
+      return caches.open(RUNTIME_CACHE).then(function (cache) {
+        return fetch(boardUrl, { cache: 'no-store' })
+          .then(function (res) {
+            if (res.ok) return cache.put(new Request(boardUrl), res);
+          })
+          .catch(function () {});
+      });
     })
   );
   self.skipWaiting();
@@ -91,7 +100,7 @@ async function handleBoardFetch(request) {
       if (cachedResponse) {
         const oldHtml = await cachedResponse.text();
         if (oldHtml !== newHtml) {
-          const allClients = await self.clients.matchAll();
+          const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
           allClients.forEach(client => {
             client.postMessage({ type: 'BOARD_UPDATED' });
           });

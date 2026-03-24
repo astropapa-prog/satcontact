@@ -6,10 +6,42 @@
 (function () {
   'use strict';
 
+  var boardPollTimer = null;
+  var BOARD_POLL_INTERVAL = 2 * 60 * 1000;
+
+  function triggerBoardCheck() {
+    fetch(window.SatContactResolveUrl('data/board.html'))
+      .then(function (res) {
+        if (!res.ok) return null;
+        return res.text();
+      })
+      .then(function (html) {
+        if (!html) return;
+        try {
+          var cached = localStorage.getItem('satcontact_board_html');
+          if (cached && cached !== html) {
+            var btn = document.getElementById('newsBtn');
+            if (btn) btn.classList.add('btn--news-updated');
+          }
+        } catch (e) {}
+      })
+      .catch(function () {});
+  }
+
+  function startBoardPoll() {
+    stopBoardPoll();
+    boardPollTimer = setInterval(function () {
+      if (document.visibilityState === 'hidden') return;
+      triggerBoardCheck();
+    }, BOARD_POLL_INTERVAL);
+  }
+
+  function stopBoardPoll() {
+    if (boardPollTimer) { clearInterval(boardPollTimer); boardPollTimer = null; }
+  }
+
   if ('serviceWorker' in navigator) {
     var swController = navigator.serviceWorker.controller;
-    var lastBoardCheck = 0;
-    var BOARD_CHECK_INTERVAL = 5 * 60 * 1000;
 
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (swController) {
@@ -17,16 +49,16 @@
       }
     });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible') {
+        stopBoardPoll();
+        return;
+      }
       if (!swController) {
         location.reload();
         return;
       }
-      var now = Date.now();
-      if (now - lastBoardCheck > BOARD_CHECK_INTERVAL) {
-        lastBoardCheck = now;
-        fetch(window.SatContactResolveUrl('data/board.html')).catch(function () {});
-      }
+      triggerBoardCheck();
+      startBoardPoll();
     });
     navigator.serviceWorker.addEventListener('message', function (event) {
       if (event.data && event.data.type === 'BOARD_UPDATED') {
@@ -950,7 +982,8 @@
     window.addEventListener('resize', updateRibbonBottomOffset);
     loadData();
 
-    fetch(window.SatContactResolveUrl('data/board.html')).catch(function() {});
+    triggerBoardCheck();
+    startBoardPoll();
   }
 
   window.getSatContactFilteredEntries = function () {
