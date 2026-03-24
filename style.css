@@ -1552,9 +1552,7 @@ body {
 }
 
 .news-view__refresh-btn {
-  margin-left: 8px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  padding-left: 10px;
+  margin-left: auto;
 }
 
 .news-view__refresh-btn:hover,
@@ -1567,12 +1565,13 @@ body {
   outline: none;
 }
 
-/* ---------- Body (scrollable) ---------- */
+/* ---------- Body (board area, scrollable) ---------- */
 .news-view__body {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 
 /* ---------- Board ---------- */
@@ -1632,14 +1631,23 @@ body {
   margin: 0;
 }
 
-/* ---------- Chat ---------- */
+/* ---------- Chat (flex child of newsView) ---------- */
 .news-view__chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
   background: #1a2530;
   border-top: 1px solid #2a3a4a;
   padding: 0;
 }
 
+.news-view__chat--collapsed {
+  flex: 0 0 auto;
+}
+
 .news-view__chat-toggle {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1662,11 +1670,18 @@ body {
 }
 
 .news-view__chat-content {
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
   padding: 8px 0;
-  min-height: 200px;
 }
 
-.news-view__chat--collapsed .news-view__chat-content {
+.news-view__chat--collapsed .news-view__chat-content,
+.news-view__chat--collapsed .news-view__reply-preview,
+.news-view__chat--collapsed .news-view__input-bar,
+.news-view__chat--collapsed .news-view__preview {
   display: none;
 }
 
@@ -1901,7 +1916,7 @@ body {
 }
 
 .news-view__filter-nav {
-  margin-left: auto;
+  margin-left: 12px;
   padding: 4px 12px;
   font-size: 0.8rem;
   font-family: var(--font-sans);
@@ -2135,6 +2150,7 @@ body {
 
 /* ---------- Preview ---------- */
 .news-view__preview {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2434,6 +2450,12 @@ body {
 /* ---------- Responsive (tablet/desktop) ---------- */
 @media (min-width: 600px) {
   .news-view__body {
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .news-view__chat-content {
     max-width: 720px;
     margin: 0 auto;
     width: 100%;

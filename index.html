@@ -164,27 +164,51 @@
             <p class="news-view__loading">Загрузка...</p>
           </div>
         </section>
-        <section class="news-view__chat" id="newsChat">
-          <button type="button" class="news-view__chat-toggle" id="newsChatToggle">
-            &#x1F4AC; ЧАТ <span id="newsChatArrow">&#x25B8;</span>
-          </button>
-          <div class="news-view__chat-content" id="chatContent">
-            <div class="news-view__filters" id="chatFilters" hidden>
-              <button type="button" class="news-view__filter-btn news-view__filter-btn--active" data-filter="all">Все</button>
-              <button type="button" class="news-view__filter-btn" data-filter="replies">Ответы мне</button>
-              <button type="button" class="news-view__filter-btn" data-filter="dm">Личные</button>
-              <button type="button" class="news-view__refresh-btn" id="newsRefresh" aria-label="Обновить">&#x1F504;</button>
-              <button type="button" class="news-view__settings-btn" id="newsSettings" aria-label="Настройки">&#x2699;</button>
-              <button type="button" class="news-view__filter-nav" id="chatScrollTop" title="К началу">&#x25B2;</button>
-            </div>
-            <div class="news-view__chat-loader" id="chatLoader" hidden>Загрузка сообщений...</div>
-            <div class="news-view__chat-feed" id="chatFeed"></div>
-            <div class="news-view__chat-empty" id="chatEmpty" hidden>
-              Пока нет сообщений. Будьте первым!
-            </div>
-          </div>
-        </section>
       </div>
+      <section class="news-view__chat news-view__chat--collapsed" id="newsChat">
+        <button type="button" class="news-view__chat-toggle" id="newsChatToggle">
+          &#x1F4AC; ЧАТ <span id="newsChatArrow">&#x25B8;</span>
+        </button>
+        <div class="news-view__chat-content" id="chatContent">
+          <div class="news-view__filters" id="chatFilters" hidden>
+            <button type="button" class="news-view__filter-btn news-view__filter-btn--active" data-filter="all">Все</button>
+            <button type="button" class="news-view__filter-btn" data-filter="replies">Ответы мне</button>
+            <button type="button" class="news-view__filter-btn" data-filter="dm">Личные</button>
+            <button type="button" class="news-view__refresh-btn" id="newsRefresh" aria-label="Обновить">&#x1F504;</button>
+            <button type="button" class="news-view__settings-btn" id="newsSettings" aria-label="Настройки">&#x2699;</button>
+            <button type="button" class="news-view__filter-nav" id="chatScrollTop" title="К началу">&#x25B2;</button>
+          </div>
+          <div class="news-view__chat-loader" id="chatLoader" hidden>Загрузка сообщений...</div>
+          <div class="news-view__chat-feed" id="chatFeed"></div>
+          <div class="news-view__chat-empty" id="chatEmpty" hidden>
+            Пока нет сообщений. Будьте первым!
+          </div>
+        </div>
+        <div class="news-view__reply-preview" id="newsReplyPreview" hidden>
+          <div class="news-view__reply-preview-content">
+            <span class="news-view__reply-preview-author" id="newsReplyAuthor"></span>
+            <span class="news-view__reply-preview-text" id="newsReplyText"></span>
+          </div>
+          <span class="news-view__reply-preview-badge" id="newsReplyBadge" hidden>ЛИЧНОЕ</span>
+          <button type="button" class="news-view__reply-preview-close" id="newsReplyClose">&#x2715;</button>
+        </div>
+        <div class="news-view__input-bar" id="newsInputBar">
+          <div class="news-view__input-actions">
+            <button type="button" class="news-view__media-btn" id="newsMediaBtn" aria-label="Фото/видео">&#x1F4F7;</button>
+            <button type="button" class="news-view__attach-btn" id="newsAttachBtn" aria-label="Файл">&#x1F4CE;</button>
+          </div>
+          <textarea class="news-view__text-input" id="newsTextInput"
+                    placeholder="Сообщение..." rows="1" maxlength="2000"></textarea>
+          <button type="button" class="news-view__send-btn" id="newsSendBtn" disabled aria-label="Отправить">&#x27A4;</button>
+          <input type="file" id="newsMediaInput" accept="image/*,video/mp4,video/webm" capture="environment" hidden>
+          <input type="file" id="newsAttachInput" hidden>
+        </div>
+        <div class="news-view__preview" id="newsPreview" hidden>
+          <span class="news-view__preview-name" id="newsPreviewName"></span>
+          <span class="news-view__preview-size" id="newsPreviewSize"></span>
+          <button type="button" class="news-view__preview-remove" id="newsPreviewRemove">&#x2715;</button>
+        </div>
+      </section>
       <div class="news-view__auth-modal" id="newsAuthModal" hidden>
         <div class="news-view__auth-overlay"></div>
         <div class="news-view__auth-box">
@@ -201,30 +225,6 @@
           <button type="button" id="newsCallsignBtn" class="news-view__auth-btn">Войти в чат</button>
           <p class="news-view__auth-hint">Позывной будет виден в чате. Пароль нужен для защиты имени.</p>
         </div>
-      </div>
-      <div class="news-view__reply-preview" id="newsReplyPreview" hidden>
-        <div class="news-view__reply-preview-content">
-          <span class="news-view__reply-preview-author" id="newsReplyAuthor"></span>
-          <span class="news-view__reply-preview-text" id="newsReplyText"></span>
-        </div>
-        <span class="news-view__reply-preview-badge" id="newsReplyBadge" hidden>ЛИЧНОЕ</span>
-        <button type="button" class="news-view__reply-preview-close" id="newsReplyClose">&#x2715;</button>
-      </div>
-      <div class="news-view__input-bar" id="newsInputBar">
-        <div class="news-view__input-actions">
-          <button type="button" class="news-view__media-btn" id="newsMediaBtn" aria-label="Фото/видео">&#x1F4F7;</button>
-          <button type="button" class="news-view__attach-btn" id="newsAttachBtn" aria-label="Файл">&#x1F4CE;</button>
-        </div>
-        <textarea class="news-view__text-input" id="newsTextInput"
-                  placeholder="Сообщение..." rows="1" maxlength="2000"></textarea>
-        <button type="button" class="news-view__send-btn" id="newsSendBtn" disabled aria-label="Отправить">&#x27A4;</button>
-        <input type="file" id="newsMediaInput" accept="image/*,video/mp4,video/webm" capture="environment" hidden>
-        <input type="file" id="newsAttachInput" hidden>
-      </div>
-      <div class="news-view__preview" id="newsPreview" hidden>
-        <span class="news-view__preview-name" id="newsPreviewName"></span>
-        <span class="news-view__preview-size" id="newsPreviewSize"></span>
-        <button type="button" class="news-view__preview-remove" id="newsPreviewRemove">&#x2715;</button>
       </div>
       <div class="news-view__edit-modal" id="newsEditModal" hidden>
         <div class="news-view__edit-overlay"></div>

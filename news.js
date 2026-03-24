@@ -145,7 +145,6 @@
 
     if (els.chatSection) els.chatSection.classList.add('news-view__chat--collapsed');
     if (els.chatArrow) els.chatArrow.textContent = '\u25B8';
-    if (els.inputBar) els.inputBar.hidden = true;
 
     checkAuth();
     bindEvents();
@@ -217,7 +216,6 @@
     if (!els.chatSection) return;
     var isCollapsed = els.chatSection.classList.toggle('news-view__chat--collapsed');
     if (els.chatArrow) els.chatArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
-    if (els.inputBar) els.inputBar.hidden = isCollapsed;
     if (els.chatFilters) els.chatFilters.hidden = isCollapsed || !userHash;
     if (isCollapsed) {
       if (els.replyPreview) els.replyPreview.hidden = true;
@@ -502,7 +500,7 @@
     isLoadingMore = true;
     const toLoad = remaining.slice(-MESSAGES_LOAD_MORE);
 
-    const scrollEl = els.body;
+    const scrollEl = els.chatContent;
     const prevScrollHeight = scrollEl ? scrollEl.scrollHeight : 0;
     const prevScrollTop = scrollEl ? scrollEl.scrollTop : 0;
 
@@ -688,8 +686,8 @@
   }
 
   function scrollToBottom() {
-    if (els.body) {
-      setTimeout(() => { els.body.scrollTop = els.body.scrollHeight; }, 50);
+    if (els.chatContent) {
+      setTimeout(() => { els.chatContent.scrollTop = els.chatContent.scrollHeight; }, 50);
     }
   }
 
@@ -1155,8 +1153,8 @@
   }
 
   function isScrolledToBottom() {
-    if (!els.body) return true;
-    return els.body.scrollHeight - els.body.scrollTop - els.body.clientHeight < 80;
+    if (!els.chatContent) return true;
+    return els.chatContent.scrollHeight - els.chatContent.scrollTop - els.chatContent.clientHeight < 80;
   }
 
   // ═══════════════════════════════════════════
@@ -1311,7 +1309,7 @@
 
     var scrollTopBtn = document.getElementById('chatScrollTop');
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', function () {
-      if (els.body) els.body.scrollTop = 0;
+      if (els.chatContent) els.chatContent.scrollTop = 0;
     });
 
     if (els.chatFilters) els.chatFilters.addEventListener('click', function (e) {
@@ -1325,9 +1323,8 @@
       updateSendBtnState();
     });
 
-    // Scroll-up to load more
-    if (els.body) els.body.addEventListener('scroll', () => {
-      if (els.body.scrollTop < 100 && allFileNames.length > loadedMessages.length) {
+    if (els.chatContent) els.chatContent.addEventListener('scroll', () => {
+      if (els.chatContent.scrollTop < 100 && allFileNames.length > loadedMessages.length) {
         loadMoreMessages();
       }
     });
@@ -1346,7 +1343,7 @@
     });
 
     var activityEvents = ['scroll', 'click', 'touchstart', 'keydown'];
-    var activityContainer = els.body || document.getElementById('newsView');
+    var activityContainer = els.chatContent || document.getElementById('newsView');
     function onChatActivity() {
       if (els.chatSection && !els.chatSection.classList.contains('news-view__chat--collapsed')) {
         resetInactivityTimer();
