@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'satcontact-v5';
+const CACHE_VERSION = 'satcontact-v6';
 const RUNTIME_CACHE = 'satcontact-runtime';
 
 const PRECACHE_URLS = [

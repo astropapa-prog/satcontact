@@ -50,6 +50,7 @@
   let isInitialized = false;
   let isLoadingMore = false;
   let boardLoaded = false;
+  let boardLoadInFlight = null;
   let chatLoaded = false;
   let pendingReply = null;
   let activeFilter = 'all';
@@ -188,26 +189,36 @@
   // ═══════════════════════════════════════════
   async function loadBoard() {
     if (!els.boardContent) return;
-    boardLoaded = true;
+    if (boardLoadInFlight) return boardLoadInFlight;
 
-    try {
-      var cached = localStorage.getItem(LS_BOARD_CACHE);
-      if (cached) els.boardContent.innerHTML = cached;
-    } catch (e) { /* localStorage unavailable */ }
+    var p = (async function () {
+      boardLoaded = true;
 
-    try {
-      var res = await fetch(BOARD_PATH);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var html = await res.text();
-      els.boardContent.innerHTML = html;
-      try { localStorage.setItem(LS_BOARD_CACHE, html); } catch (e) { /* */ }
-      var btn = document.getElementById('newsBtn');
-      if (btn) btn.classList.remove('btn--news-updated');
-    } catch (err) {
-      if (!els.boardContent.innerHTML || els.boardContent.innerHTML.includes('Загрузка')) {
-        els.boardContent.innerHTML = '<p style="color:var(--text-secondary)">Доска объявлений недоступна</p>';
+      try {
+        var cached = localStorage.getItem(LS_BOARD_CACHE);
+        if (cached) els.boardContent.innerHTML = cached;
+      } catch (e) { /* localStorage unavailable */ }
+
+      try {
+        var res = await fetch(BOARD_PATH);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var html = await res.text();
+        els.boardContent.innerHTML = html;
+        try { localStorage.setItem(LS_BOARD_CACHE, html); } catch (e) { /* */ }
+        var btn = document.getElementById('newsBtn');
+        if (btn) btn.classList.remove('btn--news-updated');
+      } catch (err) {
+        if (!els.boardContent.innerHTML || els.boardContent.innerHTML.includes('Загрузка')) {
+          els.boardContent.innerHTML = '<p style="color:var(--text-secondary)">Доска объявлений недоступна</p>';
+        }
       }
-    }
+    })();
+
+    boardLoadInFlight = p.finally(function () {
+      boardLoadInFlight = null;
+    });
+
+    return boardLoadInFlight;
   }
 
   function collapseBoard() {
