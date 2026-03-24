@@ -219,7 +219,10 @@
     if (els.chatArrow) els.chatArrow.textContent = isCollapsed ? '\u25B8' : '\u25BE';
     if (els.inputBar) els.inputBar.hidden = isCollapsed;
     if (els.chatFilters) els.chatFilters.hidden = isCollapsed || !userHash;
-    if (els.replyPreview && isCollapsed) els.replyPreview.hidden = true;
+    if (isCollapsed) {
+      if (els.replyPreview) els.replyPreview.hidden = true;
+      if (els.preview) els.preview.hidden = true;
+    }
 
     if (!isCollapsed) {
       if (!chatLoaded) {

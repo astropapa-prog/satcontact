@@ -154,10 +154,6 @@
       <header class="news-view__header">
         <button type="button" class="news-view__back" id="newsBack" aria-label="Назад">&#x2B05; Назад</button>
         <h2 class="news-view__title">Новости</h2>
-        <div class="news-view__header-actions">
-          <button type="button" class="news-view__refresh-btn" id="newsRefresh" aria-label="Обновить">&#x1F504;</button>
-          <button type="button" class="news-view__settings-btn" id="newsSettings" aria-label="Настройки">&#x2699;</button>
-        </div>
       </header>
       <div class="news-view__body" id="newsBody">
         <section class="news-view__board" id="newsBoard">
@@ -174,10 +170,12 @@
           </button>
           <div class="news-view__chat-content" id="chatContent">
             <div class="news-view__filters" id="chatFilters" hidden>
-              <button type="button" class="news-view__filter-nav" id="chatScrollTop" title="К началу">&#x25B2;</button>
               <button type="button" class="news-view__filter-btn news-view__filter-btn--active" data-filter="all">Все</button>
               <button type="button" class="news-view__filter-btn" data-filter="replies">Ответы мне</button>
               <button type="button" class="news-view__filter-btn" data-filter="dm">Личные</button>
+              <button type="button" class="news-view__refresh-btn" id="newsRefresh" aria-label="Обновить">&#x1F504;</button>
+              <button type="button" class="news-view__settings-btn" id="newsSettings" aria-label="Настройки">&#x2699;</button>
+              <button type="button" class="news-view__filter-nav" id="chatScrollTop" title="К началу">&#x25B2;</button>
             </div>
             <div class="news-view__chat-loader" id="chatLoader" hidden>Загрузка сообщений...</div>
             <div class="news-view__chat-feed" id="chatFeed"></div>
