@@ -21,7 +21,7 @@
       </div>
       <div class="control-panel">
         <button type="button" class="btn btn--all" id="chipAll">ВСЕ</button>
-        <input type="text" class="search-input" id="searchInput" placeholder="Поиск по частоте" autocomplete="off" inputmode="numeric">
+        <input type="text" class="search-input" id="searchInput" placeholder="Поиск по частоте" autocomplete="one-time-code" inputmode="numeric">
         <button type="button" class="btn btn--toggle" id="toggleBandwidth" aria-pressed="false">Полоса</button>
         <button type="button" class="btn btn--toggle" id="toggleSensitivity" aria-pressed="false">Чувств.</button>
       </div>
@@ -192,10 +192,10 @@
         <div class="news-view__auth-box">
           <h3>Вход в чат</h3>
           <input type="text" id="newsCallsignInput" class="news-view__auth-input"
-                 placeholder="UA9XXX" autocomplete="off" spellcheck="false" maxlength="12">
+                 placeholder="UA9XXX" autocomplete="one-time-code" spellcheck="false" maxlength="12">
           <div class="news-view__auth-password-wrap">
             <input type="password" id="newsPasswordInput" class="news-view__auth-input"
-                   placeholder="Пароль (минимум 8 символов)" autocomplete="off">
+                   placeholder="Пароль (минимум 8 символов)" autocomplete="new-password">
             <button type="button" class="news-view__auth-eye" id="newsPasswordToggle"
                     title="Показать пароль">&#x1F441;</button>
           </div>
