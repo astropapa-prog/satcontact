@@ -6,6 +6,8 @@
 (function () {
   'use strict';
 
+  const CACHE_VERSION = 'satcontact-v9';
+
   if ('serviceWorker' in navigator) {
     var swController = navigator.serviceWorker.controller;
 
@@ -902,12 +904,26 @@
     return false;
   }
 
+  function isNewsDismissed() {
+    try { return localStorage.getItem('satcontact_news_dismissed') === CACHE_VERSION; }
+    catch (e) { return false; }
+  }
+  function dismissNews() {
+    try { localStorage.setItem('satcontact_news_dismissed', CACHE_VERSION); }
+    catch (e) {}
+  }
+
   function init() {
     if (isInAppBrowser()) {
       var overlay = document.getElementById('inappOverlay');
       if (overlay) overlay.hidden = false;
       return;
     }
+
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist();
+    }
+
     searchInput = document.getElementById('searchInput');
     cardList = document.getElementById('cardList');
     emptyState = document.getElementById('emptyState');
@@ -932,7 +948,14 @@
 
     const newsBtn = document.getElementById('newsBtn');
     if (newsBtn) {
-      newsBtn.addEventListener('click', () => openNewsView());
+      if (!isNewsDismissed()) newsBtn.classList.add('btn--news-updated');
+      newsBtn.addEventListener('click', () => {
+        if (newsBtn.classList.contains('btn--news-updated')) {
+          newsBtn.classList.remove('btn--news-updated');
+          dismissNews();
+        }
+        openNewsView();
+      });
     }
 
     bindMapButtons();

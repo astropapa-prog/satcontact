@@ -86,6 +86,17 @@ body {
   outline: none;
 }
 
+.btn--news.btn--news-updated {
+  background: rgba(82, 136, 193, 0.35);
+  color: #fff;
+  border-color: var(--accent);
+  animation: newsShimmer 2s ease-in-out infinite;
+}
+@keyframes newsShimmer {
+  0%, 100% { background-color: rgba(82, 136, 193, 0.35); }
+  50%      { background-color: rgba(82, 136, 193, 0.55); }
+}
+
 .group-select {
   flex: 1;
   min-width: 0;
