@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'satcontact-v6';
+const CACHE_VERSION = 'satcontact-v7';
 const RUNTIME_CACHE = 'satcontact-runtime';
 
 const PRECACHE_URLS = [
@@ -20,6 +20,7 @@ const PRECACHE_URLS = [
   'lib/aws4fetch.min.js',
   'data/Frequencies.xml',
   'data/countries-50m.json',
+  'data/board.html',
   'data/board-media/ava.jpg',
   'manifest.json',
   'icons/icon-192.png',
@@ -28,20 +29,11 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
-  var boardUrl = new URL('data/board.html', self.location).href;
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
       return cache.addAll(
         PRECACHE_URLS.map(url => new Request(url, { cache: 'reload' }))
       );
-    }).then(function () {
-      return caches.open(RUNTIME_CACHE).then(function (cache) {
-        return fetch(boardUrl, { cache: 'no-store' })
-          .then(function (res) {
-            if (res.ok) return cache.put(new Request(boardUrl), res);
-          })
-          .catch(function () {});
-      });
     })
   );
   self.skipWaiting();
@@ -65,57 +57,13 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.endsWith('/data/board.html')) {
-    event.respondWith(handleBoardFetch(event.request));
-    return;
-  }
-
   if (url.pathname.endsWith('/data/tle.txt')) {
-    event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
-    return;
-  }
-
-  if (url.pathname.includes('/data/board-media/')) {
-    event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
-    return;
-  }
-
-  if (url.pathname.endsWith('/data/Frequencies.xml')) {
     event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
     return;
   }
 
   event.respondWith(cacheFirst(event.request));
 });
-
-async function handleBoardFetch(request) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  const cacheKey = new Request(request.url.split('?')[0], { method: 'GET' });
-  try {
-    const bustUrl = request.url.split('?')[0] + '?_=' + Date.now();
-    const networkResponse = await fetch(bustUrl, { cache: 'no-store' });
-    if (networkResponse.ok) {
-      const newHtml = await networkResponse.clone().text();
-      const cachedResponse = await cache.match(cacheKey);
-      if (cachedResponse) {
-        const oldHtml = await cachedResponse.text();
-        if (oldHtml !== newHtml) {
-          const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-          allClients.forEach(client => {
-            client.postMessage({ type: 'BOARD_UPDATED' });
-          });
-        }
-      }
-      await cache.put(cacheKey, networkResponse.clone());
-      return networkResponse;
-    }
-    const cached = await cache.match(cacheKey);
-    return cached || networkResponse;
-  } catch (e) {
-    const cached = await cache.match(cacheKey);
-    return cached || new Response('Доска объявлений недоступна', { status: 503 });
-  }
-}
 
 async function networkFirst(request, cacheName) {
   try {

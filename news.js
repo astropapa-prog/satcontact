@@ -30,7 +30,6 @@
 
   const LS_CALLSIGN_KEY   = 'satcontact_news_callsign';
   const LS_HASH_KEY       = 'satcontact_news_hash';
-  const LS_BOARD_CACHE    = 'satcontact_board_html';
   const SS_LISTING_KEY    = 'satcontact_chat_listing';
   const LS_BOARD_COLLAPSED = 'satcontact_board_collapsed';
 
@@ -72,14 +71,6 @@
   // ═══════════════════════════════════════════
   window.initNews = initNews;
   window.cleanupNews = cleanupNews;
-  window.onBoardDataChanged = function () {
-    if (!isInitialized) return;
-    if (els.boardSection && !els.boardSection.classList.contains('news-view__board--collapsed') && boardLoaded) {
-      loadBoard();
-    } else if (els.boardToggle) {
-      els.boardToggle.classList.add('news-view__board-toggle--updated');
-    }
-  };
 
   // ═══════════════════════════════════════════
   // LIFECYCLE
@@ -193,20 +184,11 @@
 
     var p = (async function () {
       boardLoaded = true;
-
-      try {
-        var cached = localStorage.getItem(LS_BOARD_CACHE);
-        if (cached) els.boardContent.innerHTML = cached;
-      } catch (e) { /* localStorage unavailable */ }
-
       try {
         var res = await fetch(BOARD_PATH);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         var html = await res.text();
         els.boardContent.innerHTML = html;
-        try { localStorage.setItem(LS_BOARD_CACHE, html); } catch (e) { /* */ }
-        var btn = document.getElementById('newsBtn');
-        if (btn) btn.classList.remove('btn--news-updated');
       } catch (err) {
         if (!els.boardContent.innerHTML || els.boardContent.innerHTML.includes('Загрузка')) {
           els.boardContent.innerHTML = '<p style="color:var(--text-secondary)">Доска объявлений недоступна</p>';
@@ -247,7 +229,6 @@
 
     if (!isCollapsed) {
       collapseChat();
-      if (els.boardToggle) els.boardToggle.classList.remove('news-view__board-toggle--updated');
       loadBoard();
     }
   }
@@ -1199,7 +1180,6 @@
       lastListedKey = '';
       allMessagesLoaded = false;
       allDmsLoaded = false;
-      if (boardLoaded) loadBoard();
       if (chatLoaded) fetchAndRenderFeed();
     });
 

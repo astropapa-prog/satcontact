@@ -6,55 +6,6 @@
 (function () {
   'use strict';
 
-  var boardPollTimer = null;
-  var BOARD_POLL_INTERVAL = 2 * 60 * 1000;
-
-  function triggerBoardCheck() {
-    fetch(window.SatContactResolveUrl('data/board.html'))
-      .then(function (res) {
-        if (!res.ok) return null;
-        return res.text();
-      })
-      .then(function (html) {
-        if (!html) return;
-        try {
-          var cached = localStorage.getItem('satcontact_board_html');
-          if (!cached) {
-            localStorage.setItem('satcontact_board_html', html);
-            return;
-          }
-          if (cached !== html) {
-            localStorage.setItem('satcontact_board_html', html);
-            var btn = document.getElementById('newsBtn');
-            if (btn) btn.classList.add('btn--news-updated');
-            if (typeof window.onBoardDataChanged === 'function') window.onBoardDataChanged();
-          }
-        } catch (e) {}
-      })
-      .catch(function () {});
-  }
-
-  function startBoardPoll() {
-    stopBoardPoll();
-    boardPollTimer = setInterval(function () {
-      if (document.visibilityState === 'hidden') return;
-      triggerBoardCheck();
-    }, BOARD_POLL_INTERVAL);
-  }
-
-  function stopBoardPoll() {
-    if (boardPollTimer) { clearInterval(boardPollTimer); boardPollTimer = null; }
-  }
-
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState !== 'visible') {
-      stopBoardPoll();
-      return;
-    }
-    triggerBoardCheck();
-    startBoardPoll();
-  });
-
   if ('serviceWorker' in navigator) {
     var swController = navigator.serviceWorker.controller;
 
@@ -71,13 +22,6 @@
             }
           });
         }
-      }
-    });
-    navigator.serviceWorker.addEventListener('message', function (event) {
-      if (event.data && event.data.type === 'BOARD_UPDATED') {
-        var btn = document.getElementById('newsBtn');
-        if (btn) btn.classList.add('btn--news-updated');
-        if (typeof window.onBoardDataChanged === 'function') window.onBoardDataChanged();
       }
     });
     navigator.serviceWorker.register('sw.js');
@@ -996,16 +940,6 @@
     window.addEventListener('resize', updateRibbonBottomOffset);
     loadData();
 
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      triggerBoardCheck();
-    } else if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(function () {
-        triggerBoardCheck();
-      });
-    } else {
-      triggerBoardCheck();
-    }
-    startBoardPoll();
   }
 
   window.getSatContactFilteredEntries = function () {
