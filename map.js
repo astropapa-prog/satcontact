@@ -326,7 +326,6 @@
     hudTimerId = setInterval(() => {
       updateHudTelem();
       updateGpsStatusRow();
-      if (window.SatContactMapRender) window.SatContactMapRender.update();
     }, HUD_UPDATE_MS);
   }
 
