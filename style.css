@@ -1576,7 +1576,7 @@ body {
 }
 
 .news-view__refresh-btn {
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .news-view__refresh-btn:hover,
@@ -1940,7 +1940,7 @@ body {
 }
 
 .news-view__filter-nav {
-  margin-left: 12px;
+  margin-left: auto;
   padding: 4px 12px;
   font-size: 0.8rem;
   font-family: var(--font-sans);

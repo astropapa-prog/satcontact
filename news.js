@@ -296,6 +296,7 @@
     if (els.attachBtn) els.attachBtn.disabled = false;
     if (els.textInput) els.textInput.placeholder = 'Сообщение...';
     if (els.chatFilters) els.chatFilters.hidden = false;
+    if (els.settings) { els.settings.textContent = '\u2699'; els.settings.setAttribute('aria-label', 'Настройки'); }
     updateSendBtnState();
   }
 
@@ -305,6 +306,7 @@
     if (els.mediaBtn) els.mediaBtn.disabled = true;
     if (els.attachBtn) els.attachBtn.disabled = true;
     if (els.chatFilters) els.chatFilters.hidden = true;
+    if (els.settings) { els.settings.textContent = '\uD83D\uDC64'; els.settings.setAttribute('aria-label', 'Регистрация'); }
   }
 
   function showAuthModal() {
