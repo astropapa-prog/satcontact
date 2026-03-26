@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'satcontact-v12';
+const CACHE_VERSION = 'satcontact-v13';
 const RUNTIME_CACHE = 'satcontact-runtime';
 
 const PRECACHE_URLS = [
@@ -21,6 +21,8 @@ const PRECACHE_URLS = [
   'data/Frequencies.xml',
   'data/countries-50m.json',
   'data/board.html',
+  'data/board-media/SatContact_.docx',
+  'data/board-media/SatContact_.txt',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png',

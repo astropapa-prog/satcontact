@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const CACHE_VERSION = 'satcontact-v12';
+  const CACHE_VERSION = 'satcontact-v13';
 
   if ('serviceWorker' in navigator) {
     var swController = navigator.serviceWorker.controller;
