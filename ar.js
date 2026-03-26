@@ -140,28 +140,28 @@
   }
 
   function assocLegendre(n, m, ct, st) {
-    if (n === 0) return 1;
-    if (n === 1 && m === 0) return ct;
-    if (n === 1 && m === 1) return st;
-    let pmm = 1;
-    for (let i = 1; i <= m; i++) pmm *= (2 * i - 1) * st;
-    if (n === m) return pmm;
-    let pmm1 = ct * (2 * m + 1) * pmm;
-    if (n === m + 1) return pmm1;
-    let result = 0;
-    for (let l = m + 2; l <= n; l++) {
-      result = ((2 * l - 1) * ct * pmm1 - (l + m - 1) * pmm) / (l - m);
-      pmm = pmm1;
-      pmm1 = result;
+    // Schmidt quasi-normalized associated Legendre polynomials
+    var Smm = 1;
+    for (var i = 1; i <= m; i++) Smm *= st * (i === 1 ? 1 : Math.sqrt((2 * i - 1) / (2 * i)));
+    if (n === m) return Smm;
+    var prev = Smm;
+    var curr = ct * Math.sqrt(2 * m + 1) * Smm;
+    if (n === m + 1) return curr;
+    for (var l = m + 2; l <= n; l++) {
+      var fn = Math.sqrt(l * l - m * m);
+      var next = ((2 * l - 1) * ct * curr - Math.sqrt((l - 1) * (l - 1) - m * m) * prev) / fn;
+      prev = curr;
+      curr = next;
     }
-    return result;
+    return curr;
   }
 
   function dAssocLegendre(n, m, ct, st) {
     if (st < 1e-10) return 0;
-    const Pnm = assocLegendre(n, m, ct, st);
-    const Pn1m = (n + 1 <= 20) ? assocLegendre(n + 1, m, ct, st) : 0;
-    return ((n + 1) * ct * Pnm - (n - m + 1) * Pn1m) / st;
+    var Snm = assocLegendre(n, m, ct, st);
+    if (n === m) return n * ct * Snm / st;
+    var Sn1m = assocLegendre(n - 1, m, ct, st);
+    return (n * ct * Snm - Math.sqrt(n * n - m * m) * Sn1m) / st;
   }
 
   /* ==========================================================================
@@ -979,8 +979,10 @@
   function arGpsChangeHandler(payload) {
     if (payload && payload.coords) {
       var c = payload.coords;
-      magneticDeclination = getMagneticDeclination(c.latitude, c.longitude, (c.altitude || 0) / 1000);
-      refreshOrientationMatrix();
+      if (calibState !== 'rendering') {
+        magneticDeclination = getMagneticDeclination(c.latitude, c.longitude, (c.altitude || 0) / 1000);
+        refreshOrientationMatrix();
+      }
     }
     if (calibState === 'calibrating') {
       updateCalibButtons();
