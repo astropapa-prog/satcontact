@@ -448,12 +448,20 @@
 
     if (incremental && lastListedKey) {
       if (newMsgFiles.length > 0) {
-        allFileNames = allFileNames.concat(newMsgFiles);
-        sortByTimestamp(allFileNames);
+        var existingMsg = new Set(allFileNames);
+        var dedupedMsg = newMsgFiles.filter(function (f) { return !existingMsg.has(f); });
+        if (dedupedMsg.length > 0) {
+          allFileNames = allFileNames.concat(dedupedMsg);
+          sortByTimestamp(allFileNames);
+        }
       }
       if (newDmFiles.length > 0) {
-        allDmFiles = allDmFiles.concat(newDmFiles);
-        sortByTimestamp(allDmFiles);
+        var existingDm = new Set(allDmFiles);
+        var dedupedDm = newDmFiles.filter(function (f) { return !existingDm.has(f); });
+        if (dedupedDm.length > 0) {
+          allDmFiles = allDmFiles.concat(dedupedDm);
+          sortByTimestamp(allDmFiles);
+        }
       }
     } else {
       sortByTimestamp(newMsgFiles);
