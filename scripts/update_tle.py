@@ -2,20 +2,22 @@
 """
 SatContact — скрипт обновления TLE с Space-Track.org и N2YO.com
 
-Скачивает TLE для Satcom и Меридианов по NORAD ID.
-Space-Track не отдаёт данные для военных спутников 26635, 34810, 40614 —
-они дозагружаются через API N2YO.com.
+Скачивает TLE для набора спутников (SATCOM, Меридианы, МКС и др.) по списку
+NORAD ID (см. константу NORAD_IDS ниже).
+
+Space-Track не отдаёт данные для ряда спутников (обычно военных) — они
+дозагружаются через API N2YO.com (см. константу N2YO_NORAD_IDS).
 
 Учётные данные из переменных окружения:
   SPACETRACK_USER — логин Space-Track
   SPACETRACK_PASS — пароль Space-Track
-  N2YO_API_KEY — API ключ N2YO (для дозагрузки 26635, 34810, 40614)
+  N2YO_API_KEY — API ключ N2YO (для дозагрузки спутников из N2YO_NORAD_IDS)
 
 Использование:
   python scripts/update_tle.py
 
 Выход:
-  data/tle.txt — файл с TLE в формате 3 строки на спутник
+  data/tle.txt — файл с TLE (две строки на спутник)
 """
 
 import os
@@ -31,13 +33,28 @@ except ImportError:
 
 # Space-Track API
 LOGIN_URL = "https://www.space-track.org/ajaxauth/login"
+
+# Список NORAD ID спутников, TLE которых нужно скачивать.
+# При добавлении/удалении — правьте только этот список, URL соберётся сам.
+NORAD_IDS = [
+    20253, 20776, 22787, 23467, 23967,
+    25544, 25967, 26635, 27168, 27607,
+    28117, 28899, 30794, 32294, 34810,
+    35943, 36582, 38098, 39034, 39215,
+    40296, 40614, 40931, 43678, 43700,
+    43803, 44453, 44909, 45254, 52145,
+    57167, 59112, 67291,
+]
+
 TLE_URL = (
     "https://www.space-track.org/basicspacedata/query/class/gp/"
-    "NORAD_CAT_ID/35943%2C36582%2C38098%2C28117%2C20253%2C25967%2C23967%2C32294%2C30794%2C39034%2C20776%2C25639%2C40614%2C34810%2C23467%2C27168%2C26635%2C22787%2C40296%2C44453%2C45254%2C52145/"
+    f"NORAD_CAT_ID/{'%2C'.join(str(n) for n in NORAD_IDS)}/"
     "orderby/NORAD_CAT_ID%20asc/format/tle/emptyresult/show"
 )
 
-# Спутники, которые Space-Track не отдаёт — дозагружаем с N2YO
+# Спутники, которые Space-Track не отдаёт (обычно военные) — дозагружаем с N2YO.
+# При добавлении новых NORAD в NORAD_IDS: если после прогона в data/tle.txt не появилось
+# строк `1 NNNNN` / `2 NNNNN` — добавьте NNNNN сюда.
 N2YO_NORAD_IDS = [26635, 34810, 40614]
 N2YO_TLE_URL = "https://api.n2yo.com/rest/v1/satellite/tle/{norad_id}"
 
@@ -124,7 +141,8 @@ def main() -> int:
         if n2yo_added > 0:
             print(f"N2YO: добавлено {n2yo_added} из {len(N2YO_NORAD_IDS)} спутников")
     else:
-        print("Предупреждение: N2YO_API_KEY не задан, пропуск дозагрузки 26635, 34810, 40614", file=sys.stderr)
+        ids_str = ", ".join(str(n) for n in N2YO_NORAD_IDS)
+        print(f"Предупреждение: N2YO_API_KEY не задан, пропуск дозагрузки {ids_str}", file=sys.stderr)
 
     output_path.write_text(content.rstrip() + "\n", encoding="utf-8")
     print(f"TLE сохранён: {output_path} ({len(content)} байт)")
