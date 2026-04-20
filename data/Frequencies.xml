@@ -29,7 +29,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>13° ComSatBw 2              [36582]</Name>
+    <Name>13° ComSatBw 2 (317.375 ) [36582]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>243625000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -533,7 +533,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>13° ComSatBw 2       [36582] чувствительный</Name>
+    <Name>13° ComSatBw 2 (300.250) [36582] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>248750000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1235,7 +1235,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>13° ComSatBw 2                 [36582] средняя</Name>
+    <Name>13° ComSatBw 2 (309.300) [36582] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>250900000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1565,15 +1565,6 @@
     <DetectorType>NFM</DetectorType>
     <Shift>0</Shift>
     <FilterBandwidth>6000</FilterBandwidth>
-  </MemoryEntry>
-  <MemoryEntry>
-    <IsFavourite>false</IsFavourite>
-    <Name>-1.6° Skynet 4E (307,550)  [25639]</Name>
-    <GroupName>SATCOM потухшие</GroupName>
-    <Frequency>254155000</Frequency>
-    <DetectorType>NFM</DetectorType>
-    <Shift>0</Shift>
-    <FilterBandwidth>36000</FilterBandwidth>
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
@@ -1946,21 +1937,21 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (299.450) [23467]</Name>
-    <GroupName>SATCOM</GroupName>
-    <Frequency>258450000</Frequency>
-    <DetectorType>NFM</DetectorType>
-    <Shift>0</Shift>
-    <FilterBandwidth>32000</FilterBandwidth>
-  </MemoryEntry>
-  <MemoryEntry>
-    <IsFavourite>false</IsFavourite>
     <Name>32° Skynet 4C (299.450) [20776] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>258450000</Frequency>
     <DetectorType>NFM</DetectorType>
     <Shift>0</Shift>
     <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (299.450) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>258450000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
@@ -2162,7 +2153,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (294.175) [23467]</Name>
+    <Name>-29° UFO F7 (294.175) [23967]средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>260575000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2171,7 +2162,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>-29° UFO F7 (294.175) [23967]средняя</Name>
+    <Name>172° UFO F4 (294.175) [23467]</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>260575000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2674,15 +2665,6 @@
     <FilterBandwidth>32000</FilterBandwidth>
   </MemoryEntry>
   <MemoryEntry>
-    <IsFavourite>false</IsFavourite>
-    <Name>172° UFO F4 (297.475) [23467]</Name>
-    <GroupName>SATCOM</GroupName>
-    <Frequency>263875000</Frequency>
-    <DetectorType>NFM</DetectorType>
-    <Shift>0</Shift>
-    <FilterBandwidth>32000</FilterBandwidth>
-  </MemoryEntry>
-  <MemoryEntry>
     <IsFavourite>true</IsFavourite>
     <Name>32° Skynet 4C (297.475) [20776] тупой</Name>
     <GroupName>SATCOM</GroupName>
@@ -2690,6 +2672,15 @@
     <DetectorType>NFM</DetectorType>
     <Shift>0</Shift>
     <FilterBandwidth>36000</FilterBandwidth>
+  </MemoryEntry>
+  <MemoryEntry>
+    <IsFavourite>false</IsFavourite>
+    <Name>172° UFO F4 (297.475) [23467]</Name>
+    <GroupName>SATCOM</GroupName>
+    <Frequency>263875000</Frequency>
+    <DetectorType>NFM</DetectorType>
+    <Shift>0</Shift>
+    <FilterBandwidth>32000</FilterBandwidth>
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
