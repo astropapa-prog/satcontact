@@ -533,7 +533,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>13° ComSatBw 2 (300.250) [36582] чувствительный</Name>
+    <Name>13° ComSatBw 2 (307.450) [36582] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>248750000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1379,7 +1379,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>14° SICRAL1B (293.200) [34810] чувствительный</Name>
+    <Name>14° SICRAL1B (308.200) [34810] чувствительный</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>252450000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1847,7 +1847,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>32° Skynet 4C (309.725) [20776] тупой</Name>
+    <Name>32° Skynet 4C (293.200) [20776] тупой</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>257300000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -1856,7 +1856,7 @@
   </MemoryEntry>
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
-    <Name>32° Skynet 4C (307.200) [20776] средняя</Name>
+    <Name>32° Skynet 4C (309.900) [20776] средняя</Name>
     <GroupName>SATCOM</GroupName>
     <Frequency>257350000</Frequency>
     <DetectorType>NFM</DetectorType>
@@ -2874,7 +2874,7 @@
   <MemoryEntry>
     <IsFavourite>false</IsFavourite>
     <Name>41° SICRAL 2 (308.200) [40614] тупой</Name>
-    <GroupName>SATCOM</GroupName>
+    <GroupName>SATCOM потухшие</GroupName>
     <Frequency>267200000</Frequency>
     <DetectorType>NFM</DetectorType>
     <Shift>0</Shift>
